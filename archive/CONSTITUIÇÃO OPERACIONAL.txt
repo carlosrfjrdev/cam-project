@@ -1,0 +1,323 @@
+CONSTITUIÇÃO OPERACIONAL DO CaM
+The Carlos Alternative Money
+
+Versão: 0.1
+Status: Fundacional
+Natureza: Projeto pessoal, local, não comercial
+Objetivo: Preservação de capital, disciplina operacional e construção patrimonial
+
+
+1. PRINCÍPIO FUNDADOR
+
+O CaM não existe para enriquecer rapidamente.
+
+O CaM existe para impedir decisões impulsivas, proteger capital, controlar risco, registrar operações, validar estratégias e converter ganhos táticos em patrimônio de longo prazo.
+
+O CaM não é um produto financeiro.
+O CaM não é uma consultoria.
+O CaM não é um robô de promessa de lucro.
+O CaM é um cockpit pessoal de operação, disciplina e governança.
+
+
+2. OBJETIVO CENTRAL
+
+O objetivo do CaM é construir uma estrutura operacional local capaz de:
+
+- apoiar decisões de mercado;
+- automatizar rotinas controladas;
+- limitar perdas;
+- impedir overtrade;
+- impedir aumento emocional de exposição;
+- registrar todas as operações;
+- medir aderência às regras;
+- transformar ganhos em carteira hard;
+- proteger o operador contra medo, ganância e revenge trade.
+
+
+3. CAPITAL INICIAL
+
+O capital inicial declarado para o projeto CaM é de R$ 5.000,00.
+
+Esse capital deve ser tratado como capital de aprendizado, validação e estruturação, não como capital para recuperação rápida de prejuízos passados.
+
+A meta de recuperar perdas históricas não pode influenciar o tamanho de mão, a frequência operacional ou a aceitação de risco.
+
+
+4. REGRA DE EXPOSIÇÃO INICIAL
+
+Na fase inicial real, o CaM poderá operar no máximo:
+
+- 1 contrato de mini índice; ou
+- 1 contrato de mini dólar.
+
+O CaM não poderá operar mini índice e mini dólar simultaneamente durante a fase inicial.
+
+O limite inicial de 1 contrato é absoluto até que o sistema tenha histórico suficiente para justificar qualquer evolução de fase.
+
+
+5. LIMITE ABSOLUTO FUTURO
+
+Mesmo em fases futuras, o CaM nunca poderá operar acima de:
+
+- 2 contratos de mini índice;
+- 2 contratos de mini dólar.
+
+Esse limite é absoluto e não poderá ser ultrapassado por saldo, confiança, sequência de ganhos, oportunidade de mercado, emoção, tentativa de recuperação ou decisão manual impulsiva.
+
+
+6. PROIBIÇÃO DE MARTINGALE
+
+É proibido aumentar a quantidade de contratos após uma perda com o objetivo de recuperar prejuízo.
+
+Aumento de exposição só poderá ocorrer por regra objetiva de fase, baseada em histórico, estatística, aderência operacional e controle de drawdown.
+
+Nenhuma operação anterior poderá justificar aumento imediato de mão.
+
+
+7. RISK ENGINE COMO AUTORIDADE MÁXIMA
+
+Nenhuma estratégia, sinal, análise, intuição ou leitura de mercado poderá executar operação se o Risk Engine bloquear.
+
+O Risk Engine prevalece sobre:
+
+- setup técnico;
+- sinal da plataforma;
+- leitura da IA;
+- vontade do operador;
+- sensação de oportunidade;
+- tentativa de recuperar perdas;
+- confiança subjetiva.
+
+Se o Risk Engine disser "não opera", o CaM não opera.
+
+
+8. LIMITE DE PERDA
+
+O CaM deverá possuir limite de perda diária, semanal e por fase.
+
+Ao atingir o limite de perda definido, o sistema deverá bloquear novas operações até o próximo período permitido.
+
+A perda máxima é mais importante que qualquer oportunidade de ganho.
+
+Na fase inicial, o limite de perda deve ser pequeno e compatível com capital de validação, não com ambição de lucro.
+
+
+9. GAIN LOCK
+
+Ao atingir ganho diário considerado relevante pela regra operacional vigente, o CaM poderá encerrar o dia.
+
+O objetivo do gain lock é impedir devolução de lucro por excesso de confiança.
+
+Lucro realizado deve ser protegido.
+
+
+10. HARVEST RULE
+
+Ganhos líquidos obtidos em operações táticas deverão ser convertidos em patrimônio.
+
+O lucro diário não deve permanecer integralmente exposto ao risco operacional.
+
+A regra base do harvest é:
+
+- parte do ganho vai para carteira hard;
+- parte do ganho vai para reserva operacional;
+- parte do ganho vai para impostos, custos e caixa.
+
+O ganho do derivativo deve alimentar patrimônio, não alavancar ganância.
+
+
+11. CARTEIRA HARD
+
+A carteira hard é o núcleo patrimonial do CaM.
+
+Ela poderá conter ações, FIIs ou outros ativos de longo prazo definidos pelo operador.
+
+A carteira hard não é capital de trade.
+A carteira hard não é margem emocional.
+A carteira hard não deve ser vendida para cobrir erro operacional.
+A carteira hard não deve justificar aumento de exposição em derivativos.
+
+A carteira hard existe para acumular patrimônio, dividendos e estabilidade.
+
+
+12. DERIVATIVOS
+
+Mini índice e mini dólar são instrumentos táticos.
+
+Derivativos não são a base patrimonial do CaM.
+
+Derivativos devem ser usados apenas com:
+
+- limite de contrato;
+- limite de perda;
+- stop definido;
+- registro completo;
+- estratégia validada;
+- autorização do Risk Engine;
+- possibilidade de desligamento imediato.
+
+Derivativo é ferramenta, não fonte de identidade, orgulho ou recuperação emocional.
+
+
+13. IA NO CaM
+
+A IA poderá atuar como analista, auditora, classificadora, explicadora e assistente de pesquisa.
+
+A IA não deve ser autoridade final de execução.
+
+A IA poderá:
+
+- analisar contexto;
+- revisar logs;
+- apontar anomalias;
+- sugerir hipóteses;
+- gerar relatórios;
+- avaliar comportamento operacional;
+- apoiar estudos de estratégia.
+
+A IA não poderá ignorar o Risk Engine.
+
+A decisão operacional real deve ser determinada por estratégia testável, regras objetivas e controle de risco.
+
+
+14. JOURNAL OBRIGATÓRIO
+
+Toda operação deverá ser registrada.
+
+O journal deverá conter, no mínimo:
+
+- data;
+- ativo;
+- contrato;
+- direção;
+- horário de entrada;
+- horário de saída;
+- motivo da entrada;
+- motivo da saída;
+- setup utilizado;
+- resultado bruto;
+- custos;
+- resultado líquido;
+- aderência à regra;
+- observação emocional;
+- lição aprendida.
+
+Operação sem registro é falha operacional.
+
+
+15. CHECKLIST PRÉ-MERCADO
+
+Antes de operar, o CaM deverá verificar:
+
+- sistema local funcionando;
+- Profit funcionando;
+- conexão estável;
+- plataforma sem erro;
+- limite diário configurado;
+- contrato máximo respeitado;
+- estratégia habilitada;
+- Risk Engine ativo;
+- kill switch disponível;
+- plano do dia registrado.
+
+Sem checklist válido, não há operação.
+
+
+16. CHECKLIST PÓS-MERCADO
+
+Após operar, o CaM deverá registrar:
+
+- resultado do dia;
+- número de operações;
+- aderência à estratégia;
+- eventuais violações;
+- falhas técnicas;
+- estado emocional;
+- aprendizado;
+- decisão sobre harvest;
+- atualização do ledger;
+- atualização fiscal.
+
+Sem fechamento pós-mercado, o próximo pregão poderá ser bloqueado.
+
+
+17. KILL SWITCH
+
+O CaM deverá possuir mecanismo de interrupção imediata.
+
+O kill switch poderá ser acionado por:
+
+- perda diária atingida;
+- falha técnica;
+- comportamento anormal;
+- execução inesperada;
+- instabilidade da plataforma;
+- instabilidade emocional percebida;
+- violação de regra;
+- decisão manual conservadora.
+
+O kill switch nunca precisa justificar oportunidade perdida.
+Preservar capital é sempre justificativa suficiente.
+
+
+18. PROIBIÇÃO DE OVERTRADE
+
+O CaM deverá limitar o número máximo de operações por dia.
+
+A quantidade de operações deve ser definida por fase.
+
+Na fase inicial, a regra recomendada é operar pouco, observar muito e registrar tudo.
+
+Operar demais é considerado risco operacional.
+
+
+19. ESCALA POR EVIDÊNCIA
+
+O CaM só poderá evoluir de fase se houver evidência objetiva.
+
+Critérios mínimos para evolução:
+
+- histórico operacional suficiente;
+- resultado líquido positivo;
+- custos considerados;
+- drawdown controlado;
+- aderência operacional elevada;
+- ausência de violação recente;
+- estabilidade técnica;
+- consistência em simulação e operação real controlada.
+
+Confiança subjetiva não é evidência.
+
+
+20. PRIORIDADE ABSOLUTA
+
+A ordem de prioridade do CaM é:
+
+1. Sobreviver.
+2. Preservar capital.
+3. Obedecer regras.
+4. Registrar tudo.
+5. Aprender.
+6. Melhorar o sistema.
+7. Gerar fluxo.
+8. Converter fluxo em patrimônio.
+9. Escalar somente com evidência.
+
+
+21. REGRA DE OURO
+
+O CaM não existe para provar que o operador está certo.
+
+O CaM existe para impedir que o operador quebre quando estiver convicto demais.
+
+
+22. FRASE CONSTITUCIONAL
+
+O CaM deve proteger o Carlos da coragem excessiva, da pressa, da ganância, do medo e da vontade de recuperar o passado.
+
+O mercado não deve ser enfrentado com emoção.
+
+O mercado deve ser operado com sistema, limite, registro e humildade.
+
+
+FIM DA CONSTITUIÇÃO OPERACIONAL DO CaM
