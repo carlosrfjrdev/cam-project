@@ -5,6 +5,10 @@
 > - **`teczi-*`** → compartilháveis com a Teczilabs (framework NCC-1701).
 > - **`cam-*`** → **CaM-only** (mundo financeiro) — não sincronizam para a Teczi (Art. 8º).
 > - **`strategy-session`** → institucional (Power Strategy Session).
+>
+> **Todas as `cam-*` nascem `status: draft` / Stage 0 (execução manual via Founder).**
+> Nenhuma habilita operação automática ou real; nenhuma toca Risk Engine, Constituição,
+> settings ou `REAL_TRADING_ALLOWED`.
 
 ---
 
@@ -17,32 +21,36 @@
 
 ---
 
-## Skills `cam-*` (mundo financeiro) — CaM-only
+## Skills `cam-*` (mundo financeiro) — 10, todas DRAFT / Stage 0
 
-### Ativas (esqueleto DRAFT — procedimento detalhado vira demanda própria)
+### Operacionais (estrutura do mundo financeiro)
 
-| Skill | Ritual | Lead (+co) | Ancoragem |
-|---|---|---|---|
-| [`cam-strategy-lab`](cam-strategy-lab/SKILL.md) | Tese de edge → backtest → walk-forward → Evidence Pack → gate | Jim (+Nassim, Voltaire, Founder) | Arts. 28º–30º |
-| [`cam-risk-modeling`](cam-risk-modeling/SKILL.md) | Risco agregado, sizing, ruína, drawdown | Nassim (+Kevin, Founder) | Arts. 11º/16º, R-08 |
-| [`cam-fiscal-closing`](cam-fiscal-closing/SKILL.md) | Apuração mensal, provisão, DARF, compensação | Luca (+Founder) | Arts. 24º–27º |
-| [`cam-prosperity-scan`](cam-prosperity-scan/SKILL.md) | Caça oportunidade → **hipótese (read-only, nunca ordem)** | Mammon (+Jim, Founder) | **Art. 35º (a trava vive aqui)** |
+| # | Skill | Ritual | Lead (+co) | Ancoragem |
+|---|---|---|---|---|
+| 1 | [`cam-strategy-lab`](cam-strategy-lab/SKILL.md) | Tese de edge → backtest → walk-forward → Evidence Pack → gate | Jim (+Nassim, Voltaire, Founder) | Arts. 28º–30º |
+| 2 | [`cam-risk-modeling`](cam-risk-modeling/SKILL.md) | Risco agregado, sizing, ruína, drawdown | Nassim (+Kevin, Founder) | Arts. 11º/16º, R-08 |
+| 3 | [`cam-fiscal-closing`](cam-fiscal-closing/SKILL.md) | Apuração mensal, provisão, DARF, compensação | Luca (+Founder) | Arts. 24º–27º |
+| 4 | [`cam-session-ritual`](cam-session-ritual/SKILL.md) | Checklist pré/pós-mercado + journal | Daniel (+Luca) | Arts. 31º–33º |
+| 5 | [`cam-market-data-intake`](cam-market-data-intake/SKILL.md) | Ingestão com provenance, dedupe, quality | Ada (+Wyck) | Pilar 4 + gate de dados |
+| 6 | [`cam-carteira-hard-review`](cam-carteira-hard-review/SKILL.md) | Revisão Carteira Hard (R-20), rebalance sugerido | Barsi (+Luca, Founder) | Art. 23º, Pilar 5, R-20 |
 
-### Later — declaradas, **não construídas** ("construir amplo, ativar por demanda")
+### Inteligência (read-only — produzem hipótese, nunca ordem)
 
-| Skill (later) | Ritual previsto | Lead provável |
-|---|---|---|
-| `cam-session-ritual` | Ritual de abertura/fechamento de pregão (checklists pré/pós) | Daniel + Don |
-| `cam-market-data-intake` | Ingestão governada de dados de mercado (provenance, quality) | Ada + Wyck |
-| `cam-carteira-hard-review` | Revisão periódica da Carteira Hard (dividendos, rebalance sugerido) | Barsi |
-| `cam-market-regime` | Classificação de regime de mercado (macro, ciclo, volatilidade) | Ray |
-| `cam-flow-analysis` | Análise de fluxo/tape/book L2 intraday | Wyck |
-| `cam-decision-postmortem` | Post-mortem de loss focado no processo de decisão | Daniel |
+| # | Skill | Ritual | Lead (+co) | Ancoragem |
+|---|---|---|---|---|
+| 7 | [`cam-prosperity-scan`](cam-prosperity-scan/SKILL.md) | Caça oportunidade → **hipótese (read-only, nunca ordem)** | Mammon (+Jim, Founder) | **Art. 35º (a trava vive aqui)** |
+| 8 | [`cam-market-regime`](cam-market-regime/SKILL.md) | Classificação de regime (tendência/lateral/vol) — read-only | Ray (+Sun) | Arts. 34º–35º |
+| 9 | [`cam-flow-analysis`](cam-flow-analysis/SKILL.md) | Fluxo/tape/book intraday → Cross-Asset Pattern Lab | Wyck (+Jim) | Pilar 4 |
+| 10 | [`cam-decision-postmortem`](cam-decision-postmortem/SKILL.md) | RCA de erro de decisão (paralelo ao teczi-bug-fix) | Daniel (+Founder) | Art. 4º, 32º–33º |
 
-> As 6 *later* **não devem ser criadas agora** — só serão construídas quando o Founder declarar a demanda.
+> **Founder ampliou de 4 → 10 skills** (Adendo 02). As 6 antes declaradas como *later*
+> foram promovidas a DRAFT ativo. Procedimento detalhado de cada uma = demanda própria.
 
 ---
 
-## Regra de perímetro
+## Invariantes de perímetro e segurança
 
-`cam-*` e `/personas` são **CaM-only**. Nunca sincronizar com a Teczilabs (ADR-001, Art. 8º).
+- `cam-*` e `/personas` são **CaM-only** — nunca sincronizar com a Teczilabs (ADR-001, Art. 8º).
+- **Trava read-only do Mammon (Art. 35º)** vive em `cam-prosperity-scan` (e no agent/persona do Mammon).
+- **Dureza do Daniel** (diagnóstico frio, não coach) em `cam-session-ritual` + `cam-decision-postmortem`.
+- Todas Stage 0: processo manual, não automação. "Construir amplo, liberar estreito."
