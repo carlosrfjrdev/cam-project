@@ -1,0 +1,47 @@
+# Secrets — NUNCA commitar
+.env
+*.env.local
+
+# Journal duplo JSONL (dados operacionais sensíveis)
+*.jsonl
+
+# Backups locais
+cam-backups/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+env/
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node / Frontend
+node_modules/
+dist/
+.pnpm-store/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Alembic (não commitar banco de teste)
+*.db
+*.sqlite

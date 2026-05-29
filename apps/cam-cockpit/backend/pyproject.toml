@@ -1,0 +1,127 @@
+[project]
+name = "cam-cockpit-backend"
+version = "0.1.0"
+description = "CaM Cockpit — Backend operacional do Carlos Alternative Money"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "sqlalchemy[asyncio]>=2.0",
+    "psycopg[asyncio]>=3.2",
+    "alembic>=1.13",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "structlog>=24.0",
+    "apscheduler>=3.10",
+    "python-telegram-bot>=21.0",
+    "python-multipart>=0.0.29",
+    "pyzmq>=26.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
+    "hypothesis>=6.100",
+    "ruff>=0.4",
+    "mypy>=1.10",
+    "import-linter>=2.1",
+    "httpx>=0.27",
+    "pyyaml>=6.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["cam"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests", "cam"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+# SQL strings in repositories legitimately exceed 88 chars
+"cam/**/repository.py" = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["cam"]
+omit = ["tests/*"]
+
+[tool.importlinter]
+root_packages = ["cam"]
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Features nao importam entre si"
+type = "independence"
+modules = [
+    "cam.features.journal",
+    "cam.features.fiscal",
+    "cam.features.ledger",
+    "cam.features.harvest",
+    "cam.features.strategies",
+    "cam.features.backtest",
+    "cam.features.paper_trading",
+    "cam.features.profit_integration",
+    "cam.features.market_data",
+    "cam.features.kill_switch",
+    "cam.features.checklists",
+    "cam.features.notifications",
+    "cam.features.ai_analyst",
+    "cam.features.constitution",
+    "cam.features.mt5_integration",
+]
+# ignore_imports: transitividades via cam.api.main são legítimas —
+# main.py é o único compositor autorizado (ADR-013).
+# Testes HTTP importam o app FastAPI, gerando caminhos indiretos entre features.
+ignore_imports = [
+    "cam.features.*.tests.* -> cam.api.main",
+    "cam.api.main -> cam.features.*",
+    # SPEC v0.4-BL-A/BL-C/BL-H1 — `strategies` expõe contratos canônicos
+    # (Strategy Protocol, StrategyMetadata, StrategyContext, StrategyStatus)
+    # consumidos por orquestradores (paper_trading.loop, robot_orchestrator).
+    # Esses contratos são equivalentes a shared kernel; ficam em `strategies`
+    # para co-localização com o catalog de estratégias. TD-v0.4-FEATCONTRACT
+    # propõe mover para `_shared/strategy_contracts/` em ciclo futuro.
+    "cam.features.paper_trading.loop -> cam.features.strategies.domain",
+    "cam.features.paper_trading.tests.test_paper_loop -> cam.features.strategies.domain",
+    "cam.features.robot_orchestrator.orchestrator -> cam.features.strategies.domain",
+    "cam.features.robot_orchestrator.tests.test_orchestrator -> cam.features.strategies.domain",
+    # Autonomy Matrix (shared kernel) consome `StrategyStatus` enum.
+    "cam._shared.autonomy.matrix -> cam.features.strategies.domain",
+    # Order Gateway (shared kernel) consome `StrategyStatus` para gate.
+    "cam._shared.order_gateway.gateway -> cam.features.strategies.domain",
+]
+unmatched_ignore_imports_alerting = "none"
+
+[[tool.importlinter.contracts]]
+name = "Risk Engine nao importa I/O"
+type = "forbidden"
+source_modules = ["cam._shared.risk"]
+forbidden_modules = [
+    "sqlalchemy",
+    "psycopg",
+    "httpx",
+    "aiohttp",
+    "requests",
+    "fastapi",
+    "pydantic",
+    "apscheduler",
+]

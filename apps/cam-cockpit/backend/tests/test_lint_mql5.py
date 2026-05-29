@@ -1,0 +1,103 @@
+"""
+TDD First — TASK-010 (BL-A): lint_mql5.py.
+
+Verifica que o lint detecta OrderSend/OrderClose/PositionOpen/PositionClose/
+OrderModify em arquivos .mq5/.mqh fora da allowlist.
+"""
+from __future__ import annotations
+
+import json
+import subprocess
+from pathlib import Path
+
+import pytest
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+LINT_SCRIPT = REPO_ROOT / "scripts" / "lint_mql5.py"
+
+
+def _run(mql5_dir: Path) -> tuple[int, dict]:
+    result = subprocess.run(
+        ["python3", str(LINT_SCRIPT), "--mql5-dir", str(mql5_dir), "--json"],
+        capture_output=True,
+        text=True,
+    )
+    parsed = json.loads(result.stdout)
+    return result.returncode, parsed
+
+
+class TestLintMQL5:
+    def test_clean_dir_returns_zero(self, tmp_path: Path):
+        ok_file = tmp_path / "cam_bridge.mq5"
+        ok_file.write_text(
+            "// CamBridge — read-only\nvoid OnTimer() { Print(\"ok\"); }\n"
+        )
+        code, data = _run(tmp_path)
+        assert code == 0
+        assert data["violations"] == []
+
+    def test_detects_OrderSend_outside_allowlist(self, tmp_path: Path):
+        bad = tmp_path / "cam_bridge.mq5"
+        bad.write_text(
+            "void OnTimer() {\n"
+            "  MqlTradeRequest req;\n"
+            "  OrderSend(req, result);\n"  # violação
+            "}\n"
+        )
+        code, data = _run(tmp_path)
+        assert code == 1
+        assert any(v["function"] == "OrderSend" for v in data["violations"])
+
+    def test_allows_OrderSend_in_cam_risk_mirror(self, tmp_path: Path):
+        ok = tmp_path / "cam_risk_mirror.mq5"
+        ok.write_text(
+            "void Eval() {\n"
+            "  OrderSend(req, result);\n"  # permitido só aqui
+            "}\n"
+        )
+        code, data = _run(tmp_path)
+        assert code == 0
+        assert data["violations"] == []
+
+    def test_detects_OrderClose_PositionOpen_PositionClose_OrderModify(
+        self, tmp_path: Path
+    ):
+        bad = tmp_path / "cam_bridge.mq5"
+        bad.write_text(
+            "void f1() { OrderClose(t, v, p, slip); }\n"
+            "void f2() { PositionOpen(); }\n"
+            "void f3() { PositionClose(t); }\n"
+            "void f4() { OrderModify(t, p, sl, tp, exp); }\n"
+        )
+        code, data = _run(tmp_path)
+        assert code == 1
+        funcs = {v["function"] for v in data["violations"]}
+        assert funcs == {"OrderClose", "PositionOpen",
+                         "PositionClose", "OrderModify"}
+
+    def test_ignores_comments(self, tmp_path: Path):
+        ok = tmp_path / "cam_bridge.mq5"
+        ok.write_text(
+            "// OrderSend não deve disparar aqui\n"
+            "/* exemplo: OrderSend(...) */\n"
+            "void OnTimer() { Print(\"OrderSend é proibido\"); }\n"
+        )
+        code, data = _run(tmp_path)
+        assert code == 0
+        assert data["violations"] == []
+
+    def test_ignores_strings(self, tmp_path: Path):
+        ok = tmp_path / "cam_bridge.mq5"
+        ok.write_text(
+            'void f() { Print("OrderSend não dispara dentro de string"); }\n'
+        )
+        code, data = _run(tmp_path)
+        assert code == 0
+
+    def test_machine_readable_json_has_files_list(self, tmp_path: Path):
+        f = tmp_path / "cam_bridge.mq5"
+        f.write_text("void OnTimer() {}\n")
+        code, data = _run(tmp_path)
+        assert "checked_files" in data
+        assert any(p.endswith("cam_bridge.mq5") for p in data["checked_files"])
+        assert "violations" in data

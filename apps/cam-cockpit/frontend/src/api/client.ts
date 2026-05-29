@@ -1,0 +1,32 @@
+const BASE_URL = "/api/v1";
+
+async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const response = await fetch(`${BASE_URL}${path}`, {
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    ...options,
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(error.detail ?? `HTTP ${response.status}`);
+  }
+  return response.json() as Promise<T>;
+}
+
+export const api = {
+  get: <T>(path: string) => request<T>(path),
+  post: <T>(path: string, body: unknown) =>
+    request<T>(path, { method: "POST", body: JSON.stringify(body) }),
+  patch: <T>(path: string, body: unknown) =>
+    request<T>(path, { method: "PATCH", body: JSON.stringify(body) }),
+
+  uploadFile: async <T>(path: string, file: File): Promise<T> => {
+    const form = new FormData();
+    form.append("file", file);
+    const response = await fetch(`${BASE_URL}${path}`, { method: "POST", body: form });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: response.statusText }));
+      throw new Error(error.detail ?? `HTTP ${response.status}`);
+    }
+    return response.json() as Promise<T>;
+  },
+};

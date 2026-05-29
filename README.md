@@ -8,6 +8,8 @@
 
 ## O que é o CaM
 
+O CaM é o Projeto pessoal do CARLOS para
+
 O CaM não existe para enriquecer rapidamente. Existe para **impedir decisões impulsivas, proteger capital, controlar risco, registrar operações, validar estratégias e converter ganhos táticos em patrimônio de longo prazo** (Art. 1º).
 
 > *"O CaM não existe para provar que o operador está certo. O CaM existe para impedir que o operador quebre quando estiver convicto demais."*

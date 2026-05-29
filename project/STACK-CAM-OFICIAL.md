@@ -1,61 +1,78 @@
-# STACK-CAM-OFICIAL — variante Windows + Profit
+# STACK-CAM-OFICIAL
 
 > **Projeto:** CaM — The Carlos Alternative Money
-> **Documento:** Stack Oficial — **variante Windows + Profit/NTSL**
+> **Documento:** Stack Oficial — **Linux + MetaTrader 5 + MQL5**
 > **Versão:** 1.0
-> **Data:** 2026-05-24
-> **Status:** Proposta em paralelo a [`STACK-CAM-OFICIAL-LINUX.MD`](./STACK-CAM-OFICIAL-LINUX.MD) (variante Linux + MetaTrader 5)
-> **Decisão pendente:** Carlos vai escolher entre **esta variante (Windows+Profit)** OU a variante Linux+MT5 — matriz comparativa explícita está em `STACK-CAM-OFICIAL-LINUX.MD` §13
+> **Data:** 2026-05-24 (origem) · 2026-05-25 (canonicalizada)
+> **Status:** **CANÔNICA** — decisão registrada em [`DECISION-MEMO-LINUX-OR-WINDOWS.md`](./DECISION-MEMO-LINUX-OR-WINDOWS.md) §6 (Opção B aprovada pelo Founder)
+> **Variante rejeitada:** [`archive/STACK-CAM-OFICIAL-WINDOWS-PROFIT-rejeitada-2026-05-25.md`](../archive/STACK-CAM-OFICIAL-WINDOWS-PROFIT-rejeitada-2026-05-25.md)
 > **Vinculação constitucional:** [`../CONSTITUICAO.md`](../CONSTITUICAO.md)
-> **Insumos:** `archive/insumos-stack/CLAUDE-STACK-RECOMENDATION.MD`, `archive/insumos-stack/GPT-STACK-RECOMENDATION.md`
-> **Síntese por:** Voltaire (devil's advocate) + Grace (arquitetura) + Oscar (decisões formais como ADRs)
-> **Aprovação:** Pendente — Founder valida em gate explícito antes de virar SPEC
+> **Síntese por:** Voltaire (devil's advocate) + Grace (arquitetura) + Vint (viabilidade infra)
 
 ---
 
-## 0. Decisão de Override
+## 0. Status canônico
 
-Esta stack **revoga formalmente** os Combos A/B/C do catálogo DevFlow Teczilabs (Firebase Full, Spring + Relacional, Spring + Document). Aquelas combinações foram inferidas para produtos comerciais Teczilabs e **não se aplicam ao CaM** — cockpit local, mono-operador, vinculado ao Profit/Windows.
+Carlos escolheu **Linux + MetaTrader 5** como stack oficial em **2026-05-25**, conforme registrado no DECISION-MEMO. O documento da variante Windows+Profit foi movido para `archive/` como rejeitado.
 
-Tudo que aparecer em qualquer skill/agent/template referenciando Java/Spring/Firebase/Next.js como "stack permitida" no contexto CaM é **inválido** e deve ser substituído pela referência a este documento.
+**SO produção:** Linux (Ubuntu 24.04+ LTS). **Broker:** MetaTrader 5. **Linguagem de execução automatizada:** MQL5 + Expert Advisors (EAs).
+
+**O que NÃO muda em relação ao documento Windows+Profit:**
+
+- A Constituição é a mesma (lei suprema, inviolável)
+- O framework NCC-1701 é o mesmo
+- O backend Python 3.12 + FastAPI é o mesmo
+- O frontend React 19 + Vite + MUI é o mesmo
+- O banco PostgreSQL 16 + TimescaleDB desde Fase 0 é o mesmo
+- DuckDB, Telegram, Ollama, Anthropic — iguais
+- A arquitetura Vertical Slice + Shared Kernel (ADR-013) é a mesma
+- O Risk Engine Pure Python em `_shared/risk/` é o mesmo
+- A política da IA (Arts. 34–36) é a mesma
+
+**O que MUDA:**
+
+| Camada | Windows+Profit | **Linux+MT5 (este doc)** |
+|---|---|---|
+| SO produção | Windows 11 | **Linux (Ubuntu 24.04+ LTS)** |
+| Broker/plataforma | Profit Pro/Ultra (Nelogica) | **MetaTrader 5 (MetaQuotes)** |
+| Linguagem estratégia no broker | NTSL | **MQL5** |
+| Artefatos de execução versionados | `ntsl/` (NTSL scripts + risk_mirror) | **`mql5/` (EAs + indicators + scripts + risk_mirror)** |
+| API nativa Python para o broker | `MetaTrader5` package oficial (Windows) ou ProfitDLL (Fase 5+) | **MT5 Python package NÃO roda nativo em Linux** — exige bridge (ver §6.1) |
+| Onde o MT5 roda | Windows nativo | **Wine, OU container Wine, OU VPS Windows remoto** |
+| Docker | Docker Desktop + WSL2 (pago em empresas grandes) | **Docker Engine + docker-compose nativo (open source)** |
+| Custo de licença | Windows 11 | **R$ 0 (Ubuntu LTS)** |
 
 ---
 
 ## 1. Resumo Executivo
 
 ```text
-Profit/Nelogica        →  Plataforma de execução (NTSL + Automação de Estratégias)
-Python 3.12 + FastAPI  →  Cockpit local: Risk Engine, Ledger, Journal, integração, auditoria
-React 19 + Vite + MUI  →  Frontend local (SPA servida pelo backend FastAPI)
+MetaTrader 5 (MT5)        →  Plataforma de execução (MQL5 + Expert Advisors)
+Wine (oficial) ou VPS      →  Como o MT5 roda em Linux (3 opções — ver §6.1)
+Python 3.12 + FastAPI      →  Cockpit local (Risk Engine, Ledger, Journal, IA)
+Bridge MT5 ↔ Python        →  Socket TCP / ZeroMQ / arquivo compartilhado (ver §6.1)
+React 19 + Vite + MUI      →  Frontend local (SPA servida pelo backend FastAPI)
 PostgreSQL 16 + TimescaleDB → Banco transacional + tick/candle storage (desde Fase 0)
-DuckDB                 →  Motor analítico auxiliar (research em CSV/Parquet, backtest exploratório)
-Telegram Bot           →  Canal externo de alerta (kill switch, loss limit, DARF, etc.)
-Ollama local + Anthropic → IA auditora/analista, NUNCA executora
-Git + GitHub privado   →  Versionamento e governança
-SO produção: Windows 11 (Profit é Windows-only)
-SO desenvolvimento: Linux (eficiência) + Windows para integração final
+DuckDB                     →  Motor analítico auxiliar (research em CSV/Parquet)
+Telegram Bot               →  Canal externo de alerta
+Ollama local + Anthropic   →  IA auditora/analista, NUNCA executora
+Git + GitHub privado       →  Versionamento e governança
+SO produção: Ubuntu 24.04+ LTS (ou Fedora/Arch)
+SO desenvolvimento: o mesmo Linux (sem dual SO)
 ```
 
 **Frase de arquitetura:**
 
-> O Profit executa. O Python governa. O React mostra. O Ledger registra. O Risk Engine manda. A IA comenta. O Carlos obedece ao sistema.
+> O MT5 executa. O Wine hospeda o MT5. O Python governa. O React mostra. O Ledger registra. O Risk Engine manda. A IA comenta. O Carlos obedece ao sistema.
 
 ---
 
 ## 2. Princípios da Stack
 
-Cada decisão abaixo deriva de pelo menos um destes princípios (numerados para referência):
+Mesmos 10 princípios do documento Windows+Profit, **acrescidos de 2 específicos** desta variante:
 
-1. **Soberania da Constituição** — toda escolha sobrevive à hierarquia `Constituição > Risk Engine > Estratégia validada > IA > Operador` (Art. 36º).
-2. **Profit é o executor, CaM é o cockpit** — o CaM não substitui o Profit; aumenta-o com governança, ledger e auditoria.
-3. **Localidade absoluta** — nada essencial depende de serviço externo. Cloud é opcional para backup.
-4. **DRY entre backtest e live** — funções de sinal/risco rodam idênticas em backtest, paper e live. Sem reescrita.
-5. **Falha segura** — qualquer falha técnica degrada para "não envia ordem", nunca para "executa fora de regra".
-6. **Auditabilidade** — todo evento operacional gera registro estruturado, imutável e datado (Art. 31º).
-7. **Custo controlado** — Art. 8º: custos saem do bolso do operador, fora do CaM. Favorece open source.
-8. **Familiaridade com ressalva** — alinhamento com stack Teczilabs (Monnezy: React/Vite, MUI) onde tecnicamente equivalente. Backend NÃO segue Monnezy (NestJS/Java) porque o domínio quant é Python.
-9. **Faseamento Profit** — integração com Profit cresce por fases (manual → CSV → semi-auto → NTSL → APIs), nunca pula etapas.
-10. **Hierarquia da autoridade de risco** — Risk Engine Python é **pré-validador definitivo** + NTSL no Profit espelha regras hard-coded **como segunda linha de defesa**.
+11. **Sem dependência de Windows** — toda a operação roda em Linux. Wine é detalhe de execução, não princípio.
+12. **Tudo containerizável** — Postgres+Timescale, MT5 (via Wine image), backend e frontend rodam em Docker. Migração de host = `docker compose up`. Sem instalação procedural.
 
 ---
 
@@ -63,17 +80,19 @@ Cada decisão abaixo deriva de pelo menos um destes princípios (numerados para 
 
 | Item | Valor | Origem |
 |---|---|---|
-| SO de produção | Windows 10/11 | Profit é Windows-only |
-| SO de desenvolvimento | Linux (atual) → Windows (integração) | Eficiência de dev em Linux, integração final em Windows |
-| Plataforma broker | Profit Pro ou Profit Ultra | Decisão do Founder; Automação de Estratégias para conta real |
+| SO de produção | Ubuntu 24.04+ LTS (ou distro equivalente) | Princípio 11 |
+| SO de desenvolvimento | Mesmo Linux (atual: Ubuntu 26.04 LTS) | Princípio 11 — sem dual SO |
+| Plataforma broker | MetaTrader 5 (MetaQuotes) | Decisão desta variante |
+| API broker | `MetaTrader5` package (Windows-only) **OU** bridge customizada (ver §6.1) | Limitação técnica do MT5 em Linux |
 | Capital declarado | R$ 5.000,00 | Constituição Art. 7º |
 | Modelo de uso | Mono-usuário, local | Constituição Art. 1º |
 | Custos da stack | PF, fora do perímetro CaM | Constituição Art. 8º |
 | Operação simultânea WIN+WDO | Vetada na fase inicial | Constituição Art. 12º |
+| Brokers viáveis no Brasil para MT5 + WIN/WDO | XP, Clear, Genial, Modal, Avenue, Toro (verificar antes da Fase 1) | Decisão pendente §14 |
 
 ---
 
-## 4. Camadas da Stack — Visão Geral
+## 4. Diagrama de Arquitetura
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -85,21 +104,29 @@ Cada decisão abaixo deriva de pelo menos um destes princípios (numerados para 
                                ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                          CaM Core (Python 3.12 + FastAPI)            │
-│  domain | risk* | strategies | execution | paper | market_data      │
-│  journal | fiscal | backtest | harvest | notifications | api | ai   │
-│  (* risk = Pure Python sem I/O, propriedade-based test 100%)        │
+│  _shared/{risk*, domain, events, audit, infra}                       │
+│  features/{journal, fiscal, ledger, strategies, backtest, ...}       │
+│  features/mt5_integration/  ← bridge Python ↔ MT5                    │
+│  (* risk = Pure Python sem I/O, 100% test)                           │
 └────────┬───────────────────────────────────┬────────────────────────┘
          │                                   │
          ▼                                   ▼
 ┌────────────────────────────────┐  ┌──────────────────────────────────┐
-│      Local Storage              │  │     Profit Pro / Nelogica         │
-│  PostgreSQL 16 + TimescaleDB    │  │  NTSL + Editor de Estratégias     │
-│  (hypertables + continuous      │  │  Automação de Estratégias (módulo │
-│   aggregates desde Fase 0)      │  │   contratado para conta real)     │
-│  DuckDB (research em arquivos)  │  │  Importação CSV / Excel           │
-│  JSONL append-only (fallback)   │  │  ProfitDLL (ctypes) — Fase 4+     │
-└────────────────────────────────┘  └──────────────────────────────────┘
-                               │
+│      Local Storage              │  │     MetaTrader 5 (MetaQuotes)     │
+│  PostgreSQL 16 + TimescaleDB    │  │  MQL5 + Expert Advisors (EAs)     │
+│  (hypertables + continuous      │  │  Indicators + Scripts             │
+│   aggregates desde Fase 0)      │  │                                    │
+│  DuckDB (research em arquivos)  │  │  Roda em: Wine | container Wine   │
+│  JSONL append-only (fallback)   │  │           | VPS Windows remoto    │
+└────────────────────────────────┘  └────────────┬─────────────────────┘
+                               │                  │
+                               │       ┌──────────┴──────────┐
+                               │       ▼ Bridge ↕            ▼
+                               │  ┌─────────────────────────────────┐
+                               │  │  Socket TCP / ZeroMQ / Files    │
+                               │  │  (EA MQL5 expõe eventos +       │
+                               │  │   recebe comandos do Python)    │
+                               │  └─────────────────────────────────┘
                                ▼
                 ┌──────────────────────────────┐
                 │     Telegram Bot (alertas)    │
@@ -110,18 +137,22 @@ Cada decisão abaixo deriva de pelo menos um destes princípios (numerados para 
 
 ## 5. Componentes — Tabela Canônica
 
+Diferenças em relação ao documento Windows+Profit destacadas em **negrito**.
+
 | Camada | Tecnologia | Versão alvo | Princípio |
 |---|---|---|---|
-| Execução de ordens | Profit Pro / Profit Ultra + Automação de Estratégias | atual | 2, 9 |
-| Linguagem estratégia executada no broker | NTSL (Nelogica Trading System Language) | atual | 2, 9 |
+| **Execução de ordens** | **MetaTrader 5 (MetaQuotes) + EAs MQL5** | atual | 2, 9 |
+| **Linguagem estratégia no broker** | **MQL5** | atual | 2, 9 |
+| **Hospedagem do MT5** | **Wine 9+** (oficial MetaQuotes) **ou** VPS Windows | latest | 11, 12 |
+| **Bridge Python ↔ MT5** | **socket TCP custom / ZeroMQ / arquivo compartilhado** (ver §6.1) | latest | 4, 5 |
 | Linguagem backend cockpit | Python | 3.12.x | 4, 7, 8 |
 | Framework web/API | FastAPI | 0.115+ | 4, 5, 7 |
 | ASGI server | Uvicorn | 0.32+ | padrão FastAPI |
 | Validação de schema | Pydantic v2 | 2.x | 6 |
 | ORM | SQLAlchemy 2.0 | 2.0.x | 4, 6 |
 | Migrations | Alembic | 1.13+ | 6 |
-| Banco transacional + time series | PostgreSQL 16 + TimescaleDB (extensão) | 16 / 2.x | desde Fase 0 (volume de tick + análise de padrões) |
-| Motor analítico auxiliar | DuckDB | 1.x | research em arquivos (CSV/Parquet), backtest exploratório |
+| Banco transacional + time series | PostgreSQL 16 + TimescaleDB (extensão) | 16 / 2.x | desde Fase 0 |
+| Motor analítico auxiliar | DuckDB | 1.x | research em arquivos |
 | Cache/Event bus (opcional) | Redis | 7.x | apenas se necessário |
 | Frontend framework | React + Vite | 19.x / 6.x | 7, 8 |
 | Linguagem frontend | TypeScript | 5.x | 6, 8 |
@@ -129,11 +160,11 @@ Cada decisão abaixo deriva de pelo menos um destes princípios (numerados para 
 | Estado UI | Zustand | 5.x | simplicidade |
 | Estado server | TanStack Query | 5.x | sincronização HTTP |
 | Roteamento | React Router | 6.x | padrão |
-| Gráficos candles | TradingView Lightweight Charts | 4.x | open source, padrão indústria |
+| Gráficos candles | TradingView Lightweight Charts | 4.x | open source |
 | Gráficos métricas | Recharts | 2.x | alinhamento Teczilabs |
 | Validação cliente | Zod | 3.x | 6 |
 | Streaming | WebSocket nativo FastAPI | — | 4, 5 |
-| Notificações externas | python-telegram-bot ou aiogram | 21+ | 5, 6 |
+| Notificações externas | aiogram (Telegram async) | 3+ | 5, 6 |
 | Logs estruturados | structlog | 24+ | 6 |
 | Backtest engine | Custom Python (DRY com live) + vectorbt (research) | 0.27+ | 4 |
 | Testes | pytest + pytest-asyncio + hypothesis | atuais | 1, 6 |
@@ -141,545 +172,407 @@ Cada decisão abaixo deriva de pelo menos um destes princípios (numerados para 
 | Type check Python | mypy ou pyright | latest | 6 |
 | Gerência de deps Python | uv | latest | 7 |
 | Gerência de deps frontend | pnpm | 9.x | 7 |
-| Containers (opcional Fase 3+) | Docker Desktop + WSL2 | atual | apenas Postgres/Redis |
+| **Containers** | **Docker Engine + docker-compose (nativo Linux, sem Desktop)** | 24+ / 2.x | 11, 12 |
 | Versionamento | Git + GitHub privado | — | 6, 7 |
-| Scheduler interno | APScheduler ou cron Python | latest | rotinas pós-mercado |
+| Scheduler interno | APScheduler ou systemd timers | latest | rotinas pós-mercado |
 | IA local (opcional) | Ollama | latest | 1, 7 |
-| IA externa (sob demanda) | Anthropic API (Claude) | atual | 1, anonimizar dados sensíveis |
-| Backup automatizado | rclone para Google Drive / S3 | latest | 3, 6 |
+| IA externa (sob demanda) | Anthropic API (Claude) | atual | 1 |
+| Backup automatizado | rclone para Google Drive / S3 + cron systemd | latest | 3, 6 |
 
 ---
 
 ## 6. Detalhamento por Camada Crítica
 
-### 6.1 Camada de Execução — Profit + NTSL + Automação de Estratégias
+### 6.1 Camada de Execução — MetaTrader 5 + MQL5 em Linux
 
-**Decisão fundadora:** o Profit é o executor. O CaM não envia ordem por caminho alternativo no MVP (Fase 0–3).
+**Decisão fundadora desta variante:** MT5 é o executor. CaM não envia ordem por caminho alternativo no MVP (Fase 0–3). EAs MQL5 dentro do MT5 fazem a execução; o Python publica parâmetros e recebe eventos.
 
-**Como funciona em produção:**
+#### 6.1.1 Três opções para hospedar o MT5 em Linux
 
-1. Carlos contrata **Profit Pro** (ou Ultra) com book.
-2. Para Fase 4+ com conta real automatizada: contrata **módulo de Automação de Estratégias**.
-3. As regras de **risco mecânico não-negociáveis** (limite de contratos Art. 11º, janelas vedadas, stops padrão) ficam **espelhadas** em NTSL como **segunda linha de defesa**.
-4. A regra de **decisão de entrada/saída** roda primeiro no Python (Risk Engine + Strategy), que **autoriza** a estratégia NTSL a executar via flag/parâmetro lido pelo Profit.
+A MetaQuotes **não distribui** versão nativa Linux do MT5. Há três caminhos viáveis:
 
-**Faseamento da integração** (sequencial, sem pular):
+| Opção | Como funciona | Prós | Contras |
+|---|---|---|---|
+| **A. Wine local (oficial)** | MetaQuotes distribui script Wine para Ubuntu/Debian. Roda direto no host | Tudo em uma máquina, sem latência de rede; gratuito | Wine pode glitchar; updates do MT5 quebram ocasionalmente; gráficos podem ter artefatos |
+| **B. Container Wine pré-configurado** | Imagem Docker tipo `gmag11/metatrader5` ou build próprio com Wine + MT5 | Reprodutível; isolado; portável entre máquinas Linux | Comunidade pequena; manutenção da imagem é trabalho; X11/Wayland passthrough chato |
+| **C. VPS Windows remoto** | MT5 roda em VPS Windows da Forex/HostWinds/Contabo (R$ 50–150/mês). Linux local conecta via API | MT5 estável, package Python oficial funciona, latência baixa pra B3 se VPS for em SP | Custo recorrente; mais um ponto de falha (rede); fica dependente de provider |
 
-| Fase | O que o CaM faz com o Profit | Quando avança |
+**Recomendação para Carlos:** começar com **opção A (Wine local)** na Fase 1, validar estabilidade por 4 semanas. Se Wine glitchar repetidamente, migrar para **C (VPS Windows)** — sem reescrever nada da bridge, só mudar IP/porta.
+
+#### 6.1.2 Bridge Python ↔ MT5 — três alternativas
+
+O `MetaTrader5` Python package oficial **só funciona em Windows nativo**. Em Linux/Wine, três bridges viáveis:
+
+| Bridge | Como funciona | Maturidade | Custo |
+|---|---|---|---|
+| **EA MQL5 custom + socket TCP** | EA MQL5 que escuta porta TCP local, expõe métodos (`get_tick`, `send_order`, `get_position`) e publica eventos | Alta — padrão da comunidade MT5 quant | R$ 0 (open source `mql5-trading-server`, `dwx_zeromq`) |
+| **ZeroMQ via dwx-zeromq-connector** | Padrão consagrado: lib MQL5 + lib Python comunicam via ZeroMQ. Suporta req/rep, pub/sub, push/pull | Alta — projeto de Darwinex maintido | R$ 0 |
+| **MetaApi SaaS** | API REST/WebSocket hospedada na cloud; substitui MT5 local. Roda também em produção | Comercial, estável | US$ 0–250/mês conforme uso |
+
+**Recomendação:** **dwx-zeromq-connector** (open source, comunidade ativa, design correto pub/sub). MetaApi fica como plano B se o setup ZeroMQ em Wine for instável.
+
+#### 6.1.3 Faseamento da integração MT5 (sequencial, sem pular)
+
+| Fase | O que o CaM faz com o MT5 | Quando avança |
 |---|---|---|
-| **F1 — Manual** | CaM gera plano do dia, checklist, Risk Engine valida. Carlos opera Profit manualmente. CaM registra trades manualmente | Após primeira semana operando com 0 violação |
-| **F2 — Importação CSV** | CaM importa CSV/extrato Profit pós-mercado. Concilia journal manual × execução real. Tax ledger automático | Quando importação cobre 100% das operações sem erro |
-| **F3 — Semi-automática** | CaM monitora estado do Profit em tempo real (status, P&L, posição) via export periódico ou interface oficial. Ainda não envia ordem | Quando monitoramento é estável por 30 dias úteis |
-| **F4 — NTSL com regras espelhadas** | Estratégia escrita em NTSL no Profit + Risk hard-coded em NTSL. CaM publica parâmetros vigentes. Execução real automática | Após validação em conta de simulação + módulo de Automação de Estratégias contratado |
-| **F5 — ProfitDLL (avaliação)** | Apenas se necessidade real comprovar — adapter Python via ctypes para controle fino. **Não obrigatório** | Decisão futura por emenda |
+| **F1 — Manual** | CaM gera plano do dia, checklist, Risk Engine valida. Carlos opera MT5 manualmente. CaM registra trades manualmente | Após primeira semana operando com 0 violação |
+| **F2 — Importação histórica** | CaM importa relatório HTML/Excel/CSV do MT5 pós-mercado. Concilia journal manual × execução real | Quando importação cobre 100% das operações sem erro |
+| **F3 — Bridge read-only (ZeroMQ)** | EA MQL5 publica via pub/sub: ticks, posições, P&L. CaM consome via Python+ZeroMQ. **Ainda não envia ordem** | Quando estável por 30 dias úteis |
+| **F4 — Bridge read-write (EA + Risk Engine espelhado)** | EA MQL5 implementa estratégia + risk_mirror; CaM publica parâmetros aprovados; EA executa em conta de simulação primeiro, depois real | Após validação extensa em conta demo |
+| **F5 — Migração para `MetaTrader5` package nativo (opcional)** | Se Carlos decidir mover MT5 para VPS Windows OU rodar Python dentro do Wine, package oficial funciona — bridge custom vira fallback | Decisão futura por emenda |
 
-**ADR-001 (CaM):** O Profit é a plataforma oficial de execução. ProfitDLL não é dependência da Fase 0–3.
+**ADR-001-LINUX (CaM):** MT5 é a plataforma oficial de execução nesta variante. Bridge ZeroMQ é a integração padrão.
 
 ---
 
-### 6.2 Backend Python — Feature-Based Vertical Slice Architecture
+### 6.2 Backend Python — Vertical Slice + Shared Kernel
 
-**Decisão (revoga a arquitetura hexagonal proposta na v0):** o backend adota **Vertical Slice + Shared Kernel mínimo** para otimizar **desenvolvimento agêntico**. Cada feature é uma fatia auto-contida que um agente consegue ler, entender e modificar **lendo uma única pasta** — sem pular entre camadas técnicas (domain/application/infra) espalhadas em árvores diferentes.
+**Idêntico ao documento Windows+Profit (§6.2)** — Feature-Based Vertical Slice Architecture + Shared Kernel mínimo (ADR-013).
 
-**Por que Vertical Slice neste projeto:**
-
-| Motivo | Impacto agêntico |
-|---|---|
-| Feature auto-contida em uma pasta | Agente lê 1 pasta, não 6 — menos tokens, menos drift de contexto |
-| Paralelização sem conflito | Dois agentes trabalham em `features/journal/` e `features/fiscal/` simultaneamente sem touch overlap |
-| Refactoring isolado | Mudança em `features/fiscal/` não toca código de outras features |
-| Onboarding por feature | "Como funciona o journal?" → ler 1 README + 1 pasta |
-| Contrato explícito | Cada feature publica seus eventos e endpoints; comunicação só por contrato |
-| Menos abstração prematura | Sem porta/adapter/use-case ceremoniais quando ainda não há razão |
-
-**Por que Shared Kernel ainda existe (mínimo):**
-
-O **Risk Engine** é autoridade constitucional (Art. 15º) — **toda** feature que toque ordem precisa consultá-lo. Em vertical slice puro, "shared" vira lixão. A solução é um **kernel mínimo, congelado, versionado e auditado**, contendo apenas o que é genuinamente transversal e constitucional.
-
-#### Estrutura
+**Única diferença:** a feature `profit_integration/` é substituída por `mt5_integration/`, com a mesma anatomia padrão (`README.md`, `domain.py`, `schemas.py`, `repository.py`, `service.py`, `routes.py`, `events.py`, `tests/`).
 
 ```
-backend/
-├── pyproject.toml          # uv + ruff + pytest + import-linter config
-├── alembic.ini
-├── migrations/
-└── cam/
-    │
-    ├── _shared/                  # ╔══ SHARED KERNEL — usado por TODAS as features ══╗
-    │   ├── README.md             #   regra: o que entra aqui é constitucional/transversal
-    │   ├── risk/                 #   ▶ Risk Engine — autoridade (Pure Python, 100% test)
-    │   │   ├── engine.py
-    │   │   ├── validators/       #   máx_contracts, daily_loss, kill_switch, …
-    │   │   ├── decisions.py      #   RiskDecision (Approved | Rejected)
-    │   │   └── tests/            #   property-based (hypothesis)
-    │   ├── domain/               #   ▶ primitivas: Money, ContractCount, Phase, AssetType
-    │   ├── events/               #   ▶ event bus interno (asyncio.Queue / pyee)
-    │   ├── audit/                #   ▶ audit logger transversal (structlog)
-    │   ├── infra/                #   ▶ DB session factory, settings (pydantic-settings)
-    │   └── config/               #   ▶ .env loader
-    │
-    ├── features/                 # ╔══ VERTICAL SLICES — cada pasta é auto-contida ══╗
-    │   │
-    │   ├── journal/              # Art. 31º — registro de operações
-    │   │   ├── README.md         # contrato da feature (inputs, outputs, eventos, artigos)
-    │   │   ├── domain.py         # JournalEntry, JournalQuery (entidades desta feature)
-    │   │   ├── schemas.py        # Pydantic in/out (API + persistência)
-    │   │   ├── repository.py     # SQLAlchemy específico desta feature
-    │   │   ├── service.py        # lógica de aplicação
-    │   │   ├── routes.py         # FastAPI router próprio
-    │   │   ├── events.py         # eventos publicados/consumidos
-    │   │   └── tests/
-    │   │
-    │   ├── fiscal/               # Arts. 24–27 — apuração DARF, IRRF, compensação
-    │   ├── ledger/               # Arts. 7–10, 21–22 — buckets, capital, sangria
-    │   ├── harvest/              # Art. 21º — distribuição mensal de lucro
-    │   ├── strategies/           # ciclo de vida + parâmetros + registro
-    │   ├── backtest/             # engine (usa _shared/risk/ + features/strategies/)
-    │   ├── paper_trading/        # paper adapter (mesma interface conceitual de profit)
-    │   ├── profit_integration/   # CSV importer + NTSL publisher + (futuro) ProfitDLL
-    │   ├── market_data/          # ingestão e armazenamento de tick/candle
-    │   ├── kill_switch/          # Art. 18º — mecanismo de interrupção imediata
-    │   ├── checklists/           # Arts. 32–33 — pré/pós mercado
-    │   ├── notifications/        # bot Telegram (subscriber em eventos críticos)
-    │   ├── ai_analyst/           # Ollama + Anthropic (auditor pós-mercado)
-    │   └── constitution/         # versionamento, emendas (Art. 38º), POV (Art. 37º)
-    │
-    ├── api/                      # ╔══ COMPOSER FASTAPI — só monta o app ══╗
-    │   ├── main.py               # cria FastAPI, registra routers de cada feature
-    │   ├── lifespan.py           # startup/shutdown hooks
-    │   ├── middleware.py         # CORS, audit, rate limit local
-    │   └── websocket.py          # WS broker (subscribe em _shared/events)
-    │
-    └── tests/                    # testes que cruzam features
-        ├── e2e/                  # signal → risk → execution → journal
-        └── integration/
+backend/cam/features/mt5_integration/
+├── README.md              # contrato: bridge ZeroMQ + comandos disponíveis + eventos consumidos
+├── domain.py              # MT5Tick, MT5Position, MT5Order
+├── schemas.py             # Pydantic in/out
+├── bridge.py              # ZeroMQ pub/sub + req/rep com EA MQL5
+├── importer.py            # importação HTML/Excel/CSV do MT5 (Fase 1-2)
+├── service.py             # orquestração: assinatura, reconnect, heartbeat
+├── routes.py              # endpoints para status da bridge
+├── events.py              # publica eventos `mt5.tick`, `mt5.fill`, `mt5.position_change`
+└── tests/                 # mock do EA via fake ZeroMQ server
 ```
 
-#### Regras invioláveis (enforçadas por `import-linter` no CI)
-
-1. **`features/X/` NUNCA importa de `features/Y/`** — sem exceção. Comunicação cross-feature só por:
-   - `_shared/` (kernel)
-   - Eventos publicados/consumidos via `_shared/events/`
-   - Composição na camada `api/` (que conhece todas as features, mas features não conhecem a si)
-2. **`_shared/risk/` é autoridade** — toda feature que valide ou autorize ordem chama `from cam._shared.risk import engine`. Nunca duplica regra constitucional.
-3. **`_shared/risk/` NÃO importa de NADA** — Pure Python, zero I/O. Quebra de build se importar `features/`, `api/`, `infra/db`, etc.
-4. **`_shared/` só cresce com fricção real** — para entrar em shared kernel: o item tem que ser usado por **3+ features** OU ser **mandato constitucional**. Caso contrário, fica na feature.
-5. **Cada `features/X/` tem README.md obrigatório** — contrato da feature: propósito, inputs (HTTP endpoints + eventos consumidos), outputs (eventos publicados, tabelas tocadas), artigos constitucionais aplicáveis, anti-padrões.
-
-#### Convenção interna de cada feature
-
-| Arquivo | Conteúdo | Obrigatório? |
-|---|---|---|
-| `README.md` | Contrato (propósito · I/O · eventos · artigos · anti-padrões) | Sim |
-| `domain.py` | Entidades e value objects da feature | Sim se há lógica |
-| `schemas.py` | Pydantic in/out | Sim se há API |
-| `repository.py` | Acesso a dados (SQLAlchemy) | Sim se persiste |
-| `service.py` | Lógica de aplicação | Sim |
-| `routes.py` | FastAPI router (`@router.get(...)`) | Sim se expõe HTTP |
-| `events.py` | Eventos publicados e handlers | Sim se comunica |
-| `tests/` | Unit + integration da própria feature | Sim |
-
-#### Diretrizes operacionais para o agente
-
-- **Demanda nova de feature?** Criar pasta `features/{nome}/`, escrever README.md primeiro com o contrato.
-- **Precisa de algo de outra feature?** NÃO importe. Ou publica/consome evento, ou eleva para `_shared/` se for genuinamente transversal (com gate Founder).
-- **Precisa validar ordem/risco?** Chama `_shared/risk/`. Sem exceção.
-- **Vai duplicar código de outra feature?** Primeiro pergunta: posso evitar? Se não, duplica conscientemente — repetição é mais barata que acoplamento errado em vertical slice.
-- **A feature `audit_log` ficou parecida com `events`?** Provavelmente são a mesma — funde antes de virar dois.
-
-> **Por que essa arquitetura sobrevive ao crescimento:** quando o CaM tiver 30 features, o agente continua lendo uma pasta para entender uma feature. Em arquitetura hexagonal, com 30 features, `domain/`, `application/`, `infra/` ficam imensos e exigem navegação cruzada constante — péssimo para LLM.
+**Regra cardinal mantida:** `features/mt5_integration/` NÃO importa `features/Y/`. Comunicação com outras features só via eventos.
 
 ---
 
 ### 6.3 Risk Engine — `cam/_shared/risk/`
 
-Módulo Python puro **dentro do Shared Kernel** (autoridade transversal — Art. 15º). Recebe `OrderCandidate` + `RiskContext`, retorna `RiskDecision` (`Approved` ou `Rejected(reason: str)`). Nenhuma feature pode duplicar regra constitucional — todas chamam `from cam._shared.risk import engine`.
-
-**Validators mínimos (cobertura 100% obrigatória — Anexo II saída Fase 0):**
-
-| Validator | Artigo |
-|---|---|
-| `max_contracts_check` (limite absoluto) | Art. 11º |
-| `phase_contracts_check` (limite por fase) | Art. 12º (Fase 2: 1 contrato; sem simultaneidade) |
-| `daily_loss_limit_check` (3%) | Art. 16º + POV |
-| `weekly_loss_limit_check` (7%) | Art. 16º + POV |
-| `monthly_loss_limit_check` (15% — congela fase) | Art. 16º + POV |
-| `gain_lock_check` (2% diário encerra dia) | Art. 17º |
-| `daily_operations_count_check` (3 Fase 1–2, 5 Fase 3–4) | Art. 20º + POV |
-| `martingale_check` (proíbe aumentar contratos após loss) | Art. 13º |
-| `trading_window_check` (15 min pós-abertura, 10 min pré-fechamento, eventos macro) | POV |
-| `simultaneous_position_check` (WIN/WDO simultâneo só Fase 3+) | Art. 12º + POV |
-| `circuit_breaker_check` (configurável) | Art. 18º |
-| `kill_switch_active_check` | Art. 18º |
-| `tax_compliance_check` (DARF atrasada bloqueia) | Art. 26º |
-| `phase_authorization_check` (estratégia autorizada na fase atual) | Art. 30º |
-| `setup_a_plus_check` (Fase 4 — 2 contratos só em Setup A+) | Art. 11º + Anexo II Fase 4 |
-| `pre_market_checklist_check` (Art. 32º) | Art. 32º |
-| `post_market_checklist_check` (bloqueia próximo pregão se ausente) | Art. 33º |
-
-**Testes:**
-
-- `tests/unit/test_risk/`: unitários por validator
-- `tests/property/test_risk_invariants/`: property-based via `hypothesis` — gera cenários adversos
-- Cada artigo da Constituição relevante tem teste nomeado: `test_art_11_max_contracts_absolute`, `test_art_15_risk_engine_authority`, etc.
+**Idêntico ao documento Windows+Profit (§6.3)** — Pure Python, zero I/O, 100% testado com property-based via `hypothesis`, validators ligados aos artigos constitucionais.
 
 ---
 
 ### 6.4 Banco de Dados — PostgreSQL 16 + TimescaleDB desde Fase 0
 
-**Decisão (revoga proposta anterior de SQLite no MVP):** PostgreSQL 16 com extensão TimescaleDB é o banco transacional **e** de séries temporais do CaM **desde o primeiro commit**. SQLite foi descartado.
+**Idêntico ao documento Windows+Profit (§6.4)** — Postgres+Timescale via Docker.
 
-#### Por que Postgres+Timescale desde o início
-
-A premissa operacional do CaM exige **análise de padrões em estratégias** sobre **volume massivo de tick/candle data**. SQLite seria fricção pura:
-
-- **Volume real:** 1 ativo (WIN ou WDO) em horário de pregão (10h–18h) com tick a 50–100 ms ≈ **300k–600k ticks/dia**. Dois ativos, dois anos de histórico para backtest ≈ **400M–800M registros**. SQLite não foi feito pra isso.
-- **Análise de padrões** exige: window functions complexas, time-bucketing arbitrário (1s, 5s, 1m, 5m, 15m, 1h), gap-fill, agregações estatísticas (percentil, stddev móvel, ATR, ADX), correlações cross-ativo. Tudo nativo no Postgres+Timescale, doloroso no SQLite.
-- **Continuous aggregates** (Timescale): candles em vários timeframes pré-agregados e atualizados em background. Backtest e dashboard consultam pré-agregados em ms — sem isso, cada query reagrega tick puro.
-- **Compressão Timescale**: tick antigo comprime 10–95×. Sem compressão, 800M ticks ≈ centenas de GB; com compressão, dezenas de GB.
-- **Hyperfunctions** (Timescale): `time_bucket`, `first/last`, `histogram`, `time_weight`, `interpolate`, `locf` — primitivas que substituem dezenas de linhas de Python.
-- **JOIN tick × operacional**: cruzar tick data com `cam_trades`, `cam_risk_decisions` é trivial em Postgres, inviável em SQLite + Python.
-
-Mudar de SQLite para Postgres no meio do projeto sai mais caro do que pagar o overhead inicial de Docker Desktop + WSL2.
-
-#### Setup
-
-- **Container:** `timescale/timescaledb:latest-pg16` via `docker-compose.yml` no repo do app (ativo desde M1)
-- **Linux dev:** Docker nativo (já instalado: Docker 29.1)
-- **Windows prod:** Docker Desktop + WSL2 (Carlos instala junto com a portabilidade)
-- **Migrations:** Alembic com convenção de naming consistente, incluindo `CREATE EXTENSION timescaledb` na migration inicial
-- **Acesso:** SQLAlchemy 2.0 + driver `psycopg[binary]` (v3). Sessions assíncronas para o backend FastAPI
-
-#### Schemas
-
-**Domínio operacional (tabelas regulares):**
-
-```sql
-cam_orders                    -- ordens propostas e executadas
-cam_positions                 -- posições abertas/fechadas
-cam_trades                    -- execuções (fills)
-cam_journal_entries           -- entradas de journal (Art. 31º)
-cam_risk_decisions            -- TODA decisão do Risk Engine (audit trail)
-cam_violations                -- violações para cálculo de aderência (Art. 29º)
-cam_constitution_versions     -- emendas constitucionais
-cam_pov_versions              -- versões da POV (Art. 37º)
-cam_phase_history             -- transições de fase
-cam_checklist_pre_market      -- Art. 32º
-cam_checklist_post_market     -- Art. 33º
-cam_kill_switch_events        -- ativações do kill switch (Art. 18º)
-```
-
-**Fiscal (tabelas regulares):**
-
-```sql
-cam_fiscal_apuration          -- apuração mensal
-cam_darf_history              -- DARFs gerados/pagos
-cam_loss_compensation_ledger  -- prejuízos compensáveis (Art. 27º)
-```
-
-**Market data (Timescale hypertables — desde M1):**
-
-```sql
-cam_market_ticks              -- hypertable, chunk 1 dia, compressão > 7 dias
-cam_market_book_snapshots     -- hypertable, chunk 1 dia, compressão > 3 dias
--- Continuous aggregates:
-cam_candles_1s                -- agregação contínua de cam_market_ticks
-cam_candles_5s
-cam_candles_1m
-cam_candles_5m
-cam_candles_15m
-cam_candles_1h
-cam_candles_1d
--- (criados via CREATE MATERIALIZED VIEW ... WITH (timescaledb.continuous))
-```
-
-**Backtest / research (hypertable + regular):**
-
-```sql
-cam_backtest_runs             -- metadata da execução (regular)
-cam_backtest_trades           -- trades simulados (regular)
-cam_backtest_equity_curve     -- hypertable se grande
-cam_pattern_studies           -- registro de estudos de padrão (regular)
-```
-
-#### Retenção e compressão
-
-| Tabela | Retenção bruta | Política Timescale |
-|---|---|---|
-| `cam_market_ticks` | indefinida | compressão após 7 dias; reorder após 30 dias |
-| `cam_market_book_snapshots` | 90 dias bruto | compressão após 3 dias; drop após 90 dias |
-| `cam_candles_*` (continuous aggregates) | indefinida | sem compressão (já agregado, pequeno) |
-| `cam_journal_entries`, `cam_risk_decisions`, `cam_violations` | **infinita** | memória institucional do CaM |
-| `cam_orders`, `cam_trades`, `cam_positions` | infinita | memória operacional |
-| `cam_fiscal_*` | infinita | exigência legal (5 anos mínimo, manter mais) |
-| `cam_backtest_*` | configurável por run | drop após N execuções por estudo |
-
-#### Backup
-
-- `pg_dump` diário automatizado (cron Linux dev / Task Scheduler Windows prod) → `~/cam-backups/YYYY-MM-DD.dump`
-- `rclone` para Google Drive ou S3 — sync incremental noturno
-- **Journal duplo** (R5 mitigação): além do banco, append-only em `~/.cam/journal/YYYY-MM-DD.jsonl` versionado em Git privado separado — se o Postgres cair com posição aberta, journal local + JSONL ainda registra tudo
-
-#### Papel do DuckDB nesta arquitetura
-
-DuckDB **complementa** Postgres+Timescale, não substitui. Casos de uso:
-
-- Research exploratório em CSV/Parquet exportado do Profit (importação inicial antes de virar hypertable Timescale)
-- Notebooks Jupyter de pesquisa quant onde Carlos quer fazer query SQL em arquivo local sem subir nada
-- Backtest em datasets isolados (um experimento específico) sem poluir o Postgres operacional
-
-Decisão: DuckDB nunca grava em tabela vista pelo cockpit live. É read-only sobre arquivos.
+**Diferença operacional:** no Linux roda **Docker Engine + docker-compose nativo** (sem Docker Desktop, sem licença), via `apt install docker.io docker-compose-v2` ou install script oficial. Já temos Docker 29.1 instalado na máquina atual.
 
 ---
 
 ### 6.5 Frontend — React 19 + Vite + MUI
 
-**Decisão:** SPA local servida pelo backend FastAPI (`/static/cockpit/`). **Sem Next.js** — não há necessidade de SSR em cockpit local mono-usuário.
+**Idêntico ao documento Windows+Profit (§6.5)** — SPA local servida pelo backend FastAPI, telas mínimas iguais (`Cockpit Live`, `Trade Journal`, `Estratégias`, `Risk Console`, `Backtest`, `Paper Trading`, `Carteira Hard`, `Fiscal`, `Constituição read-only`, `Configurações`).
 
-**Telas mínimas Fase 0:**
+**Detalhe específico:** a tela `Configurações` ganha uma seção **"Bridge MT5"** com:
 
-1. **Cockpit Live** — P&L líquido (Art. 25º), posições, status Risk Engine, **kill switch grande/vermelho/confirmação dupla** (Art. 18º), gauges de limite diário/semanal/mensal
-2. **Trade Journal** — listagem com filtros, exportação
-3. **Estratégias** — habilitar/desabilitar (com cooldown), parâmetros vigentes
-4. **Risk Console** — POV vigente, log de decisões do Risk Engine, gauges
-5. **Backtest** — executar, comparar, walk-forward
-6. **Paper Trading** — mesma UI do Live + badge "PAPER" gigante em vermelho
-7. **Carteira Hard** — snapshot patrimonial, dividendos, harvest history
-8. **Fiscal** — apuração, DARF, compensação, alertas
-9. **Constituição (read-only)** — visualização + histórico de versões + botão "propor emenda" (Art. 38º com cooldowns)
-10. **Configurações** — conexão Profit, Telegram, paths
+- Status da conexão ZeroMQ (verde/vermelho)
+- Heartbeat e latência (ms)
+- Botão "Reiniciar bridge"
+- Path do MT5 (Wine local / container / VPS)
+- Janela do MT5 aberta vs fechada (se Wine local)
 
 ---
 
 ### 6.6 IA — Política Vinculante
 
-(Constituição Arts. 34º–36º)
-
-**Pode:**
-
-- Analisar journal pós-mercado
-- Gerar resumo diário/semanal/mensal
-- Apontar anomalias comportamentais (aderência, padrões de loss)
-- Sugerir hipóteses de estudo
-- Code review de estratégias e do próprio Risk Engine
-- Apoiar pesquisa quant
-
-**Não pode:**
-
-- Enviar ordem (Art. 35º)
-- Desabilitar/contornar/parametrizar Risk Engine (Art. 35º)
-- Justificar exceção a regra constitucional (Art. 35º)
-- Atuar como autoridade final de execução em tempo real (Art. 35º)
-- Ser advogada de defesa para violação do operador (Art. 35º)
-
-**Onde roda:**
-
-- **Job assíncrono pós-mercado** lê journal do dia → gera análise → envia via Telegram
-- **Endpoints API** acionados manualmente pelo operador
-- **CLI de research** separada (binário diferente do backend live)
-
-**Modelos:**
-
-- **Ollama local** (qwen2.5, llama3, etc.) para análise privada e dados sensíveis
-- **Anthropic API (Claude)** quando análise demandar capacidade superior — apenas com dados anonimizados ou não sensíveis
+**Idêntica ao documento Windows+Profit (§6.6)** — Arts. 34º–36º.
 
 ---
 
-## 7. Ambiente de Desenvolvimento
+### 6.7 Rodando MT5 em Linux — Setup Operacional
 
-### 7.1 Dev em Linux (atual)
+Esta seção não existe no documento Windows+Profit. Detalhamento prático específico desta variante.
 
-| Item | Por quê |
+#### Opção A — Wine local (recomendada para Fase 1)
+
+```bash
+# Ubuntu 24.04+ / 26.04
+# 1. Instalar Wine
+sudo dpkg --add-architecture i386
+sudo mkdir -pm755 /etc/apt/keyrings
+sudo wget -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key
+sudo wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/$(lsb_release -cs)/winehq-$(lsb_release -cs).sources
+sudo apt update
+sudo apt install --install-recommends winehq-stable
+
+# 2. Baixar instalador MT5 da MetaQuotes
+wget https://download.mql5.com/cdn/web/metaquotes.software.corp/mt5/mt5setup.exe
+
+# 3. Rodar via Wine
+wine mt5setup.exe
+# Setup gráfico abre, instala MT5
+
+# 4. Lançar MT5
+wine "$HOME/.wine/drive_c/Program Files/MetaTrader 5/terminal64.exe"
+```
+
+**Atenção:** MetaQuotes mantém um script oficial em `https://www.mql5.com/en/articles/625` (artigo "Linux on MetaTrader 5"). Vale rodar o script oficial em vez de instalar tudo manualmente.
+
+#### Opção B — Container Wine pré-configurado
+
+```yaml
+# docker-compose.yml fragment
+services:
+  mt5:
+    image: ghcr.io/elestio/metatrader5:latest   # validar imagem maintida antes de usar
+    environment:
+      - DISPLAY=${DISPLAY}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ./mt5-data:/config
+    ports:
+      - "5556:5556"   # porta ZeroMQ exposta pelo EA
+    network_mode: host  # ou rede dedicada com expose das portas
+```
+
+#### Opção C — VPS Windows remoto
+
+- Provedor recomendado para Brasil: **Forex VPS** ou **ContaboFX** com servidor em São Paulo (latência baixa pra B3)
+- Custo típico: R$ 80–150/mês
+- Conexão CaM Linux → VPS via TCP (ZeroMQ porta exposta) ou MetaApi
+- **Risco:** mais um ponto de falha; CaM precisa lidar com perda de conexão como evento operacional (estado OPS)
+
+---
+
+## 7. Ambiente — Linux nativo (sem dual SO)
+
+### 7.1 Desenvolvimento e produção no mesmo host
+
+Vantagem chave desta variante: **dev = prod**. Não há ponte entre WSL2 e Windows nativo; não há "rodar o Risk Engine no Linux mas testar integração no Windows". Tudo no mesmo SO.
+
+| Item | Status no host atual (Ubuntu 26.04) |
 |---|---|
-| Eficiência de tooling Python (uv, pytest, profiling) | WSL2 funciona, mas nativo é mais limpo |
-| Build/test do frontend é cross-platform | Vite/pnpm funcionam idênticos |
-| Risk Engine, domain, strategies, backtest, fiscal, IA podem ser desenvolvidos 100% em Linux | Não dependem do Profit |
-| Postgres+TimescaleDB rodando em Docker nativo | Já temos Docker 29.1 instalado |
-| Integração com Profit/NTSL → Windows | Apenas na fase de integração final |
+| Linux | ✅ Ubuntu 26.04 LTS |
+| Docker Engine | ✅ Docker 29.1 |
+| Git, Node, pnpm, gh | ✅ Já instalados |
+| Python 3.12 | ⚠️ Atual é 3.14 — instalar 3.12 paralelo via `uv python install 3.12` |
+| Wine | ❌ Instalar (`winehq-stable`) — se opção A para MT5 |
+| `psql` client | ❌ Instalar (`postgresql-client`) |
+| `uv`, `ruff`, `rclone` | ❌ Instalar (mesmos comandos do documento Windows) |
 
-### 7.2 Produção em Windows 11
+### 7.2 Containers nativos
 
-| Item | Por quê |
+Diferente do Windows, no Linux rodamos Docker Engine direto, sem Docker Desktop. Mesma `docker-compose.yml` mas:
+
+- Volumes mapeados em `/home/carlos/...` em vez de `C:\Users\Carlos\...`
+- Networks usam bridge nativo sem virtualização
+- Performance significativamente melhor (sem overhead WSL2)
+
+### 7.3 Estratégia de produção 24/7 (futura)
+
+Para Fase 4+ com EA rodando autônomo no horário de pregão:
+
+| Componente | Como manter rodando |
 |---|---|
-| Profit Pro + Automação de Estratégias | Windows-only |
-| Backend Python | Roda nativo no Windows (necessário para futura ProfitDLL Fase 5) |
-| PostgreSQL 16 + TimescaleDB | Docker Desktop + WSL2 (Windows) — **obrigatório desde Fase 0** |
-| Backup | `pg_dump` + `rclone` agendado via Task Scheduler |
-
-### 7.3 Estratégia de portabilidade dev↔prod
-
-- Código 100% cross-platform via `pathlib`, sem hardcode de paths
-- `.env.example` documenta variáveis específicas por SO
-- CI/CD futuro: GitHub Actions com matriz `[ubuntu-latest, windows-latest]`
-- Adapters (Profit) injetados via DI — em Linux usa mock; em Windows usa real
+| MT5 (Wine) | `systemd --user` service com auto-restart |
+| Backend FastAPI | `systemd` service + uvicorn workers |
+| Postgres+Timescale | container Docker com `restart: unless-stopped` |
+| Backup pg_dump + rclone | `systemd timer` diário |
+| Telegram bot (independente) | `systemd` service separado — sobrevive a crash do cockpit |
 
 ---
 
 ## 8. Estrutura de Repositórios
 
-**Decisão:** **monorepo único** no MVP, separar quando justificar.
-
 ```
 apps/
 └── cam-cockpit/                  # backend Python + frontend React no mesmo repo
     ├── backend/
-    │   ├── pyproject.toml        # uv + ruff + pytest + import-linter
+    │   ├── pyproject.toml
     │   ├── alembic.ini
     │   ├── migrations/
-    │   ├── tests/                # e2e / integração cross-feature
+    │   ├── tests/
     │   ├── .env.example
     │   └── cam/
-    │       ├── _shared/          # SHARED KERNEL (risk, domain, events, audit, infra)
-    │       ├── features/         # VERTICAL SLICES (journal, fiscal, ledger, ...)
-    │       └── api/              # FastAPI composer
-    │
-    ├── frontend/
-    │   ├── package.json
-    │   ├── vite.config.ts
-    │   ├── public/
-    │   └── src/
-    │       ├── features/         # VERTICAL SLICES no frontend também
-    │       │   ├── cockpit/      # cada feature em uma pasta
+    │       ├── _shared/          # SHARED KERNEL
+    │       ├── features/
+    │       │   ├── mt5_integration/   # ← bridge ZeroMQ + importer
     │       │   ├── journal/
-    │       │   ├── risk-console/
     │       │   ├── fiscal/
-    │       │   ├── backtest/
     │       │   └── ...
-    │       ├── _shared/          # componentes, hooks e tipos transversais
-    │       ├── api/              # client da API (tipos derivados de OpenAPI)
-    │       └── app/              # router root, providers, layout
+    │       └── api/
     │
-    ├── ntsl/                     # estratégias NTSL versionadas
-    │   ├── strategies/
-    │   ├── risk_mirror/          # regras espelhadas (segunda linha de defesa)
+    ├── frontend/                 # idêntico ao doc Windows
+    │
+    ├── mql5/                     # ← substituiu /ntsl
+    │   ├── experts/              # EAs (Expert Advisors)
+    │   │   ├── cam_bridge.mq5    # EA principal (publica ticks + executa ordens)
+    │   │   └── cam_risk_mirror.mq5  # risk_mirror espelhado
+    │   ├── indicators/           # indicadores customizados (se houver)
+    │   ├── scripts/              # scripts MQL5 utilitários
+    │   ├── include/              # bibliotecas .mqh compartilhadas
     │   └── README.md
     │
     ├── scripts/
-    │   ├── dev.sh / dev.ps1
+    │   ├── dev.sh
     │   ├── backup.sh
-    │   └── import_profit_csv.py
-    ├── docker-compose.yml        # postgres/redis (Fase 3+)
+    │   ├── import_mt5_report.py
+    │   ├── install_wine_mt5.sh   # ← novo: setup automatizado do Wine+MT5
+    │   └── start_mt5.sh
+    ├── docker-compose.yml        # Postgres+Timescale (+ opcional container MT5)
     └── README.md
 ```
 
-**Simetria intencional:** o **frontend** também segue Vertical Slice (`src/features/{nome}/` espelhando os módulos do backend quando possível). Mesmo motivo: agente trabalha numa pasta. Mesmas regras invioláveis: `features/X/` não importa de `features/Y/`.
-
-Em `/project/cam-cockpit/` ficam os artefatos DevFlow: SCOPE, SPEC, PLAN, DAS, ADRs, PROOF-PACKs.
-
 ---
 
-## 9. ADRs (Architecture Decision Records) Embutidos
+## 9. ADRs (Architecture Decision Records) — Variante Linux+MT5
 
-ADRs formais ficam em `/project/cam-cockpit/architecture/adrs/` quando ARCH (Fase 3 do NCC-1701) for executada formalmente. Resumo das decisões já tomadas:
+ADRs que mudam em relação ao documento Windows+Profit. Os demais (ADR-002, 003, 004, 005, 006, 007, 010, 011, 013) **permanecem idênticos**.
 
-| ID | Decisão | Princípio | Status |
-|---|---|---|---|
-| **ADR-001** | Profit como plataforma oficial de execução | 2, 9 | Proposto |
-| **ADR-002** | Python 3.12 + FastAPI como backend cockpit | 4, 7, 8 | Proposto |
-| **ADR-003** | React 19 + Vite + MUI como frontend (SPA local, sem Next.js) | 7, 8 | Proposto |
-| **ADR-004** | **PostgreSQL 16 + TimescaleDB desde Fase 0** (revoga proposta anterior de SQLite no MVP). Justificativa: volume de tick data e análise de padrões em estratégias exigem hypertables, continuous aggregates, compressão e hyperfunctions desde o início. DuckDB complementa em research read-only sobre arquivos | 3, 4, 6, 7 | Proposto |
-| **ADR-005** | DuckDB como motor analítico **auxiliar** (research read-only sobre CSV/Parquet/Jupyter), complementando Postgres+Timescale — não substitui | 3, 4, 7 | Proposto |
-| **ADR-006** | IA sem autoridade operacional (Arts. 34º–36º) | 1 | Vinculante constitucional |
-| **ADR-007** | Risk Engine em Python puro dentro do Shared Kernel (`cam/_shared/risk/`), sem I/O, 100% testado | 1, 4, 5, 6 | Proposto |
-| **ADR-008** | Integração Profit por fases (manual → CSV → semi-auto → NTSL → ProfitDLL opcional) | 2, 5, 9 | Proposto |
-| **ADR-009** | Risk Engine espelhado em NTSL como segunda linha de defesa | 1, 5, 10 | Proposto |
-| **ADR-010** | Telegram bot como canal externo de alerta independente do cockpit | 5, 6 | Proposto |
-| **ADR-011** | Monorepo único `apps/cam-cockpit/` no MVP | 7 | Proposto |
-| **ADR-012** | Dev em Linux, produção em Windows; código cross-platform via `pathlib` | — | Proposto |
-| **ADR-013** | **Feature-Based Vertical Slice Architecture + Shared Kernel mínimo** no backend e frontend, otimizando desenvolvimento agêntico (revoga arquitetura hexagonal proposta na v0). Regra inviolável: `features/X/` não importa `features/Y/`; comunicação cross-feature só via `_shared/` ou eventos | 4, 6, 8 | Proposto |
-
-> Quando o gate ARCH for executado formalmente, cada ADR vira artefato próprio em `/project/cam-cockpit/architecture/adrs/ADR-{NNN}-{slug}.md`.
-
----
-
-## 10. Custos Recorrentes — Honestidade
-
-Conforme Art. 8º, custos PF, fora do CaM.
-
-| Item | Custo estimado | Obrigatório? |
+| ID | Decisão | Status |
 |---|---|---|
-| Profit Pro com book (Nelogica) | R$ 200–300/mês | Sim (Fase 1+) |
-| Módulo de Automação de Estratégias | adicional | Sim (Fase 4+) |
-| Corretora vinculada | corretagem por trade | Sim |
-| Cloud backup (rclone Google Drive) | R$ 0–30/mês | Recomendado |
-| Anthropic API | R$ 0–50/mês | Não, sob demanda |
+| **ADR-001-LINUX** | MT5 (MetaQuotes) como plataforma oficial de execução. EAs MQL5 fazem execução. Bridge ZeroMQ Python↔MQL5 é a integração padrão | Proposto |
+| **ADR-008-LINUX** | Integração MT5 por fases: Manual → Importação HTML/CSV → Bridge read-only (ZeroMQ) → Bridge read-write (EA + risk_mirror) → Migração opcional para `MetaTrader5` package nativo via VPS Windows | Proposto |
+| **ADR-009-LINUX** | Risk Engine espelhado em MQL5 (`cam_risk_mirror.mq5`) dentro do EA como segunda linha de defesa. Mesma lógica do espelhamento NTSL do documento Windows | Proposto |
+| **ADR-012-LINUX** | Dev e produção no mesmo Linux (Ubuntu LTS). Sem dual SO. Wine como detalhe de execução para o MT5 | Proposto |
+| **ADR-014-LINUX** (novo) | MT5 hospedado em Wine local (Fase 1), com plano de migração para VPS Windows se instabilidade Wine recorrente. CaM resiliente à mudança de host MT5 (configurável por env: localhost vs IP da VPS) | Proposto |
+| **ADR-015-LINUX** (novo) | Docker Engine nativo (sem Docker Desktop). Postgres+Timescale, opcionalmente MT5 container, todos em `docker-compose.yml` versionado | Proposto |
+
+---
+
+## 10. Custos Recorrentes — Variante Linux+MT5
+
+| Item | Custo aproximado | Obrigatório? |
+|---|---|---|
+| Sistema operacional | R$ 0 (Ubuntu LTS) | Sim |
+| MetaTrader 5 (plataforma) | R$ 0 (gratuito da MetaQuotes) | Sim |
+| Corretora com MT5 + WIN/WDO | corretagem por trade | Sim |
+| Conta de simulação MT5 (demo) | R$ 0 (gratuita) | Sim (Fase 1) |
+| VPS Windows (se opção C para hospedar MT5) | R$ 80–150/mês | Opcional |
+| MetaApi (se substituir bridge ZeroMQ) | US$ 0–250/mês conforme uso | Opcional plano B |
+| Cloud backup (rclone GDrive/S3) | R$ 0–30/mês | Recomendado |
+| Anthropic API (uso analítico) | R$ 0–50/mês | Não, sob demanda |
 | GitHub privado | R$ 0 (free tier) | Sim |
 | Telegram | R$ 0 | Sim |
-| Resto da stack (Python, React, Postgres, DuckDB, etc.) | R$ 0 | — |
+| PostgreSQL/TimescaleDB | R$ 0 (open source, container) | Sim |
+| Resto da stack | R$ 0 (open source) | — |
 
-**Total mensal típico Fase 1–3:** R$ 200–380.
+**Total mensal típico Fase 1–3:** **R$ 0–30** (apenas corretagem + backup opcional). Se opção C (VPS): R$ 80–180.
 
-**Honestidade dura (de Voltaire):** isso é **4–8% ao mês sobre R$ 5.000** declarados. O sistema precisa ter **expectância líquida positiva acima desse patamar** para parar de queimar caixa pessoal. **Edge mínimo de sobrevivência** deve aparecer explícito desde o backtest. Backtest sem custos de plataforma está mentindo.
+**Comparação direta com Windows+Profit:** estimativa do doc Windows era R$ 200–380/mês (Profit Pro). Esta variante economiza **R$ 200–350/mês** no MVP.
+
+**Atenção:** o custo "zero" do MT5 esconde custo de manutenção do Wine (tempo de Carlos) — se Wine glitchar muito, vai consumir horas. Se isso virar realidade, migrar para opção C (R$ 80–150/mês VPS) — ainda mais barato que Profit Pro.
 
 ---
 
-## 11. Riscos da Stack — Mitigações
+## 11. Riscos da Stack — Variante Linux+MT5
+
+Riscos R1–R8 do documento Windows+Profit permanecem (substituindo "Profit" por "MT5" onde aplicável). **Riscos adicionais específicos desta variante:**
 
 | ID | Risco | Mitigação |
 |---|---|---|
-| R1 | Profit/NTSL/ProfitDLL muda sem aviso | Travar versão; smoke test antes do pregão; manter changelog próprio |
-| R2 | Operador desligar Risk Engine "só por hoje" | Flag `PRODUCTION_ALLOWED` versionada + edição requer cooldown (Art. 38º) |
-| R3 | Backtest divergir do live (DRY quebrado) | Contrato `MarketContext` único; testes de paridade backtest↔paper |
-| R4 | Acoplamento acidental risk↔infra | `import-linter` configurado; CI bloqueia merge se `risk/` importar de `execution/`/`journal/` |
-| R5 | Falha catastrófica do banco com posição aberta | Journal duplo: Postgres + JSONL append-only em disco local; modo degradado bloqueia novas ordens e alerta via Telegram |
-| R6 | Vazamento de credenciais | `.env` nunca versionado; pré-commit hook detecta padrões de chave; Windows Credential Manager via `keyring` |
-| R7 | Performance Python para tick streaming | Profiling desde o início; hot path em Cython/Rust **se necessário** (improvável em 1 ativo); planejar margem |
-| R8 | NTSL espelhada divergir do Risk Engine Python | Testes de paridade NTSL↔Python por cenário canônico; review semanal |
+| **R9-LINUX** | Wine glitcha após update do MT5 ou após update do Wine | Travar versão do MT5; testar update em ambiente isolado antes; ter VPS Windows como plano B documentado |
+| **R10-LINUX** | Bridge ZeroMQ perde conexão silenciosamente (TCP sem heartbeat ativo) | Heartbeat obrigatório a cada 1s; se >3s sem heartbeat, marca como "MT5 offline" no cockpit, envia alerta Telegram, bloqueia novas ordens (estado OPS) |
+| **R11-LINUX** | Conta MT5 da corretora brasileira não permite EA / Automação | Validar **antes da Fase 1** com a corretora escolhida. Algumas exigem plano específico para Algorithmic Trading |
+| **R12-LINUX** | MetaQuotes encerra suporte oficial a Linux/Wine sem aviso | Pivot para opção C (VPS Windows) — código da bridge não muda |
+| **R13-LINUX** | Comunidade brasileira de quant é majoritariamente Profit/NTSL — menos tutoriais MT5+Linux em PT | Aceitar custo de aprendizado; recursos em inglês são abundantes (forum mql5.com) |
 
 ---
 
 ## 12. O Que Esta Stack NÃO É
 
-- ❌ Não é produto comercial — CaM é cockpit pessoal (Constituição Art. 1º)
-- ❌ Não é multiusuário — sem auth, sem tenant
-- ❌ Não é escalável horizontalmente — mono-host por design
-- ❌ Não é HFT — latência alvo: dezenas de ms, não microssegundos
-- ❌ Não é cross-broker — single venue (B3 via Profit)
-- ❌ Não é cloud-first — localidade absoluta (princípio 3)
-- ❌ Não usa Java, Spring, Firebase, Next.js, MongoDB — esses **NÃO se aplicam ao CaM**, vieram de inferência baseada no catálogo Teczilabs e foram revogados nesta versão
+Mesma lista do documento Windows+Profit, com nota adicional:
+
+- ❌ Não usa Windows como SO de produção
+- ❌ Não usa Profit/NTSL — esses ficam só no documento Windows
+- ❌ Não usa `MetaTrader5` Python package oficial nativamente (não funciona em Linux) — opção C (VPS) é o caminho se essa lib for crítica
 
 ---
 
-## 13. Próximas Decisões Pendentes (bloqueadores Fase 1)
+## 13. Matriz Comparativa — Windows+Profit vs Linux+MT5
 
-1. **Versão do Profit** — Pro ou Ultra? Verificar se Ultra é necessário para Fase 1 (paper) ou só Fase 4 (automação real).
-2. **Corretora vinculada** — corretagem por mini contrato impacta diretamente o edge mínimo. Decidir antes de Fase 1.
-3. **Tese de edge da primeira estratégia** — pendente da conversa estratégica anterior. Sem tese, a Fase 0 constrói infra sem destino. Infra continua válida, mas Setup A+ futuro (Fase 4) depende disso.
-4. **Versão da ProfitDLL** (se Fase 5 for considerada) — levantar com Nelogica.
-5. **Origem do tick histórico para backfill inicial** — Profit exporta tick? Ou só candles? Define a estratégia de backfill da Timescale na M2 (precisa carregar 1–2 anos de histórico para os primeiros estudos de padrão).
-6. **Schedule de revisão da stack** — quando reavaliar versões, modelo IA, etc.
+> **Esta seção é o coração do documento.** Use para decidir.
+
+| Critério | Windows + Profit | **Linux + MT5 (este doc)** | Vencedor |
+|---|---|---|---|
+| **Custo mensal MVP** | R$ 200–380 (Profit Pro) | R$ 0–30 (ou R$ 80–180 com VPS) | **Linux+MT5** |
+| **Custo de licença SO** | Windows 11 (~R$ 700 uma vez, ou licença OEM já no PC) | R$ 0 (Ubuntu LTS) | **Linux+MT5** |
+| **Estabilidade da plataforma** | Profit é nativa Windows, robusta | MT5 em Wine: estabilidade variável; em VPS Windows: idêntica a Windows nativo | Windows+Profit (Wine) / empate (VPS) |
+| **Documentação em português** | Profit tem comunidade brasileira gigante; tudo em PT | MT5 tem documentação em PT da MetaQuotes; comunidade brasileira menor | Windows+Profit |
+| **API Python oficial** | ProfitDLL existe (Fase 5+) | `MetaTrader5` package só Windows; em Linux precisa bridge | Windows+Profit |
+| **Setup inicial** | Instalar Profit, contratar plano, baixar book | Instalar Wine, baixar MT5, configurar EA — mais passos | Windows+Profit |
+| **Manutenção do ambiente** | Updates do Windows + Profit (pode quebrar) | Updates do Wine + MT5 (pode quebrar) + bridge | Empate |
+| **Dev = Prod** | Não (dev Linux, prod Windows) | **Sim** (dev e prod mesmo Linux) | **Linux+MT5** |
+| **Containerização** | Docker Desktop + WSL2 (overhead) | Docker Engine nativo | **Linux+MT5** |
+| **Backup e DR** | Equivalente (rclone) | Equivalente (rclone) | Empate |
+| **Performance Risk Engine** | Mesma (Python nativo) | Mesma (Python nativo) | Empate |
+| **Brokers no Brasil** | Várias (XP, Genial, Modal, etc) | Várias (XP, Clear, Genial, Modal, Avenue, Toro) — **validar** | Empate |
+| **Linguagem estratégia broker** | NTSL (parecido com Pascal) | MQL5 (parecido com C++) — mais poderosa | **Linux+MT5** |
+| **Suporte a backtest no broker** | Profit tem replay/simulador | MT5 tem **Strategy Tester** muito robusto, tick-by-tick | **Linux+MT5** |
+| **Cross-broker (futuro)** | Profit é uni-broker | MT5 é cross-broker mundial (Forex, Crypto, B3) | **Linux+MT5** |
+| **Risco de descontinuação** | Profit existe há ~20 anos, comunidade BR | MT5 é padrão mundial, MetaQuotes referência | **Linux+MT5** |
+| **Stack 100% open-source** | Não (Windows + Profit pago) | Sim (exceto MT5 binário, gratuito) | **Linux+MT5** |
+| **Familiaridade Carlos** | Carlos vem de Java/backend, familiaridade Windows operacional | Carlos vem de Java/backend, dev nativo Linux | Empate / leve **Linux+MT5** |
+| **Curva de aprendizado MQL5 vs NTSL** | NTSL mais simples; menos features | MQL5 mais robusta; curva maior | depende do objetivo |
+| **Confiança operacional do sistema** | Profit é caixa-preta confiável | MT5+Wine introduz variável extra | **Windows+Profit** |
+| **Latência ordem→broker** | Profit no Windows: ms | MT5 Wine local: ms; MT5 VPS: ms+RTT | **Windows+Profit** marginalmente |
+
+### Resumo qualitativo
+
+**Escolha Windows+Profit se:**
+- Você quer **caminho de menor resistência operacional** — Profit Pro just works, ProfitDLL existe como upgrade futuro
+- Custo de R$ 200–380/mês não é problema
+- Documentação 100% em português é importante
+- Você prefere estabilidade comprovada à liberdade técnica
+
+**Escolha Linux+MT5 se:**
+- Você quer **dev=prod, stack inteira open source, custo mínimo**
+- Você está disposto a investir tempo aprendendo MQL5 e configurando Wine
+- Você valoriza ter MT5 (padrão mundial) na bagagem técnica
+- Você quer a possibilidade futura de operar Forex/Crypto cross-broker
+- Você confia que o setup MT5+Wine vai estabilizar com 2–4 semanas de tuning
+
+**Decisão híbrida possível (não recomendada):** começar Linux+MT5 com plano explícito de migrar para Windows+Profit se Wine glitchar de forma intolerável nas primeiras 4 semanas. Tem custo (refazer integração), mas é reversível.
 
 ---
 
-## 14. Roadmap Resumido (ver detalhamento em PLAN futuro do NCC-1701)
+## 14. Próximas Decisões Pendentes (bloqueadores Fase 1)
 
-| Milestone | Conteúdo principal |
+1. **Windows+Profit vs Linux+MT5** — esta é a decisão-mãe. Sem ela, Fase 1 não começa. Carlos decide.
+2. **Corretora vinculada** — confirmar se permite WIN/WDO via MT5 (se variante Linux) ou Profit (se variante Windows). XP, Clear, Genial, Modal, Avenue, Toro têm MT5 para B3.
+3. **Hospedagem do MT5** (se Linux): Wine local OU container Wine OU VPS Windows. Recomendação: A primeiro, C como plano B.
+4. **Bridge MT5↔Python**: ZeroMQ via dwx-zeromq-connector OU socket TCP custom OU MetaApi.
+5. **Tese de edge da primeira estratégia** — independente da variante.
+6. **Origem do tick histórico para backfill da Timescale** — Profit ou MT5? Define M2.
+
+---
+
+## 15. Roadmap Resumido (variante Linux+MT5)
+
+Mesmo do documento Windows+Profit, com diferenças nos milestones que tocam o broker:
+
+| Milestone | Conteúdo principal (diff vs doc Windows em itálico) |
 |---|---|
-| **M0** | Constituição + Stack Oficial (este doc) + Política Operacional |
-| **M1** | Infra base: Docker Compose (Postgres 16 + TimescaleDB) + Alembic + Backend FastAPI esqueleto + `_shared/risk/` Pure Python com primeiros validators 100% test |
-| **M2** | Schema completo (operacional + Timescale hypertables `cam_market_ticks/book_snapshots` + continuous aggregates `cam_candles_*`) + backfill inicial de tick histórico (Profit → CSV/Parquet → Timescale) |
-| **M3** | Frontend cockpit passivo (Dashboard + Journal + Risk Console + Constituição read-only) |
-| **M4** | Ledger + Fiscal básicos + Importador CSV Profit + conciliação trade-a-trade |
-| **M5** | Risk Engine completo (todos os validators dos Arts. 11º–20º) com property-based testing |
-| **M6** | Backtest engine + walk-forward + DuckDB para research exploratório em Jupyter |
-| **M7** | Estudos de padrão (features/pattern_studies) usando hyperfunctions Timescale + IA analítica (Ollama local + Anthropic sob demanda) |
-| **M8** | Integração operacional Profit (NTSL espelhada + paper trading) |
-| **M9** | Kill switch hardening + Telegram bot + critérios de saída Fase 0 (cobertura ≥ 80% global, ≥ 100% Risk Engine, kill switch validado, backtest e paper funcionais) |
-
-Estimativa **bruta** (não-vinculante, sem horas/dias — proibição constitucional): **8–12 ciclos de trabalho** compatíveis com rotina Porto + Monnezy.
+| **M0** | Constituição + Stack Oficial Linux+MT5 + Política Operacional |
+| **M1** | Docker Compose (Postgres+Timescale) + Alembic + Backend FastAPI esqueleto + `_shared/risk/` 100% test |
+| **M2** | Schema completo + hypertables + continuous aggregates + *backfill inicial via importação CSV do MT5* |
+| **M3** | Frontend cockpit passivo |
+| **M4** | Ledger + Fiscal + *Importador HTML/Excel/CSV do MT5* + conciliação trade-a-trade |
+| **M5** | Risk Engine completo (validators Arts. 11º–20º) + property-based |
+| **M6** | Backtest engine + walk-forward + DuckDB research |
+| **M7** | Estudos de padrão + IA analítica (Ollama + Anthropic) |
+| **M8** | *Instalação Wine+MT5 + EA `cam_bridge.mq5` + bridge ZeroMQ read-only + paper trading via MT5 demo* |
+| **M9** | *EA `cam_risk_mirror.mq5` + bridge read-write + critérios de saída Fase 0* |
 
 ---
 
-## 15. Aprovação
+## 16. Aprovação
 
-Este documento é **proposto**. Vira **vigente** após gate Founder em SPEC formal do projeto `cam-cockpit` no DevFlow NCC-1701 (Fase 4 — Albert + Kevin + Oscar consolidam, Founder aprova).
+Este documento é **proposto** como **alternativa** ao [`STACK-CAM-OFICIAL.md`](./STACK-CAM-OFICIAL.md) (Windows+Profit). Carlos decide qual virar canônico.
 
-Até a aprovação formal, este documento é a **referência canônica de stack** para qualquer trabalho técnico no CaM-project, **revogando** o catálogo Teczilabs (Combos A/B/C).
+Quando a decisão for tomada:
+
+- **Se Windows+Profit:** este documento (`STACK-CAM-OFICIAL-LINUX.MD`) vai para `archive/` com nota de "não escolhido"
+- **Se Linux+MT5:** o documento `STACK-CAM-OFICIAL.md` vai para `archive/` e este vira o canônico (renomeando para `STACK-CAM-OFICIAL.md` sem o sufixo `-LINUX`)
+- **Se híbrido (improvável):** revisão completa — não recomendado
 
 ---
 
-> **Frase final:**
+> **Frase final desta variante:**
 >
-> O CaM não foi construído para operar mais. O CaM foi construído para impedir operação ruim.
+> O CaM continua sendo o cockpit que impede operação ruim. O Linux libera o Carlos de uma dependência de SO; o MT5 abre cross-broker no futuro. O preço é Wine como variável de execução — gerenciável.
 >
-> O Profit executa. O Python fiscaliza. O React mostra. O Ledger registra. O Risk Engine manda. A IA comenta. O Carlos obedece ao sistema.
+> O MT5 executa. O Wine hospeda. O Python governa. O React mostra. O Ledger registra. O Risk Engine manda. A IA comenta. O Carlos obedece ao sistema.

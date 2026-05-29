@@ -1,11 +1,12 @@
 # Constituição Operacional do CaM
 
 > **The Carlos Alternative Money**
-> **Versão vigente:** 1.0 — Constituinte
+> **Versão vigente:** 1.1 — Pós EMENDA-001 v2 (ratificada 2026-05-27)
 > **Operador único:** Carlos Rodrigues Ferreira Junior
 > **Natureza:** Projeto pessoal, local, não comercial
-> **Vigência:** A partir da assinatura simbólica do operador
+> **Vigência:** A partir da assinatura simbólica do operador (v1.0 em 2026-05-24; EMENDA-001 v2 em 2026-05-27)
 > **Documento único — substitui** `CONSTITUIÇÃO OPERACIONAL.txt` (v0.1, fundacional) e `CaM_Constituicao_v1.0.txt` (v1.0, constituinte). A v0.1 está preservada como **Apêndice A — Memória Fundacional** ao final deste documento.
+> **Histórico de emendas:** ver Apêndice B + [`/project/cam-constitution/emendas/`](./project/cam-constitution/emendas/)
 
 ---
 
@@ -142,14 +143,67 @@ Cada bucket tem propósito definido e não pode ser usado fora dele sem revisão
 
 ## Parte III — Exposição e Limites Operacionais
 
-### Art. 11º — Limite absoluto de contratos
+### Art. 11º — Limite de contratos por default
 
-O CaM nunca poderá operar acima de:
+O CaM nunca poderá operar acima de **2 contratos de mini índice (WIN) e 2 contratos de mini dólar (WDO)** sem que um processo formal de **escalonamento condicional** (Art. 11-B) tenha sido cumprido e ratificado pelo operador em estado frio.
 
-- **2 contratos de mini índice (WIN)**;
-- **2 contratos de mini dólar (WDO)**.
+Este limite por default permanece intocável por: saldo disponível, confiança subjetiva, sequência de ganhos sem evidência empírica registrada, oportunidade de mercado, emoção, tentativa de recuperação, decisão manual impulsiva e qualquer outra justificativa que **não passe** pelos critérios objetivos do Art. 11-B.
 
-Este limite é absoluto e não poderá ser ultrapassado por saldo, confiança, sequência de ganhos, oportunidade de mercado, emoção, tentativa de recuperação ou decisão manual impulsiva.
+O limite se aplica à **SOMA AGREGADA de contratos abertos** (Art. 11-A) — independentemente de quantas estratégias estejam operando simultaneamente.
+
+### Art. 11-A — Multiestratégia simultânea
+
+Múltiplas estratégias podem operar simultaneamente no CaM, desde que:
+
+1. **A soma de contratos abertos respeite o Art. 11º** (default 2 WIN + 2 WDO, eventualmente elevado pelo Art. 11-B). O limite é **agregado**, não por estratégia.
+2. **O risco agregado esteja modelado** em `cam/_shared/risk/aggregate.py` (Pure Python, Zero I/O, property-based testing) cobrindo no mínimo: exposição total por ativo, drawdown projetado se todos os candidatos forem aprovados, soma de operações abertas vs limite de fase.
+3. **A prioridade entre sinais conflitantes** esteja definida explicitamente em POV (§3.11 — Resolução de Conflitos), com regra determinística e testável via property-based.
+4. **Cada estratégia em produção** tenha cumprido **individualmente** todos os gates do Art. 28º antes de ser ativada.
+5. **Kill switch global** (Art. 18º) propaga para TODAS as estratégias ativas simultaneamente — nenhuma estratégia pode ignorar kill switch sob alegação de "minha estratégia não foi a causa".
+6. **Setup A+ aplica-se ao agregado.** A regra de Setup A+ (Anexo II Fase 4) requer que pelo menos um dos sinais conflitantes que somam contratos seja classificado como Setup A+. Não basta uma estratégia "fora de A+" + outra "fora de A+" cuja soma chegue ao teto.
+7. **Aderência operacional (Art. 29º)** é calculada por estratégia individual E em agregado. Estratégia com aderência individual < 95% é suspensa do orquestrador.
+8. **Correlação entre estratégias ativas** é medida em janela rolling de 30 dias. Correlação > 0.7 entre duas estratégias dispara alerta + bloqueia ativação de nova estratégia correlacionada.
+
+### Art. 11-B — Escalonamento condicional do limite por default
+
+O limite por default do Art. 11º pode ser elevado **acima de 2 contratos WIN e/ou 2 contratos WDO** desde que TODAS as condições abaixo sejam cumpridas:
+
+**(a) Critério empírico de track record (métrica composta)** — A estratégia (ou conjunto de estratégias do orquestrador) demonstrou em **operação real** (Fase 2 ou superior — Anexo II):
+
+- **Profit Factor ≥ 1,8** em **30 pregões consecutivos**;
+- **Win rate ≥ 55%** no mesmo período;
+- **Expectância líquida positiva ≥ 1,5 × custo fixo mensal** (custo de plataforma + corretora + impostos esperados) no mesmo período;
+- **Drawdown máximo ≤ 10% do Bucket Derivativo** no mesmo período;
+- **Aderência operacional ≥ 95%** (Art. 29º) no mesmo período.
+
+> Não basta atingir win rate alto isoladamente — o conjunto de 5 métricas precisa ser cumprido **simultaneamente** e **sem cherry-picking** (sem janelas ignoradas).
+
+**(b) Sinalização objetiva do Risk Engine** — O módulo `cam/_shared/risk/scaling.py` (Pure Python, sem auto-execução) computa todas as métricas de (a) e produz `ScalingEligibility(eligible: bool, evidence: ScalingEvidence)` apenas-leitura. Eligibility `false` bloqueia o passo (c). Job automático calcula elegibilidade pós-pregão e publica evento `ScalingEligibilityReady` no EventBus quando elegível — operador recebe notificação Telegram.
+
+**(c) Formalização explícita do Founder** — Ratificação por arquivo em `/project/cam-constitution/escalonamentos/{ID}.md` contendo:
+
+- referência ao `ScalingEvidence` produzido por (b);
+- novo limite proposto (**incremento estrito de +1 por vez** — proibido pular passos; para subir de 2 para 4, exige passar primeiro por 3 e cumprir nova janela de 30 pregões em 3 contratos antes de propor 4);
+- motivação registrada (mínimo 3 frases);
+- assinatura simbólica em estado frio.
+
+**(d) Cooldown reverso** — O escalonamento entra em vigor **somente após 7 dias corridos** da assinatura do operador. Durante esse cooldown, o operador pode **revogar** o escalonamento sem ônus. Após 7 dias, o novo limite vigora.
+
+> **Cooldown estendido condicional:** se o operador estiver com win streak ativo (sequência de pregões positivos sem interrupção) no momento em que a elegibilidade for sinalizada, o cooldown sobe para **21 dias corridos**. Esta exceção existe para proteger contra decisões tomadas sob euforia de sequência ganhadora (Art. 4º).
+
+**(e) Reversão automática** — Se qualquer critério de (a) deixar de ser satisfeito após o escalonamento entrar em vigor (medido em janela rolling de 30 pregões), o limite **retorna automaticamente ao default** do Art. 11º. Reversão registra evento em audit + alerta Telegram + suspende novas operações por 1 pregão (Art. 18º — kill switch suave).
+
+> **Penalidade matemática anti-reincidência:** drawdown ocorrido durante o período escalonado é contabilizado **em dobro** para fins de cálculo da próxima janela de elegibilidade. Esta penalidade desincentiva escalonamentos prematuros.
+
+**(f) Limites superiores absolutos do escalonamento** — Mesmo com escalonamento, o limite **NUNCA** ultrapassa:
+
+- **5 contratos WIN** (teto histórico do CaM);
+- **5 contratos WDO** (idem);
+- **Drawdown diário 3% do capital** (Art. 16º permanece intocável independente de escalonamento).
+
+> **Cláusula de blindagem reforçada:** subir além desses tetos exige **revisão integral da Constituição** — não pode ser feito pelo protocolo simplificado v2.0. Exige retorno ao protocolo endurecido (cooldown 30 dias, nova convocação completa do Conselho Estratégico, justificativa por documento próprio).
+
+**(g) Audit trail dedicado** — Toda decisão de escalonamento, reversão, suspensão e tentativa-bloqueada registra evento em `cam_constitutional_scaling_events` + log estruturado em audit trail (Art. 31º). Histórico de tentativas-bloqueadas é exibido no Risk Console da UI para o operador calibrar expectativas sobre o quão difícil/raro o escalonamento de fato é.
 
 ### Art. 12º — Exposição na fase inicial
 
@@ -748,8 +802,9 @@ O CaM deve proteger o Carlos da coragem excessiva, da pressa, da ganância, do m
 | Versão | Status | Data | Principais mudanças |
 |---|---|---|---|
 | 0.1 | Fundacional | — | Primeiro registro dos 22 princípios operacionais. Sem articulado formal, sem perímetro de capital, sem POV separada |
-| **1.0** | **Constituinte (vigente)** | 2026-05-24 | Articulado em 43 artigos + 3 anexos. Formaliza perímetro (Art. 8º), buckets (Art. 10º), POV separada (Art. 37º), processo de emenda (Art. 38º), hierarquia constitucional `Constituição > Risk Engine > Estratégia > IA > Operador` (Art. 36º), fases 0–4 com critérios objetivos (Anexo II), gates de validação (Art. 28º) |
+| **1.0** | Constituinte | 2026-05-24 | Articulado em 43 artigos + 3 anexos. Formaliza perímetro (Art. 8º), buckets (Art. 10º), POV separada (Art. 37º), processo de emenda (Art. 38º), hierarquia constitucional `Constituição > Risk Engine > Estratégia > IA > Operador` (Art. 36º), fases 0–4 com critérios objetivos (Anexo II), gates de validação (Art. 28º) |
 | 1.0-consolidada | Consolidação documental | 2026-05-24 | Fusão de v0.1 + v1.0 em documento único `CONSTITUICAO.md`; v0.1 preservada como Apêndice A. Sem alteração material — apenas substituição dos `.txt` originais |
+| **1.1** | **EMENDA-001 v2 ratificada (vigente)** | 2026-05-27 | Art. 11º reformulado (deixa de ser absolutamente intocável, passa a ser default-com-caminho-de-escalonamento) + **Art. 11-A** criado (multiestratégia simultânea com 8 condições) + **Art. 11-B** criado (escalonamento condicional do limite via track record empírico + métrica composta + Risk Engine eligibility + formalização Founder + cooldown reverso 7/21 dias + reversão automática + tetos absolutos 5+5+3%). Aprovada pelo Founder com TODAS as recomendações do Conselho Estratégico incorporadas (Sun, Voltaire, Leo, Mammon, Marty). Origem: [`/project/cam-constitution/emendas/TD-v0.4-03-MULTIESTRATEGIA-v2.md`](/project/cam-constitution/emendas/TD-v0.4-03-MULTIESTRATEGIA-v2.md) |
 
 ---
 

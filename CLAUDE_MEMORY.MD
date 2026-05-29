@@ -22,7 +22,7 @@
 
 ## 2. O que é o CaM
 
-**CaM — The Carlos Alternative Money.** Cockpit pessoal, local, **não comercial** de operação de mercado. Existe para **impedir decisões impulsivas, preservar capital e converter ganhos táticos em patrimônio** — não para enriquecer rápido.
+**CaM — The Carlos Alternative Money.** Cockpit pessoal, local, **não comercial** de operação de mercado. Existe para **impedir decisões impulsivas, preservar capital e converter ganhos táticos em patrimônio**.
 
 - Capital declarado: **R$ 5.000,00** (Bucket Derivativo R$ 3.000 + Buffer R$ 1.000 + Carteira Hard R$ 1.000)
 - Limite absoluto: **2 contratos WIN / 2 contratos WDO** (intocável — Art. 11º)
@@ -98,16 +98,23 @@ CaM-project/
 
 ## 5. Stack vigente (resumo executável)
 
-> ⚠️ **DECISÃO PENDENTE DO FOUNDER:** existem **duas variantes de stack em paralelo** — Carlos ainda não escolheu se opera em Windows ou Linux. A escolha define broker, SO de produção, integração e custos.
+> ✅ **DECISÃO TOMADA (2026-05-25):** Carlos escolheu **Linux + MetaTrader 5 + MQL5** como stack canônica do CaM v1.
+> Registro formal: [`project/DECISION-MEMO-LINUX-OR-WINDOWS.md`](./project/DECISION-MEMO-LINUX-OR-WINDOWS.md) §6.
+> Stack canônica: [`project/STACK-CAM-OFICIAL.md`](./project/STACK-CAM-OFICIAL.md) (atual = ex-LINUX, agora único).
+> Variante rejeitada: [`archive/STACK-CAM-OFICIAL-WINDOWS-PROFIT-rejeitada-2026-05-25.md`](./archive/STACK-CAM-OFICIAL-WINDOWS-PROFIT-rejeitada-2026-05-25.md).
 >
-> | Variante | Documento canônico | Resumo |
-> |---|---|---|
-> | **Windows + Profit** | [`project/STACK-CAM-OFICIAL.md`](./project/STACK-CAM-OFICIAL.md) | Profit Pro/NTSL como executor; SO produção Windows 11; ProfitDLL futura |
-> | **Linux + MT5** | [`project/STACK-CAM-OFICIAL-LINUX.MD`](./project/STACK-CAM-OFICIAL-LINUX.MD) | MetaTrader 5 + MQL5 como executor; SO Linux nativo (Ubuntu LTS); MT5 via Wine ou VPS Windows; bridge ZeroMQ |
+> **Resumo da stack vigente:**
+> - SO produção: Ubuntu 24.04+ LTS (dev = prod)
+> - Broker: MetaTrader 5 (MetaQuotes), via Wine local (com plano B VPS Windows)
+> - Estratégia automatizada: MQL5 + Expert Advisors em `apps/cam-cockpit/mql5/`
+> - Bridge Python ↔ MT5: ZeroMQ (dwx-zeromq-connector) ou MetaApi como plano B
+> - Backend: Python 3.12 + FastAPI (idêntico em todas as variantes consideradas)
+> - Frontend: React 19 + Vite + MUI (idêntico)
+> - Banco: PostgreSQL 16 + TimescaleDB via Docker Engine nativo (porta 5433)
+> - Custo recorrente Fase 1: R$ 0–30/mês (vs R$ 200–380/mês da rejeitada)
+> - V2 (futuro): "extender capacidade multiplataforma" — declaração do Founder na §6 do DECISION-MEMO
 >
-> **Matriz comparativa explícita** está em `STACK-CAM-OFICIAL-LINUX.MD` §13 (Custo, estabilidade, documentação PT, dev=prod, etc).
->
-> **O que NÃO depende da decisão** (idêntico nas duas variantes):
+> **O que NÃO mudou com a decisão** (era idêntico nas duas variantes):
 
 ```
 Python 3.12 + FastAPI       →  Cockpit local (Risk Engine, Ledger, Journal, IA)
@@ -292,12 +299,12 @@ winget install --id PostgreSQL.PostgreSQL.16       # apenas para ter psql CLI; s
 
 ## 11. Próximas decisões pendentes (bloqueadores Fase 1)
 
-1. ⭐ **DECISÃO-MÃE: Windows+Profit vs Linux+MT5** — sem isso, nada começa. Carlos decide entre [`project/STACK-CAM-OFICIAL.md`](./project/STACK-CAM-OFICIAL.md) e [`project/STACK-CAM-OFICIAL-LINUX.MD`](./project/STACK-CAM-OFICIAL-LINUX.MD). Matriz comparativa explícita está em `STACK-CAM-OFICIAL-LINUX.MD` §13. O documento não escolhido vai para `archive/`
-2. **Versão do Profit** (se Windows) — Pro ou Ultra? Decidir antes de Fase 1
-3. **Hospedagem do MT5** (se Linux) — Wine local OU container Wine OU VPS Windows
-4. **Bridge MT5↔Python** (se Linux) — ZeroMQ (recomendado) OU socket TCP custom OU MetaApi SaaS
-5. **Corretora vinculada** — corretagem por mini contrato impacta edge mínimo. Confirmar se permite WIN/WDO na plataforma escolhida (Profit ou MT5)
-6. **Tese de edge da primeira estratégia** — sem isso, Fase 0 constrói infra sem destino
+1. ~~DECISÃO-MÃE Windows+Profit vs Linux+MT5~~ — **RESOLVIDA 2026-05-25** → Linux+MT5 (ver §5)
+2. **Hospedagem do MT5** — Wine local (Fase 1, default), VPS Windows como plano B se Wine glitchar
+3. **Bridge MT5↔Python** — ZeroMQ (dwx-zeromq-connector) é o caminho recomendado; MetaApi SaaS como plano B
+4. **Corretora vinculada** — confirmar suporte a EA em MT5 para PF antes de Fase 1; matriz em [`project/CORRETORA-EVAL.md`](./project/CORRETORA-EVAL.md). Candidatas fortes com convergência (servem Profit e MT5): Clear, Genial, Toro
+5. **Tese de edge da primeira estratégia** — proposta inicial S1 = ORB 60m WIN em [`project/strategies/EDGE-THESIS-S1.md`](./project/strategies/EDGE-THESIS-S1.md), aguardando gate Founder (§11)
+6. **SPEC v0.2 — enquadramento MT5** — substitui `profit_integration` por `mt5_integration`, especifica bridge ZeroMQ + EAs MQL5 + estrutura `mql5/`
 4. **Schedule de revisão da stack** — quando reavaliar versão Postgres, modelo IA, etc.
 5. **Origem do tick histórico para backfill** — Profit exporta tick? Ou só candles? Define estratégia de backfill da Timescale na M2.
 
