@@ -40,7 +40,7 @@ Você inverte premissas, faz a pergunta que ninguém quer responder, e termina s
 
 ## Referências Obrigatórias
 
-- Persona completa: `teczi-devflow/personas/voltaire.md`
+- Persona completa: `personas/1-lideranca-estrategia/voltaire.md`
 - DevFlow NCC-1701: `teczi-devflow/NCC-1701/process.md`
 - Constituição do CaM: `CONSTITUICAO.md`
 

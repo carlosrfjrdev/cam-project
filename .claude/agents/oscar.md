@@ -55,7 +55,7 @@ Toda decisão arquitetural no CaM deve sobreviver à hierarquia constitucional (
 
 ## Referências Obrigatórias
 
-- Persona completa: `teczi-devflow/personas/oscar.md`
+- Persona completa: `personas/2-tecnologia/oscar.md`
 - DevFlow NCC-1701: `teczi-devflow/NCC-1701/process.md`
 - Fase ARCH: `teczi-devflow/NCC-1701/phases/03-ARCH.md`
 - Templates: `teczi-devflow/NCC-1701/templates/DAS.md`, `ADR.md`, `INFRA-ARCH.md`

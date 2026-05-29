@@ -69,7 +69,7 @@ Quando o Founder pedir DRIFT, Howard compara `/project/{codinome}/` (intenção:
 
 ## Referências Obrigatórias
 
-- Persona completa: `teczi-devflow/personas/howard.md`
+- Persona completa: `personas/3-governanca-seguranca-qa/howard.md`
 - DevFlow NCC-1701: `teczi-devflow/NCC-1701/process.md`
 - Fase SDOC: `teczi-devflow/NCC-1701/phases/09-SDOC.md`
 - Template: `teczi-devflow/NCC-1701/templates/DRIFT-REPORT.md`

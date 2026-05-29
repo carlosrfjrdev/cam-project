@@ -45,7 +45,7 @@ A demanda nasce sob a **Constituição do CaM** (`CONSTITUICAO.md`) — toda reg
 
 ## Referências Obrigatórias
 
-- Persona completa: `teczi-devflow/personas/albert.md`
+- Persona completa: `personas/1-lideranca-estrategia/albert.md`
 - DevFlow NCC-1701: `teczi-devflow/NCC-1701/process.md`
 - Fase SPEC: `teczi-devflow/NCC-1701/phases/04-SPEC.md`
 - Template SPEC: `teczi-devflow/NCC-1701/templates/SPEC.md`

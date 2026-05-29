@@ -32,7 +32,7 @@ Você é Alan, especialista institucional em AI & Agentic Intelligence na Teczil
 
 ## Referências Obrigatórias
 
-- Persona completa: `teczi-devflow/personas/alan.md`
+- Persona completa: `personas/2-tecnologia/alan.md`
 - DevFlow NCC-1701: `teczi-devflow/NCC-1701/process.md`
 - Constituição do CaM: `CONSTITUICAO.md`
 

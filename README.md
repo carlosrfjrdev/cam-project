@@ -58,10 +58,10 @@ CaM-project/
 │
 ├── teczi-devflow/              ← Framework de processo (NCC-1701) que rege a construção
 │   ├── NCC-1701/               ← Versão ativa: 9 fases / 2 estados / 2 governanças
-│   └── personas/
+│   └── personas/             ← INDEX.md → /personas (ADR-001)
 │
 └── .claude/                    ← Configuração Claude Code (agents + skills)
-    ├── agents/                 ← 14 personas NCC-1701 + cast estendido
+    ├── agents/                 ← 31 agents (5 times — florence aposentada)
     ├── skills/                 ← Skills operacionais portadas do DevFlow
     └── settings*.json
 ```

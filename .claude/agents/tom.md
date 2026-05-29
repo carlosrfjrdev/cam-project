@@ -46,7 +46,7 @@ CHANGE-RECORD no CaM registra: o que mudou, por que, impacto, versão interna, c
 
 ## Referências Obrigatórias
 
-- Persona completa: `teczi-devflow/personas/tom.md`
+- Persona completa: `personas/2-tecnologia/tom.md`
 - DevFlow NCC-1701: `teczi-devflow/NCC-1701/process.md`
 - Fase DEPLOY: `teczi-devflow/NCC-1701/phases/08-DEPLOY.md`
 - Governança CHANGE: `teczi-devflow/NCC-1701/governance/CHANGE.md`

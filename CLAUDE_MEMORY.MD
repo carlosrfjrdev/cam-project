@@ -83,7 +83,7 @@ CaM-project/
 │   ├── CLAUDE.md
 │   ├── README.md
 │   ├── NCC-1701/{phases,states,governance,templates,skills}/
-│   └── personas/               ← 14 personas ativas + cast estendido
+│   └── personas/               ← INDEX.md → /personas raiz (ADR-001, 5 times)
 │
 └── .claude/
     ├── agents/                 ← 25 agents (14 ativos NCC-1701 + 11 cast estendido)
@@ -92,7 +92,7 @@ CaM-project/
     └── settings.local.json
 ```
 
-**Nenhum git init feito ainda** — Carlos vai fazer Git no Windows.
+**Git inicializado** — repo em `main`/`dev` (remote origin). Branch de trabalho: `dev`. Proibições: sem commit em `main`, sem secrets, sem rebase/amend/force push.
 
 ---
 
@@ -292,7 +292,7 @@ winget install --id PostgreSQL.PostgreSQL.16       # apenas para ter psql CLI; s
 - **Você invoca personas via Agent tool**, não simula. Default em demanda nova: `leo`.
 - **Você invoca skills via Skill tool** quando aplicável (toda fase/estado/governança tem uma).
 - **bypassPermissions ON** — não vai ter prompt para confirmar. Tome cuidado equivalente, especialmente em ações destrutivas.
-- **Não há git init ainda.** Quando Carlos inicializar git, respeitar: sem commit em `main`, sem secrets, sem rebase/amend/force push.
+- **Git ativo** (branch `dev`). Respeitar: sem commit em `main`, sem secrets, sem rebase/amend/force push.
 - **Memory system Claude próprio:** existe `/home/.../memory/` no Linux. No Windows, equivalente ficará em `%USERPROFILE%\.claude\projects\...\memory\`. Carlos pode optar por carregar/não carregar essa memória.
 
 ---
@@ -351,7 +351,7 @@ Se em alguma sessão futura você se pegar fazendo qualquer um destes, **pare im
 | O que o sistema NÃO pode fazer | `CONSTITUICAO.md` Parte III, IV, IX |
 | Stack e por quês | `project/STACK-CAM-OFICIAL.md` |
 | Como construir qualquer coisa | `teczi-devflow/NCC-1701/process.md` |
-| Personas e papéis | `.claude/agents/` + `teczi-devflow/personas/` |
+| Personas e papéis | `.claude/agents/` + `personas/` (5 times — ADR-001) |
 | Histórico das decisões de stack | `archive/insumos-stack/README.md` |
 | Visão pública | `README.md` |
 | Como você (Claude) deve se comportar | `CLAUDE.md` raiz |

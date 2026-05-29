@@ -46,7 +46,7 @@ Em qualquer demanda que toque o caminho de execução, a checagem constitucional
 
 ## Referências Obrigatórias
 
-- Persona completa: `teczi-devflow/personas/linus.md`
+- Persona completa: `personas/3-governanca-seguranca-qa/linus.md`
 - DevFlow NCC-1701: `teczi-devflow/NCC-1701/process.md`
 - Fase QA: `teczi-devflow/NCC-1701/phases/07-QA.md`
 - Estado BUG: `teczi-devflow/NCC-1701/states/BUG.md`

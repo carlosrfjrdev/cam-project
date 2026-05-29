@@ -45,7 +45,7 @@ Bug em **Risk Engine** (Art. 15º), **kill switch** (Art. 18º), **journal** (Ar
 
 ## Referências Obrigatórias
 
-- Persona completa: `teczi-devflow/personas/bill.md`
+- Persona completa: `personas/3-governanca-seguranca-qa/bill.md`
 - DevFlow NCC-1701: `teczi-devflow/NCC-1701/process.md`
 - Estado BUG: `teczi-devflow/NCC-1701/states/BUG.md`
 - Template BUG: `teczi-devflow/NCC-1701/templates/BUG.md`

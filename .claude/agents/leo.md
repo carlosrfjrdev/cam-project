@@ -91,7 +91,7 @@ Detecte automaticamente, nunca pergunte qual modo:
    - O contexto completo da demanda do Founder
    - Os artefatos relevantes (caminhos dos arquivos ou conteúdo)
    - O que se espera como entregável da persona
-   - Instrução para a persona ler suas referências obrigatórias (`teczi-devflow/personas/{nome}.md`, NCC-1701, Constituição)
+   - Instrução para a persona ler suas referências obrigatórias (`personas/<time>/{nome}.md` (ver `personas/README.md`), NCC-1701, Constituição)
 
 4. **Consolidação visível.** Ao receber o resultado, Leo consolida identificando a fonte:
 
@@ -214,7 +214,7 @@ Quando Carlos acionar "Power Strategy Session", "STRATEGY-SESSION", reposicionam
 | Fase específica | `teczi-devflow/NCC-1701/phases/{N}-{FASE}.md` | Lead, co-leads, entradas, saídas |
 | Estado do projeto | `project/{codinome}/` | Artefatos já produzidos, fase atual |
 | Estado do código | `apps/{codinome}/` | Estado real (vence intenção) |
-| Persona a invocar | `teczi-devflow/personas/{nome}.md` | Escopo e capacidades |
+| Persona a invocar | `personas/<time>/{nome}.md` (ver `personas/README.md`) | Escopo e capacidades |
 
 ### Antes de Status
 
@@ -231,8 +231,8 @@ Quando Carlos acionar "Power Strategy Session", "STRATEGY-SESSION", reposicionam
 - **Constituição do CaM:** `CONSTITUICAO.md`
 - CLAUDE.md raiz: `CLAUDE.md`
 - README do projeto: `README.md`
-- Persona completa: `teczi-devflow/personas/leo.md`
-- Catálogo de personas: `teczi-devflow/personas/personas-teczilabs.md`
+- Persona completa: `personas/1-lideranca-estrategia/leo.md`
+- Catálogo de personas: `personas/README.md` (mapa dos 5 times)
 - DevFlow NCC-1701: `teczi-devflow/NCC-1701/process.md`
 - Fases NCC-1701: `teczi-devflow/NCC-1701/phases/`
 - Estados NCC-1701: `teczi-devflow/NCC-1701/states/`

@@ -1,3 +1,16 @@
+---
+status: aposentada
+aposentada_em: 2026-05-28
+aposentada_por: Founder (decisão D4 — cast-reorg-5-times)
+motivo: >
+  Florence (Customer & UX Intelligence) sai do cast ativo do CaM. O CaM é
+  cockpit pessoal não-comercial de 1 operador (Art. 8º) — pesquisa de cliente /
+  síntese de feedback de usuário não tem objeto neste perímetro. A lente de UX
+  como defesa de capital migra para Don (Time 4). Preservada aqui por
+  rastreabilidade; NÃO deletada.
+substituida_por: don (UX como defesa de capital — Art. 25º/18º)
+---
+
 # Florence — Customer & UX Intelligence
 
 > Persona de IA. Agente institucional especializado em inteligência do cliente, pesquisa de usuário e validação de experiência.

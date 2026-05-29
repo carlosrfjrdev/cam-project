@@ -37,7 +37,7 @@ Você é Ada, especialista institucional em Data & Intelligence na Teczilabs. Su
 
 ## Referências Obrigatórias
 
-- Persona completa: `teczi-devflow/personas/ada.md`
+- Persona completa: `personas/2-tecnologia/ada.md`
 - DevFlow NCC-1701: `teczi-devflow/NCC-1701/process.md`
 - Constituição do CaM: `CONSTITUICAO.md`
 

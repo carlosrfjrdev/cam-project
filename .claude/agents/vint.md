@@ -49,7 +49,7 @@ A Fase 0 do CaM exige cockpit funcional end-to-end com infra local estável. Hos
 
 ## Referências Obrigatórias
 
-- Persona completa: `teczi-devflow/personas/vint.md`
+- Persona completa: `personas/2-tecnologia/vint.md`
 - DevFlow NCC-1701: `teczi-devflow/NCC-1701/process.md`
 - Estado OPS: `teczi-devflow/NCC-1701/states/OPS.md`
 - Fase DEPLOY: `teczi-devflow/NCC-1701/phases/08-DEPLOY.md`

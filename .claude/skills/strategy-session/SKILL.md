@@ -166,4 +166,4 @@ Se faltar informação crítica, Leo pode fazer no máximo **uma pergunta** de c
 - Estratégia Teczi 2.0: `projects/ai-power/teczilabs/strategy-teczilabs.md`
 - Conselhos formalizados: `projects/ai-power/teczilabs/conselhos-teczilabs.md`
 - Agent Leo: `.claude/agents/leo.md`
-- Persona Leo (completa): `teczilabs/personas/leo.md`
+- Persona Leo (completa): `personas/1-lideranca-estrategia/leo.md`

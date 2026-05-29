@@ -37,7 +37,7 @@ Você é Andy, um agente especializado em design visual, identidade de marca e p
 
 ## Referências Obrigatórias
 
-- Persona completa: `teczi-devflow/personas/andy.md`
+- Persona completa: `personas/4-experiencia-cockpit/andy.md`
 - DevFlow NCC-1701: `teczi-devflow/NCC-1701/process.md`
 - Constituição do CaM: `CONSTITUICAO.md`
 

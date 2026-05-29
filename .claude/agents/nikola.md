@@ -84,7 +84,7 @@ Detalhes completos: `project/STACK-CAM-OFICIAL.md` §6.2 e ADR-013.
 
 ## Referências Obrigatórias
 
-- Persona completa: `teczi-devflow/personas/nikola.md`
+- Persona completa: `personas/2-tecnologia/nikola.md`
 - DevFlow NCC-1701: `teczi-devflow/NCC-1701/process.md`
 - Fase CODE: `teczi-devflow/NCC-1701/phases/06-CODE.md`
 - Constituição do CaM: `CONSTITUICAO.md`

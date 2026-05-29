@@ -1,3 +1,8 @@
+> ⚠️ **CATÁLOGO LEGADO (fase Teczilabs).** Preservado como referência histórica.
+> Links internos (`teczilabs/personas/...`) são do layout antigo e **não** refletem
+> a estrutura atual. **Fonte autoritativa do cast do CaM:** [`README.md`](README.md)
+> (5 times — ADR-001 repo-wide). Não usar este arquivo para navegação.
+
 ﻿# Personas — Teczi DevFlow
 
 > **Este documento foi unificado em `personas-teczilabs.md`.**

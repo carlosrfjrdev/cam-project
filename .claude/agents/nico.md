@@ -53,7 +53,7 @@ PLAN deve materializar a SPEC sem violar a Constituição. Em demandas que tocam
 
 ## Referências Obrigatórias
 
-- Persona completa: `teczi-devflow/personas/nico.md`
+- Persona completa: `personas/1-lideranca-estrategia/nico.md`
 - DevFlow NCC-1701: `teczi-devflow/NCC-1701/process.md`
 - Fase PLAN: `teczi-devflow/NCC-1701/phases/05-PLAN.md`
 - Template PLAN: `teczi-devflow/NCC-1701/templates/PLAN.md`

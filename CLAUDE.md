@@ -68,12 +68,22 @@ CaM-project/
 │   │   ├── governance/         ← SEC-GOV, CHANGE
 │   │   ├── templates/          ← SCOPE, DVP, DAS, ADR, INFRA-ARCH, SPEC, PLAN, BUG, OPS-EVENT, CHANGE-RECORD, DRIFT-REPORT, PROOF-PACK
 │   │   └── skills/             ← Drafts conceituais (referência canônica das skills operacionais)
-│   ├── personas/               ← Definições completas das 14+ personas
+│   ├── personas/               ← Apenas INDEX.md → aponta para /personas (ADR-001 repo-wide)
 │   └── CLAUDE.md               ← Notas escopadas ao subdiretório
 │
+├── personas/                   ← CAST CaM-only em 5 times (ADR-001 — fora do teczi-devflow, Art. 8º)
+│   ├── carlos.md               ← Founder (soberano, cross-time)
+│   ├── 1-lideranca-estrategia/ ← leo, marty, albert, nico, peter, voltaire, sun
+│   ├── 2-tecnologia/           ← oscar, nikola, tom, vint, ada, grace, alan, steve
+│   ├── 3-governanca-seguranca-qa/ ← kevin, linus, bill, denis, howard
+│   ├── 4-experiencia-cockpit/  ← don, andy
+│   ├── 5-financeiro-mercado-ativos/ ← mammon, ray, jim, wyck, nassim, barsi, luca, daniel, fred
+│   ├── _archive/               ← florence (aposentada) + catálogos legados
+│   └── README.md               ← Mapa dos 5 times (fonte autoritativa)
+│
 └── .claude/                    ← Configuração Claude Code
-    ├── agents/                 ← 14 personas NCC-1701 + cast estendido (25 total)
-    ├── skills/                 ← Skills operacionais (DevFlow portadas + strategy-session + teczi-discovery-software)
+    ├── agents/                 ← 31 agents (24 ativos + 7 financeiros novos; florence removida)
+    ├── skills/                 ← teczi-* (compartilháveis) + cam-* (CaM-only) + strategy-session
     ├── settings.json           ← bypassPermissions ON (cuidado equivalente)
     └── settings.local.json
 ```
@@ -179,8 +189,11 @@ Padrão Claude Code disponíveis: `superpowers:*`, `frontend-design`, `verify`, 
 | `denis` | PDOC co-lead + SDOC lead | Lime |
 | `howard` | SDOC DRIFT (sob solicitação) | Sandy Brown |
 
-**Cast estendido (11)** — chamado por Leo quando necessário:
-`sun`, `voltaire`, `mammon`, `grace`, `alan`, `andy`, `ada`, `peter`, `florence`, `fred`, `don`.
+**Cast estendido + mundo financeiro (Time 5)** — chamado por Leo quando necessário:
+`sun`, `voltaire`, `grace`, `alan`, `andy`, `ada`, `peter`, `fred`, `don` +
+**Time 5 financeiro:** `mammon` (ofensivo, read-only Art. 35º), `ray` (macro), `jim` (quant/edge), `wyck` (fluxo), `nassim` (risco de ruína), `barsi` (Carteira Hard/dividendos), `luca` (fiscal/ledger), `daniel` (RCA do operador).
+
+> `florence` **aposentada** (D4) — ver `personas/_archive/`. Cast organizado em **5 times** (ADR-001): mapa completo em [`personas/README.md`](./personas/README.md).
 
 **Padrão de invocação:** delegue para `leo` quando a demanda for ampla ou ambígua; para `{persona}` específica quando o lead da fase/estado/governança for óbvio. Leo NUNCA simula outra persona — sempre invoca via `Agent` tool e consolida o resultado identificando a fonte.
 

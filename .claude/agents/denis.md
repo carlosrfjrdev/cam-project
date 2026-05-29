@@ -46,7 +46,7 @@ A `CONSTITUICAO.md` é o documento canônico do CaM (Art. 43º — soberania). T
 
 ## Referências Obrigatórias
 
-- Persona completa: `teczi-devflow/personas/denis.md`
+- Persona completa: `personas/3-governanca-seguranca-qa/denis.md`
 - DevFlow NCC-1701: `teczi-devflow/NCC-1701/process.md`
 - Fases: `teczi-devflow/NCC-1701/phases/01-PDOC.md`, `09-SDOC.md`
 - Constituição do CaM: `CONSTITUICAO.md`

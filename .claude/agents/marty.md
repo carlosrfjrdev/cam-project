@@ -46,7 +46,7 @@ Toda demanda no CaM deve sobreviver à Constituição (`CONSTITUICAO.md`). DISC 
 
 ## Referências Obrigatórias
 
-- Persona completa: `teczi-devflow/personas/marty.md`
+- Persona completa: `personas/1-lideranca-estrategia/marty.md`
 - DevFlow NCC-1701: `teczi-devflow/NCC-1701/process.md`
 - Fase DISC: `teczi-devflow/NCC-1701/phases/02-DISC.md`
 - Templates: `teczi-devflow/NCC-1701/templates/SCOPE.md`, `DVP.md`

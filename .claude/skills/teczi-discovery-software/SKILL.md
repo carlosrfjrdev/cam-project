@@ -274,5 +274,5 @@ Se Howard não leu, deve ler. Se leu mas não entendeu, deve tentar mais e regis
 - Templates de artefatos: `references/artifact-structure.md`
 - CLI Guide completo: `teczilabs-doc/CLI-AGENT-GUIDE-v0.1.3.md`
 - Análise fundacional: `projects/ai-power/analysis/2026-05-17-discovery-software-skill-skeleton.md`
-- Persona Howard: `teczilabs/personas/howard.md`
+- Persona Howard: `personas/3-governanca-seguranca-qa/howard.md`
 - Agent Howard: `.claude/agents/howard.md`

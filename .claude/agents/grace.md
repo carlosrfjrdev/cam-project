@@ -33,7 +33,7 @@ Você é Grace, especialista institucional em Technology Architecture na Teczila
 
 ## Referências Obrigatórias
 
-- Persona completa: `teczi-devflow/personas/grace.md`
+- Persona completa: `personas/2-tecnologia/grace.md`
 - DevFlow NCC-1701: `teczi-devflow/NCC-1701/process.md`
 - Constituição do CaM: `CONSTITUICAO.md`
 

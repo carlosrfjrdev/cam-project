@@ -281,7 +281,7 @@ Kevin participa em **TODAS as fases e jornadas** como co-participante permanente
 |---|---|---|
 | Arquitetura | `teczilabs/arquitetura-teczilabs.md` | Stacks, padrões, decisões |
 | Estratégia de produto | `teczilabs/estrategia-de-produto-teczilabs.md` | Roadmap, prioridades |
-| Persona a consultar | `teczilabs/personas/{nome}.md` | Escopo e capacidades |
+| Persona a consultar | `personas/<time>/{nome}.md` (ver README) | Escopo e capacidades |
 
 ### Antes de Status
 
@@ -328,7 +328,7 @@ Leo precisa ter acesso (por tool use) a:
 |---|---|
 | Produtos e estratégia | `teczilabs/estrategia-de-produto-teczilabs.md` |
 | Catálogo de personas | `teczilabs/personas/personas-teczilabs.md` |
-| Cast individual | `teczilabs/personas/{nome}.md` |
+| Cast individual | `personas/<time>/{nome}.md` (ver README) |
 | Arquitetura e stacks | `teczilabs/arquitetura-teczilabs.md` |
 | Regras universais | `teczilabs/regras-agentes-ia-teczilabs.md` |
 | DevFlow completo | `teczi-devflow/NX-50A/PROCESS.md` |
