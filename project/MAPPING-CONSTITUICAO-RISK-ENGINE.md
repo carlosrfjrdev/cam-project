@@ -269,7 +269,7 @@ Quando um validator novo é adicionado ao Risk Engine:
 - [`apps/cam-cockpit/backend/tests/test_risk_*.py`](../apps/cam-cockpit/backend/tests/) — testes dos validators
 - [`project/cam-cockpit/SPEC.md`](./cam-cockpit/SPEC.md) §5 / R1.06 — ordem oficial dos validators
 - [`project/cam-cockpit/PLAN.md`](./cam-cockpit/PLAN.md) — TASKs T-B01 a T-B07
-- [`apps/cam-cockpit/TECH-DEBT.md`](../apps/cam-cockpit/TECH-DEBT.md) — TD-001 (limite simultâneo WIN+WIN) ligado ao Art. 12º
+- [`apps/cam-cockpit/TECH-DEBT.md`](cam-cockpit/TECH-DEBT.md) — TD-001 (limite simultâneo WIN+WIN) ligado ao Art. 12º
 - [`GATE-FASE-0-PARA-1.md`](./GATE-FASE-0-PARA-1.md) — pré-requisito F.7 (esta matriz sem lacunas críticas)
 
 ---

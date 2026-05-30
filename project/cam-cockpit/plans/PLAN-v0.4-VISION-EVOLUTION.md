@@ -46,7 +46,7 @@ Implementar a SPEC v0.4-VISION-EVOLUTION em **62 TASKs flat numeradas**, agrupad
 | [`CONSTITUICAO.md`](../../../CONSTITUICAO.md) | v1.1 (pós EMENDA-001 v2) | Vigente |
 | [`POV-VIGENTE-v1.0.md`](../../POV-VIGENTE-v1.0.md) | v1.1 | Vigente |
 | [`MAPPING-CONSTITUICAO-RISK-ENGINE.md`](../../MAPPING-CONSTITUICAO-RISK-ENGINE.md) | atual | Vigente |
-| [`FEATURE-FLAGS-LEDGER.md`](../../../apps/cam-cockpit/FEATURE-FLAGS-LEDGER.md) | atual | Vigente |
+| [`FEATURE-FLAGS-LEDGER.md`](../FEATURE-FLAGS-LEDGER.md) | atual | Vigente |
 | ADRs vigentes | 001..013 | Vigentes (especial atenção a ADR-013 vertical-slice + shared-kernel) |
 
 ---

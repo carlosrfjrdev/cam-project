@@ -502,7 +502,7 @@ Ja tenho conta GENIAL, CLEAR e MODAL Estou avaliando o suporte a meta trader
 - [`DECISION-MEMO-LINUX-OR-WINDOWS.md`](./DECISION-MEMO-LINUX-OR-WINDOWS.md) — decisão-mãe que define qual subset desta matriz é válido
 - [`STACK-CAM-OFICIAL.md`](./STACK-CAM-OFICIAL.md) §10 — custos recorrentes (variante Windows+Profit)
 - [`STACK-CAM-OFICIAL-LINUX.MD`](./STACK-CAM-OFICIAL-LINUX.MD) §10 — custos recorrentes (variante Linux+MT5)
-- [`apps/cam-cockpit/TODO-OPERACIONAL.md`](../apps/cam-cockpit/TODO-OPERACIONAL.md) OP-001 — corretora pendente (referência a fechar quando §9 for criada)
+- [`apps/cam-cockpit/TODO-OPERACIONAL.md`](cam-cockpit/TODO-OPERACIONAL.md) OP-001 — corretora pendente (referência a fechar quando §9 for criada)
 
 ---
 

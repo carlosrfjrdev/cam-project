@@ -17,7 +17,7 @@ review_target: apps/cam-cockpit/TECH-DEBT.md
 > **Lead:** Albert (especificação) · **Co-lead:** Linus (auditoria QA)
 > **Skill:** `teczi-demand-specification`
 > **Aprovador:** Founder
-> **Alvo:** [`apps/cam-cockpit/TECH-DEBT.md`](../../apps/cam-cockpit/TECH-DEBT.md) — 36 entradas vigentes
+> **Alvo:** [`apps/cam-cockpit/TECH-DEBT.md`](../TECH-DEBT.md) — 36 entradas vigentes
 >
 > **Origem:** "vamos validar os débitos técnicos... avalie ele novamente e vamos verificar o que dá para sanar já agora" — Founder, 2026-05-25.
 
@@ -357,7 +357,7 @@ Nenhuma. Todas as TASKs podem ser executadas no ambiente atual.
 
 ## Referências cruzadas
 
-- [`/apps/cam-cockpit/TECH-DEBT.md`](../../apps/cam-cockpit/TECH-DEBT.md) — alvo da auditoria
+- [`/apps/cam-cockpit/TECH-DEBT.md`](../TECH-DEBT.md) — alvo da auditoria
 - [`/project/cam-cockpit/qa/QA-REVIEW-SPEC-v0.2.md`](./qa/QA-REVIEW-SPEC-v0.2.md) — review do bloco MT5 (contexto)
 - [`/project/cam-cockpit/SPEC-v0.2-MT5-ENQUADRAMENTO.md`](./SPEC-v0.2-MT5-ENQUADRAMENTO.md) — origem dos 9 TDs novos e dos 3 CONGELADOS
 - [`/CONSTITUICAO.md`](../../CONSTITUICAO.md) — Arts. 12º (validator novo), 31º (audit), 25º (P&L)

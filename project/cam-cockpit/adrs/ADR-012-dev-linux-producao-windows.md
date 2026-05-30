@@ -1,13 +1,22 @@
 ---
 template: ADR
 phase: ARCH
-status: Accepted
+status: Superseded-in-part
 ---
 
 # ADR-012 — Desenvolvimento em Linux, Produção em Windows; Código Cross-Platform
 
-> **Data:** 2026-05-24
-> **Status:** Aceita
+> 🪟 **ATUALIZAÇÃO 2026-05-30 (soft-stage, sem ADR HARD):** o MT5 sob Wine no Linux
+> **falhou** → **desenvolvimento E produção agora em Windows 11** (single-SO). Wine
+> eliminado; MT5 roda nativo; bridge ZeroMQ em `127.0.0.1`. A premissa original
+> "dev Linux / prod Windows" deixa de valer, **mas as regras de código
+> cross-platform (§2) seguem recomendadas** (pathlib, encoding utf-8, `.gitattributes`,
+> DI de adapters) — protegem contra regressões e mantêm a opção de CI bi-SO.
+> O broker é **MT5** (não Profit — ADR-001 também defasada nesse ponto).
+> Runbook: [`../../runbooks/RUNBOOK-WINDOWS.md`](../../runbooks/RUNBOOK-WINDOWS.md).
+
+> **Data:** 2026-05-24 · **Atualizada:** 2026-05-30 (reversão p/ Windows)
+> **Status:** Superseded-in-part (premissa de SO revista; disciplina cross-platform mantida)
 > **Lead:** Oscar · **Co-lead:** Vint (INFRA-ARCH)
 > **Aprovador final:** Founder (Carlos Rodrigues Ferreira Junior)
 > **Vive em:** `/project/cam-cockpit/adrs/ADR-012-dev-linux-producao-windows.md`

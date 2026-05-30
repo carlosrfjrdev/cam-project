@@ -221,7 +221,7 @@ go_no_go: Go-Conditional
 
 ### 6.2 Mapeados como Tech-Debt (sem ação imediata necessária)
 
-> Tech-debts da execução autônoma BL-A..BL-I já estão em [`apps/cam-cockpit/TECH-DEBT.md`](../../../../apps/cam-cockpit/TECH-DEBT.md) — não duplico aqui.
+> Tech-debts da execução autônoma BL-A..BL-I já estão em [`apps/cam-cockpit/TECH-DEBT.md`](../../TECH-DEBT.md) — não duplico aqui.
 
 | ID TD | Severidade | Bloqueia |
 |---|---|---|

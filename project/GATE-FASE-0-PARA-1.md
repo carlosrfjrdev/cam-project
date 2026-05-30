@@ -363,8 +363,8 @@ Se a flag for revertida para `False` (motivo: incidente, falha de aderência, de
 - [`runbooks/RUNBOOK-INCIDENTE-TECNICO.md`](./runbooks/RUNBOOK-INCIDENTE-TECNICO.md) — pré-requisito F.6 / H.1-H.3
 - [`MAPPING-CONSTITUICAO-RISK-ENGINE.md`](./MAPPING-CONSTITUICAO-RISK-ENGINE.md) — pré-requisito F.7
 - [`PROTOCOLO-EMENDA-CONSTITUCIONAL.md`](./PROTOCOLO-EMENDA-CONSTITUCIONAL.md) — pré-requisito F.8
-- [`apps/cam-cockpit/TECH-DEBT.md`](../apps/cam-cockpit/TECH-DEBT.md) — tech debts conhecidos (TD-022, TD-027 críticos para Fase 1)
-- [`apps/cam-cockpit/TODO-OPERACIONAL.md`](../apps/cam-cockpit/TODO-OPERACIONAL.md) — itens OP-007 a OP-013 relevantes
+- [`apps/cam-cockpit/TECH-DEBT.md`](cam-cockpit/TECH-DEBT.md) — tech debts conhecidos (TD-022, TD-027 críticos para Fase 1)
+- [`apps/cam-cockpit/TODO-OPERACIONAL.md`](cam-cockpit/TODO-OPERACIONAL.md) — itens OP-007 a OP-013 relevantes
 
 ---
 

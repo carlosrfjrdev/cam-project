@@ -97,6 +97,23 @@ CaM-project/
 
 Quando ambos divergirem: **estado real vence intenção** (NCC-1701 §2, regra 7). DRIFT só é analisado por solicitação explícita do Founder (Q12).
 
+### 📄 Política de documentação (diretriz do Founder — 2026-05-30)
+
+**`.md` de documentação NÃO ficam dentro de `/apps`.** A codebase (`/apps`) só
+contém os `.md` **obrigatórios**: `README.md` (qualquer nível) e arquivos de
+instrução de agente (`CLAUDE.md`, `AGENTS.md`). **Toda outra documentação**
+(runbooks, tech-debt, ledgers, TODOs operacionais, notas) vive em **`/project`**:
+
+| Tipo de doc | Local |
+|---|---|
+| Runbooks | `project/runbooks/` |
+| Tech-debt / feature-flags / TODO operacional | `project/cam-cockpit/` |
+| SCOPE / SPEC / PLAN / ADR / QA / PROOF-PACK | `project/cam-cockpit/{scopes,specs,plans,adrs,qa}/` |
+
+> Ao criar documentação, **nunca** a coloque em `/apps`. Se precisar referenciá-la
+> do código, use um link relativo para `/project`. README de feature pode resumir
+> e apontar para o doc em `/project`.
+
 ---
 
 ## Framework de produção — Teczi DevFlow NCC-1701
@@ -208,7 +225,8 @@ A stack do CaM **revoga** os Combos A/B/C do catálogo Teczilabs (Java/Spring, F
 **Resumo da stack oficial:**
 
 ```text
-Profit/Nelogica         →  Plataforma de execução (NTSL + Automação de Estratégias)
+MetaTrader 5 (MQL5 EAs) →  Plataforma de execução — Windows NATIVO (sem Wine)
+Bridge ZeroMQ           →  Python ↔ MT5 em 127.0.0.1 (PUB 5556 / REQ 5557)
 Python 3.12 + FastAPI   →  Cockpit local: Risk Engine, Ledger, Journal, IA, integração
 React 19 + Vite + MUI   →  Frontend SPA local (sem Next.js)
 PostgreSQL 16 + TimescaleDB → Banco transacional + tick/candle storage (desde Fase 0)
@@ -217,10 +235,21 @@ Telegram Bot            →  Canal externo de alerta
 Ollama local + Anthropic → IA auditora/analista, NUNCA executora (Arts. 34–36)
 ```
 
-**SO produção:** Windows 11 (Profit é Windows-only).
-**SO desenvolvimento:** Linux (eficiência) → Windows (integração Profit/NTSL).
+**SO produção E desenvolvimento:** **Windows 11** (decisão 2026-05-30). O MT5 sob
+Wine no Linux **falhou** → execução em Windows nativo, single-SO. Estamos em
+**soft-stage de concepção** (pré-v1): docs e ADRs são **moldáveis, não-HARD**.
 
-Convenção de pastas: aplicativos em `/apps/cam-*`. Estrutura monorepo `apps/cam-cockpit/{backend,frontend,ntsl}` no MVP. Detalhes completos, ADRs propostos, faseamento de integração Profit, riscos, custos: ver [`STACK-CAM-OFICIAL.md`](./project/STACK-CAM-OFICIAL.md).
+> ⚙️ **Continuar a partir de um `git clone` no Windows:** siga o runbook
+> [`project/runbooks/RUNBOOK-WINDOWS.md`](./project/runbooks/RUNBOOK-WINDOWS.md)
+> (setup, MT5 + EAs, bridge ZeroMQ, guardrails DEMO-only). O `cam-cockpit`
+> (backend/frontend/banco) é multiplataforma; só a camada MT5 é Windows.
+> EAs em `apps/cam-cockpit/mql5/` (`cam_bridge.mq5`, `cam_risk_mirror.mq5`).
+
+Convenção de pastas: aplicativos em `/apps/cam-*` (monorepo `apps/cam-cockpit/{backend,frontend,mql5}`). Detalhes, faseamento de integração, riscos: ver [`STACK-CAM-OFICIAL.md`](./project/STACK-CAM-OFICIAL.md).
+
+> ⚠️ **Notas de drift (soft-stage):** o `ntsl/` foi DESATIVADO (broker é MT5, não
+> Profit). ADR-001/008/009 ainda citam Profit/NTSL — defasadas, serão revistas ao
+> sair do soft-stage. Estado real (`/apps`) vence intenção (NCC-1701 §2 regra 7).
 
 ---
 

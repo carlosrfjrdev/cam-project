@@ -20,7 +20,7 @@ companion_of: QA-REVIEW-SPEC-v0.2.md
 ## Como usar
 
 1. Tenha o RUNBOOK aberto em outra aba: [`/project/runbooks/RUNBOOK-INCIDENTE-TECNICO.md`](../../runbooks/RUNBOOK-INCIDENTE-TECNICO.md)
-2. Tenha o [`RUNBOOK.md`](../../../apps/cam-cockpit/RUNBOOK.md) (técnico de subida) aberto.
+2. Tenha o [`RUNBOOK.md`](../../runbooks/RUNBOOK.md) (técnico de subida) aberto.
 3. Execute item a item, marcando ✅/❌.
 4. Ao final, assine §10 (Go/No-Go do Founder).
 

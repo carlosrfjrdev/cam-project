@@ -639,7 +639,7 @@ A única adição opcional ao DVP é uma nota sobre "v2 multi-plataforma" confor
 - [`/project/cam-cockpit/SPEC.md`](./SPEC.md) — SPEC v0.1 que esta v0.2 estende
 - [`/project/cam-cockpit/PLAN.md`](./PLAN.md) — Bloco D (integração) será revisado quando esta SPEC virar PLAN v0.2
 - [`/apps/cam-cockpit/`](../../apps/cam-cockpit/) — estrutura física (backend + frontend + mql5 + scripts)
-- [`/apps/cam-cockpit/TECH-DEBT.md`](../../apps/cam-cockpit/TECH-DEBT.md) — TD-007, TD-008, TD-009 (revisar escopo para MT5)
+- [`/apps/cam-cockpit/TECH-DEBT.md`](../TECH-DEBT.md) — TD-007, TD-008, TD-009 (revisar escopo para MT5)
 
 ---
 

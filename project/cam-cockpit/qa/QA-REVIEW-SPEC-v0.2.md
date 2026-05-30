@@ -292,7 +292,7 @@ Assinatura Founder: _________________________
 - [`/project/cam-cockpit/PLAN-v0.2.md`](../PLAN-v0.2.md) — TASKs auditadas
 - [`/project/cam-cockpit/qa/MANUAL-VALIDATION-CHECKLIST.md`](./MANUAL-VALIDATION-CHECKLIST.md) — companion para Carlos validar manualmente
 - [`/project/cam-cockpit/SPEC-v0.3-TECH-DEBT-REVIEW.md`](../SPEC-v0.3-TECH-DEBT-REVIEW.md) — revisão sistemática dos TDs
-- [`/apps/cam-cockpit/TECH-DEBT.md`](../../../apps/cam-cockpit/TECH-DEBT.md) — TDs vigentes (entrada da v0.3)
+- [`/apps/cam-cockpit/TECH-DEBT.md`](../TECH-DEBT.md) — TDs vigentes (entrada da v0.3)
 - [`/project/MAPPING-CONSTITUICAO-RISK-ENGINE.md`](../../MAPPING-CONSTITUICAO-RISK-ENGINE.md) — alvo do BUG-002
 
 ---

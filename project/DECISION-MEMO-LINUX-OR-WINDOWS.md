@@ -359,6 +359,26 @@ Esta seção é o ponto de aprovação formal. **Não preencher** até a §6 est
 
 ---
 
+## 10. ADENDO 2026-05-30 — Reversão da decisão (Opção B revogada)
+
+**Gatilho objetivo disparado** (§7 — "Wine glitcha repetidamente / inviável"):
+o MT5 sob **Wine no Linux falhou em teste**. O Founder **reverteu o SO para
+Windows 11 nativo**, mantendo o broker **MetaTrader 5** (muda só onde/como o MT5
+roda; sai a camada Wine).
+
+- **Vigente:** Windows 11 + MT5 nativo + bridge ZeroMQ em `127.0.0.1`.
+- **Soft-stage:** decisão de concepção pré-v1 — **sem ADR HARD**; docs moldáveis.
+- **Inalterado:** Constituição, NCC-1701, backend Python/FastAPI, frontend React/MUI,
+  Postgres+Timescale, Risk Engine, política da IA, EAs (`cam_bridge.mq5`,
+  `cam_risk_mirror.mq5`), allowlist `OrderSend`, `REAL_TRADING_ALLOWED=false`.
+- **Docs atualizadas:** `STACK-CAM-OFICIAL.md` (§0 + tabela + §6.1 supersedida),
+  `ADR-012` (Superseded-in-part), runbook [`runbooks/RUNBOOK-WINDOWS.md`](./runbooks/RUNBOOK-WINDOWS.md),
+  `cam-cockpit/TODO-OPERACIONAL.md` (OP-014).
+- **Pendente (quando sair do soft-stage):** consolidar a stack Windows como HARD e
+  rever ADR-001 (Profit→MT5) e ADR-008/009 (Profit/NTSL) que ainda citam Profit.
+
+---
+
 ## Referências cruzadas
 
 - [`CONSTITUICAO.md`](../CONSTITUICAO.md) Arts. 4º, 6º, 8º, 11º, 12º, 15º, 19º, 36º, 38º

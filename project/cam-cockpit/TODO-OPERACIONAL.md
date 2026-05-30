@@ -102,7 +102,7 @@
 ### OP-014 — MT5 no Linux (Wine) falhou → migração para Windows nativo
 **Ação:** O teste do MT5 sob Wine no Linux **não funcionou**. A camada de execução
 migra para **Windows 11 nativo**. Runbook operacional criado:
-[`RUNBOOK-WINDOWS.md`](./RUNBOOK-WINDOWS.md).
+[`RUNBOOK-WINDOWS.md`](../runbooks/RUNBOOK-WINDOWS.md).
 **Impacto:** Reverte `DECISION-MEMO-LINUX-OR-WINDOWS.md` (Opção B = Linux+MT5/Wine)
 e ressuscita parte da variante Windows arquivada. O **cockpit** (backend/frontend/
 banco) é multiplataforma e não muda; muda **como o MT5 roda**.
