@@ -1,7 +1,13 @@
 # RUNBOOK — cam-cockpit
 
 > Referência técnica operacional. Comandos para subir, parar e trabalhar com o ambiente.
-> **SO de desenvolvimento:** Linux (este guia). Para Windows, ver seção específica.
+> **SO de desenvolvimento:** Linux (este guia).
+>
+> 🪟 **2026-05-30 — MUDANÇA DE ROTA:** o MT5 sob **Wine no Linux falhou**. A
+> camada de execução migra para **Windows nativo**. Para subir o cockpit + MT5
+> no Windows, use **[`RUNBOOK-WINDOWS.md`](./RUNBOOK-WINDOWS.md)** (runbook canônico
+> de operação Windows). Este guia Linux permanece válido para o **cockpit**
+> (backend/frontend/banco), mas **não** para a integração MT5/Wine.
 
 ---
 
@@ -253,24 +259,14 @@ cp backend/.env.example backend/.env
 
 ---
 
-## Setup Windows (produção / integração Profit)
+## Setup Windows (produção / integração MT5)
 
-```powershell
-# Pré-requisito: Docker Desktop com WSL2, Python 3.12+, uv, Node.js 20+
-
-cd C:\...\CaM-project\apps\cam-cockpit
-.\scripts\dev.ps1
-
-# Subir backend
-cd backend
-uv run uvicorn cam.api.main:app --reload --port 8000
-
-# Subir frontend (terminal separado)
-cd ..\frontend
-npm run dev
-```
-
-> Script completo: `scripts/dev.ps1` — inclui verificação do Docker Desktop, migrations e install do npm.
+> ➡️ **Movido para um runbook dedicado:** **[`RUNBOOK-WINDOWS.md`](./RUNBOOK-WINDOWS.md)**.
+> Cobre instalação do MT5 nativo, compilação/deploy dos EAs (`cam_bridge.mq5`,
+> `cam_risk_mirror.mq5`), bridge ZeroMQ em `127.0.0.1`, guardrails constitucionais
+> (DEMO-only, allowlist `OrderSend`) e troubleshooting Windows.
+>
+> Atalho de setup: `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass; .\scripts\dev.ps1`
 
 ---
 

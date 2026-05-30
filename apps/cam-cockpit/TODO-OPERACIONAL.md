@@ -97,4 +97,23 @@
 
 ---
 
+## BREAKING CHANGE — Plataforma de execução (2026-05-30)
+
+### OP-014 — MT5 no Linux (Wine) falhou → migração para Windows nativo
+**Ação:** O teste do MT5 sob Wine no Linux **não funcionou**. A camada de execução
+migra para **Windows 11 nativo**. Runbook operacional criado:
+[`RUNBOOK-WINDOWS.md`](./RUNBOOK-WINDOWS.md).
+**Impacto:** Reverte `DECISION-MEMO-LINUX-OR-WINDOWS.md` (Opção B = Linux+MT5/Wine)
+e ressuscita parte da variante Windows arquivada. O **cockpit** (backend/frontend/
+banco) é multiplataforma e não muda; muda **como o MT5 roda**.
+**Pendência de gate (ARCH — Oscar + Voltaire + Grace + Vint):**
+1. ADR formal "Windows+MT5 nativo revoga Linux+Wine".
+2. Atualizar `project/STACK-CAM-OFICIAL.md` (hoje diz Linux+MT5/Wine) + DECISION-MEMO.
+3. `mt5_wine_prefix` → deprecado/no-op; documentar `mt5_terminal_path` (Windows).
+4. Kevin revalida perímetro de execução no novo SO (DEMO-only, allowlist OrderSend).
+**Estado:** runbook operacional disponível; **stack canônica ainda registra Linux**
+(divergência conhecida, sinalizada no topo do RUNBOOK-WINDOWS §11).
+
+---
+
 *TODOs adicionados nos Blocos D–H serão appendados abaixo conforme produção avança.*
