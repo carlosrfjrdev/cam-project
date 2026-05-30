@@ -374,8 +374,9 @@ roda; sai a camada Wine).
 - **Docs atualizadas:** `STACK-CAM-OFICIAL.md` (§0 + tabela + §6.1 supersedida),
   `ADR-012` (Superseded-in-part), runbook [`runbooks/RUNBOOK-WINDOWS.md`](./runbooks/RUNBOOK-WINDOWS.md),
   `cam-cockpit/TODO-OPERACIONAL.md` (OP-014).
-- **Pendente (quando sair do soft-stage):** consolidar a stack Windows como HARD e
-  rever ADR-001 (Profit→MT5) e ADR-008/009 (Profit/NTSL) que ainda citam Profit.
+- **ADRs alinhadas (2026-05-30):** ADR-001 → Superseded (plataforma = MT5);
+  ADR-008/009 → Superseded-in-part (broker = MT5, espelho = `cam_risk_mirror.mq5`;
+  princípios mantidos). **Pendente só na v1:** consolidar a stack Windows como HARD.
 
 ---
 

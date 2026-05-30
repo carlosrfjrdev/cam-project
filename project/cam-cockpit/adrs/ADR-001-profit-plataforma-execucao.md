@@ -1,13 +1,22 @@
 ---
 template: ADR
 phase: ARCH
-status: Accepted
+status: Superseded
 ---
 
-# ADR-001 — Profit como Plataforma Oficial de Execução
+# ADR-001 — ~~Profit~~ **MetaTrader 5** como Plataforma Oficial de Execução
 
-> **Data:** 2026-05-24
-> **Status:** Aceita
+> ⚠️ **SUPERSEDIDA (soft-stage, 2026-05-30).** A plataforma de execução do CaM é
+> **MetaTrader 5 (MQL5 + Expert Advisors)**, decidida em 2026-05-25
+> (`DECISION-MEMO-LINUX-OR-WINDOWS.md`) e confirmada rodando em **Windows nativo**
+> em 2026-05-30 (MT5/Wine no Linux falhou). **Profit/Nelogica/NTSL NÃO é mais a
+> plataforma.** O texto abaixo é histórico do raciocínio original. Onde se lê
+> "Profit" → MT5; "NTSL" → MQL5; "ProfitDLL" → bridge ZeroMQ (`MetaTrader5`
+> package nativo é opção futura). Estamos em soft-stage (pré-v1) — sem ADR HARD.
+> SSoT da stack: [`../../STACK-CAM-OFICIAL.md`](../../STACK-CAM-OFICIAL.md).
+
+> **Data:** 2026-05-24 · **Supersedida:** 2026-05-30
+> **Status:** Superseded (plataforma = MetaTrader 5)
 > **Lead:** Oscar
 > **Aprovador final:** Founder (Carlos Rodrigues Ferreira Junior)
 > **Vive em:** `/project/cam-cockpit/adrs/ADR-001-profit-plataforma-execucao.md`

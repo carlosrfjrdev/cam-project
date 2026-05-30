@@ -1,13 +1,22 @@
 ---
 template: ADR
 phase: ARCH
-status: Accepted
+status: Superseded-in-part
 ---
 
-# ADR-009 — Risk Engine Espelhado em NTSL como Segunda Linha de Defesa
+# ADR-009 — Risk Engine Espelhado em ~~NTSL~~ **MQL5** como Segunda Linha de Defesa
 
-> **Data:** 2026-05-24
-> **Status:** Aceita
+> ⚠️ **ATUALIZADA (soft-stage, 2026-05-30).** O espelho de risco é implementado em
+> **MQL5**, não NTSL: **`apps/cam-cockpit/mql5/experts/cam_risk_mirror.mq5`** — o
+> ÚNICO arquivo autorizado a `OrderSend` (allowlist enforçada por
+> `scripts/lint_mql5.py`), que entrega **só em conta DEMO**. O **princípio
+> permanece intacto**: regras de risco não-negociáveis espelhadas no broker como
+> segunda linha de defesa hard-coded (Arts. 15º/18º/19º). Releia "NTSL" → MQL5;
+> "estratégia NTSL no Profit" → EA no MT5. Soft-stage (pré-v1) — sem ADR HARD.
+> SSoT: [`../../STACK-CAM-OFICIAL.md`](../../STACK-CAM-OFICIAL.md).
+
+> **Data:** 2026-05-24 · **Atualizada:** 2026-05-30
+> **Status:** Superseded-in-part (princípio mantido; espelho = MQL5 cam_risk_mirror.mq5)
 > **Lead:** Oscar · **Cross-cutting:** Kevin (SEC-GOV)
 > **Aprovador final:** Founder (Carlos Rodrigues Ferreira Junior)
 > **Vive em:** `/project/cam-cockpit/adrs/ADR-009-risk-ntsl-segunda-linha-defesa.md`

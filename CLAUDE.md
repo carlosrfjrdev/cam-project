@@ -248,8 +248,8 @@ Wine no Linux **falhou** → execução em Windows nativo, single-SO. Estamos em
 Convenção de pastas: aplicativos em `/apps/cam-*` (monorepo `apps/cam-cockpit/{backend,frontend,mql5}`). Detalhes, faseamento de integração, riscos: ver [`STACK-CAM-OFICIAL.md`](./project/STACK-CAM-OFICIAL.md).
 
 > ⚠️ **Notas de drift (soft-stage):** o `ntsl/` foi DESATIVADO (broker é MT5, não
-> Profit). ADR-001/008/009 ainda citam Profit/NTSL — defasadas, serão revistas ao
-> sair do soft-stage. Estado real (`/apps`) vence intenção (NCC-1701 §2 regra 7).
+> Profit). ADR-001 (Superseded), ADR-008/009 (Superseded-in-part) **já alinhadas a
+> MT5/MQL5** em 2026-05-30. Estado real (`/apps`) vence intenção (NCC-1701 §2 regra 7).
 
 ---
 
