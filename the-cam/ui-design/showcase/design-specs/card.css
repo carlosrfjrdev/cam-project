@@ -1,0 +1,6 @@
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius-card);padding:var(--space-6);width:220px;transition:border-color var(--dur-default)}
+.card:hover{border-color:rgba(5,150,105,.4)}
+.card .ch{font-size:var(--text-caption);color:var(--muted-foreground);text-transform:uppercase;letter-spacing:.05em}
+.card .cv{font-family:var(--font-mono);font-size:1.6rem;margin:var(--space-2) 0}
+.card .cv.pos{color:var(--success)} .card .cv.neg{color:var(--destructive)}
+.card .cf{font-size:var(--text-caption);color:var(--subtle)}

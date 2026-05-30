@@ -1,0 +1,8 @@
+.tbl{width:100%;border-collapse:collapse;font-size:var(--text-dense)}
+.tbl th{text-align:left;color:var(--muted-foreground);font-weight:500;font-size:var(--text-caption);text-transform:uppercase;letter-spacing:.05em;padding:10px 12px;border-bottom:1px solid var(--border)}
+.tbl td{padding:12px;border-bottom:1px solid var(--border);color:var(--subtle)}
+.tbl tr:hover td{background:var(--surface-2)}
+.tbl .num{text-align:right;font-family:var(--font-mono)}
+.tbl .pos{color:var(--success)} .tbl .neg{color:var(--destructive)}
+.chip{display:inline-flex;font-size:var(--text-caption);padding:3px 9px;border-radius:14px}
+.chip.ok{background:rgba(16,185,129,.15);color:#34D399}.chip.err{background:rgba(239,68,68,.15);color:#EF4444}

@@ -1,0 +1,4 @@
+.sel{position:relative}
+.sel select{appearance:none;width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-input);color:var(--foreground);font-family:var(--font-body);font-size:var(--text-dense);padding:10px 36px 10px 12px;outline:none}
+.sel::after{content:"▾";position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted-foreground);pointer-events:none}
+.sel select:focus{border-color:var(--ring);box-shadow:0 0 0 2px var(--primary-soft)}

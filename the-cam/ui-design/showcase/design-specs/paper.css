@@ -1,0 +1,2 @@
+.paper{background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius-card);padding:var(--space-6);min-width:200px;color:var(--subtle);font-size:var(--text-dense)}
+.paper.e2{background:var(--surface-2)}

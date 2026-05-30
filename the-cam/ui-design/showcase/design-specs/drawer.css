@@ -1,0 +1,6 @@
+.drw-mock{display:flex;border:1px solid var(--border);border-radius:var(--radius-card);overflow:hidden;min-height:200px}
+.drw{width:180px;background:var(--surface-1);border-right:1px solid var(--border);padding:var(--space-3) 0}
+.di{padding:8px 16px;font-size:var(--text-dense);color:var(--subtle);cursor:pointer;border-left:2px solid transparent}
+.di:hover{background:var(--surface-2)}
+.di.active{color:var(--primary-light);border-left-color:var(--primary);background:var(--primary-soft)}
+.drw-content{flex:1;padding:var(--space-6);color:var(--muted-foreground);font-size:var(--text-dense)}

@@ -1,0 +1,3 @@
+.tip{position:relative;color:var(--primary-light);font-size:var(--text-dense);cursor:help;border-bottom:1px dotted var(--primary)}
+.tip-box{visibility:hidden;opacity:0;position:absolute;bottom:130%;left:0;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-card);padding:8px 10px;font-size:var(--text-caption);color:var(--subtle);width:240px;transition:opacity var(--dur-fast);z-index:5}
+.tip:hover .tip-box,.tip:focus .tip-box{visibility:visible;opacity:1}

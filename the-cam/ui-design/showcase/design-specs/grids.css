@@ -1,0 +1,3 @@
+.sp { width:36px; background:var(--primary); border-radius:2px; display:flex; align-items:flex-start; justify-content:center; color:#fff; font-size:var(--text-caption); }
+.gcols { display:grid; grid-template-columns:repeat(4,1fr); gap:var(--space-4); width:100%; }
+.gcols span { height:48px; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-card); }

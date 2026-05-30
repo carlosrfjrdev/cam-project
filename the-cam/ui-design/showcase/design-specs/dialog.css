@@ -1,0 +1,6 @@
+.dlg-mock{position:relative;width:100%;min-height:240px;background:rgba(0,0,0,.3);border-radius:var(--radius-card);display:flex;align-items:center;justify-content:center}
+.dlg{background:var(--elevated);border:1px solid var(--border);border-radius:var(--radius-card);box-shadow:var(--shadow-modal);padding:var(--space-6);max-width:420px;position:relative}
+.dlg .x{position:absolute;top:12px;right:12px;background:none;border:none;color:var(--muted-foreground);cursor:pointer;font-size:1rem}
+.btn{font-size:var(--text-dense);border-radius:var(--radius-btn);padding:9px 16px;cursor:pointer;border:1px solid transparent}
+.btn.text{background:none;color:var(--primary-light)}
+.btn.danger{background:var(--destructive);color:#fff;font-weight:600}

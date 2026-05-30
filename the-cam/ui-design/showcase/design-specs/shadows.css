@@ -1,0 +1,2 @@
+.el { width:150px; height:90px; border:1px solid var(--border); border-radius:var(--radius-card); display:flex; align-items:center; justify-content:center; font-size:var(--text-caption); color:var(--subtle); }
+.el.modal { box-shadow:var(--shadow-modal); background:var(--elevated); }

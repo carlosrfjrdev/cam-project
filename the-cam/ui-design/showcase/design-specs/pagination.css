@@ -1,0 +1,5 @@
+.pg{display:inline-flex;gap:4px;align-items:center}
+.pg button{min-width:34px;height:34px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-btn);color:var(--subtle);cursor:pointer;font-size:var(--text-dense)}
+.pg button:hover{background:var(--surface-3)}
+.pg button.active{background:var(--primary);color:#fff;border-color:transparent}
+.pg span{color:var(--muted-foreground)}

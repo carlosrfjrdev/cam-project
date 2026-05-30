@@ -1,0 +1,4 @@
+.snack{display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--border);border-left-width:3px;border-radius:var(--radius-card);padding:12px 14px;font-size:var(--text-dense);color:var(--foreground);max-width:420px}
+.snack button{margin-left:auto;background:none;border:none;color:var(--muted-foreground);cursor:pointer}
+.snack.success{border-left-color:var(--success)} .snack.info{border-left-color:var(--info)}
+.snack.warning{border-left-color:var(--warning)} .snack.error{border-left-color:var(--destructive)}
