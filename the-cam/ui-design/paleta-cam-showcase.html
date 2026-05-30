@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Paleta Esmeralda CAM — Cockpit CaM</title>
+    <style>
+      :root {
+        --emerald-void: #061711;
+        --emerald-deep: #071a12;
+        --emerald-night: #0b2418;
+        --emerald-core: #047857;
+        --emerald-cam: #059669;
+        --emerald-signal: #10b981;
+        --emerald-light: #34d399;
+        --emerald-soft: rgba(5, 150, 105, 0.14);
+        --graphite-black: #09090b;
+        --lab-graphite: #111827;
+        --carbon-slate: #1f2937;
+        --steel-muted: #64748b;
+        --cloud-gray: #e5e7eb;
+        --mist-white: #f8fafc;
+        --founder-orange: #ff7a00;
+        --founder-ember: #c2410c;
+        --founder-glow: #fdba74;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at top left, rgba(16, 185, 129, 0.28), transparent 28rem),
+          radial-gradient(circle at bottom right, rgba(255, 122, 0, 0.16), transparent 24rem),
+          linear-gradient(135deg, var(--emerald-void), var(--graphite-black) 56%, #020806);
+        color: var(--mist-white);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      main {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 64px 0;
+      }
+
+      .hero {
+        display: grid;
+        gap: 24px;
+        place-items: center;
+        min-height: 52vh;
+        text-align: center;
+      }
+
+      .logo {
+        margin: 0;
+        font-size: clamp(3rem, 12vw, 8rem);
+        line-height: 0.9;
+        letter-spacing: -0.08em;
+        font-weight: 800;
+      }
+
+      .logo .cam-anchor {
+        color: var(--mist-white);
+      }
+
+      .logo .cam-accent {
+        color: var(--emerald-light);
+        text-shadow: 0 0 36px rgba(52, 211, 153, 0.35);
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid rgba(52, 211, 153, 0.28);
+        border-radius: 999px;
+        padding: 8px 14px;
+        background: rgba(5, 150, 105, 0.1);
+        color: var(--emerald-light);
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .spark {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--founder-orange);
+        box-shadow: 0 0 20px var(--founder-orange);
+      }
+
+      .lead {
+        max-width: 720px;
+        margin: 0;
+        color: rgba(248, 250, 252, 0.78);
+        font-size: clamp(1rem, 2vw, 1.3rem);
+        line-height: 1.7;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+      }
+
+      .button {
+        border: 0;
+        border-radius: 6px;
+        padding: 12px 18px;
+        font-weight: 700;
+        color: white;
+        background: var(--emerald-cam);
+        box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.18), 0 18px 50px rgba(5, 150, 105, 0.22);
+      }
+
+      .button.secondary {
+        border: 1px solid rgba(255, 122, 0, 0.55);
+        color: var(--founder-glow);
+        background: rgba(255, 122, 0, 0.08);
+      }
+
+      .section-title {
+        margin: 64px 0 18px;
+        font-size: 1rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--emerald-light);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+      }
+
+      .card {
+        border: 1px solid rgba(248, 250, 252, 0.1);
+        border-radius: 14px;
+        padding: 18px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.025));
+        backdrop-filter: blur(18px);
+      }
+
+      .swatch {
+        min-height: 110px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        margin-bottom: 14px;
+      }
+
+      .name {
+        margin: 0 0 6px;
+        font-weight: 800;
+      }
+
+      .hex {
+        margin: 0;
+        color: rgba(248, 250, 252, 0.64);
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      }
+
+      .note {
+        border-left: 3px solid var(--founder-orange);
+        margin-top: 32px;
+        padding: 18px 20px;
+        background: rgba(255, 122, 0, 0.08);
+        color: rgba(248, 250, 252, 0.8);
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding: 40px 0;
+        }
+
+        .hero {
+          min-height: auto;
+          padding: 48px 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero" aria-labelledby="page-title">
+        <span class="eyebrow"><span class="spark"></span>Paleta Esmeralda CAM / Founder Orange</span>
+        <h1 id="page-title" class="logo">
+          <span class="cam-anchor">C</span><span class="cam-accent">a</span><span class="cam-anchor">M</span>
+        </h1>
+        <p class="lead">
+          A Esmeralda CAM representa o sistema operando: clareza, instrumento de precisão, estado sob controle.
+          O Founder Orange permanece como faísca: a voz pessoal de Carlos, o operador.
+        </p>
+        <div class="actions">
+          <button class="button">Esmeralda CAM</button>
+          <button class="button secondary">Founder spark</button>
+        </div>
+      </section>
+
+      <h2 class="section-title">Esmeralda CAM</h2>
+      <section class="grid" aria-label="Cores da paleta Esmeralda CAM">
+        <article class="card">
+          <div class="swatch" style="background: #061711"></div>
+          <p class="name">Esmeralda Void</p>
+          <p class="hex">#061711</p>
+        </article>
+        <article class="card">
+          <div class="swatch" style="background: #071A12"></div>
+          <p class="name">Esmeralda Deep</p>
+          <p class="hex">#071A12</p>
+        </article>
+        <article class="card">
+          <div class="swatch" style="background: #0B2418"></div>
+          <p class="name">Esmeralda Night</p>
+          <p class="hex">#0B2418</p>
+        </article>
+        <article class="card">
+          <div class="swatch" style="background: #047857"></div>
+          <p class="name">Esmeralda Core</p>
+          <p class="hex">#047857</p>
+        </article>
+        <article class="card">
+          <div class="swatch" style="background: #059669"></div>
+          <p class="name">Esmeralda CAM</p>
+          <p class="hex">#059669</p>
+        </article>
+        <article class="card">
+          <div class="swatch" style="background: #10B981"></div>
+          <p class="name">Esmeralda Signal</p>
+          <p class="hex">#10B981</p>
+        </article>
+        <article class="card">
+          <div class="swatch" style="background: #34D399"></div>
+          <p class="name">Esmeralda Light</p>
+          <p class="hex">#34D399</p>
+        </article>
+      </section>
+
+      <h2 class="section-title">Founder Orange</h2>
+      <section class="grid" aria-label="Cores da paleta Founder Orange">
+        <article class="card">
+          <div class="swatch" style="background: #FF7A00"></div>
+          <p class="name">Founder Orange</p>
+          <p class="hex">#FF7A00</p>
+        </article>
+        <article class="card">
+          <div class="swatch" style="background: #C2410C"></div>
+          <p class="name">Founder Ember</p>
+          <p class="hex">#C2410C</p>
+        </article>
+        <article class="card">
+          <div class="swatch" style="background: #FDBA74"></div>
+          <p class="name">Founder Glow</p>
+          <p class="hex">#FDBA74</p>
+        </article>
+      </section>
+
+      <aside class="note">
+        O laranja foi a chama inicial. A esmeralda é o sistema vivo que nasceu dela.
+      </aside>
+    </main>
+  </body>
+</html>
