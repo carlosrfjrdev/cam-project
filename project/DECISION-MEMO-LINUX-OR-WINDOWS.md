@@ -359,24 +359,30 @@ Esta seção é o ponto de aprovação formal. **Não preencher** até a §6 est
 
 ---
 
-## 10. ADENDO 2026-05-30 — Reversão da decisão (Opção B revogada)
+## 10. ADENDO 2026-05-30 — SO fixado em Windows; broker em reavaliação
 
 **Gatilho objetivo disparado** (§7 — "Wine glitcha repetidamente / inviável"):
-o MT5 sob **Wine no Linux falhou em teste**. O Founder **reverteu o SO para
-Windows 11 nativo**, mantendo o broker **MetaTrader 5** (muda só onde/como o MT5
-roda; sai a camada Wine).
+o MT5 sob **Wine no Linux falhou em teste**. Duas decisões de maturidade diferente:
 
-- **Vigente:** Windows 11 + MT5 nativo + bridge ZeroMQ em `127.0.0.1`.
+- ✅ **SO = Windows 11 nativo (FIRME).** Encerra a parte Linux/Wine da Opção B.
+- 🔄 **Broker = EM AVALIAÇÃO (não decidido).** **MT5 em teste** agora (Founder já
+  criou alguns pontos/setups). **Profit NÃO caiu — está em STANDBY**, mantido como
+  opção. **A escolha de broker fecha após o 1º teste do MT5.**
+
+Detalhes:
+- **Vigente em teste:** Windows 11 + MT5 nativo + bridge ZeroMQ em `127.0.0.1`.
+- **Standby:** Profit/Nelogica (NTSL + CSV/ProfitDLL) — reativável se o teste do MT5 não convencer.
 - **Soft-stage:** decisão de concepção pré-v1 — **sem ADR HARD**; docs moldáveis.
 - **Inalterado:** Constituição, NCC-1701, backend Python/FastAPI, frontend React/MUI,
-  Postgres+Timescale, Risk Engine, política da IA, EAs (`cam_bridge.mq5`,
-  `cam_risk_mirror.mq5`), allowlist `OrderSend`, `REAL_TRADING_ALLOWED=false`.
+  Postgres+Timescale, Risk Engine, política da IA, allowlist `OrderSend`,
+  `REAL_TRADING_ALLOWED=false`.
 - **Docs atualizadas:** `STACK-CAM-OFICIAL.md` (§0 + tabela + §6.1 supersedida),
   `ADR-012` (Superseded-in-part), runbook [`runbooks/RUNBOOK-WINDOWS.md`](./runbooks/RUNBOOK-WINDOWS.md),
   `cam-cockpit/TODO-OPERACIONAL.md` (OP-014).
-- **ADRs alinhadas (2026-05-30):** ADR-001 → Superseded (plataforma = MT5);
-  ADR-008/009 → Superseded-in-part (broker = MT5, espelho = `cam_risk_mirror.mq5`;
-  princípios mantidos). **Pendente só na v1:** consolidar a stack Windows como HARD.
+- **ADRs recalibradas (2026-05-30):** ADR-001 → **Under-evaluation** (MT5 em teste ·
+  Profit em standby); ADR-008 → Under-evaluation (faseamento mantido, broker em
+  aberto); ADR-009 → **Active** (espelho de risco: MQL5 se MT5, NTSL se Profit).
+- **Pendente:** decisão de broker (após 1º teste) e, na v1, consolidar a stack como HARD.
 
 ---
 

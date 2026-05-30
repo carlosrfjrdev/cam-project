@@ -1,14 +1,14 @@
 # RUNBOOK — cam-cockpit no **Windows 11** (MetaTrader 5 nativo)
 
-> **Contexto (BREAKING CHANGE — 2026-05-30):** MT5 sob **Wine no Linux falhou**.
-> Rota de plataforma muda para **Windows nativo** (MT5 + bridge ZeroMQ local).
-> Este runbook é a referência operacional do ambiente Windows.
+> **Contexto (2026-05-30):** dois níveis de decisão:
+> - ✅ **SO = Windows 11 (FIRME)** — o MT5 sob Wine no Linux falhou.
+> - 🔄 **Broker = EM AVALIAÇÃO** — este runbook cobre o **teste do MetaTrader 5**
+>   no Windows (Founder já criou alguns pontos/setups). **Profit NÃO caiu — está em
+>   STANDBY**; se o 1º teste do MT5 não convencer, o Profit é reativado.
+> Este runbook é a referência operacional do **caminho MT5 sob teste**.
 >
-> ⚠️ **Governança:** esta mudança **reverte** a decisão `DECISION-MEMO-LINUX-OR-WINDOWS.md`
-> (Opção B = Linux+MT5/Wine) e ressuscita parte da variante Windows arquivada.
-> **Exige ADR formal** (Oscar + Voltaire + Grace + Vint) atualizando
-> `project/STACK-CAM-OFICIAL.md` — ver [§11 ARCH follow-up](#11-arch-follow-up-obrigatório).
-> Este runbook **não** altera a stack canônica; documenta a operação no novo SO.
+> ℹ️ **Soft-stage (pré-v1):** docs/ADRs moldáveis, **sem ADR HARD**. A decisão de
+> broker fecha após o 1º teste — ver [§11](#11-decisão-pendente--próximos-passos).
 >
 > **Fase atual:** FASE_0 (Construção). **Sem trade real.** `REAL_TRADING_ALLOWED=false`.
 
@@ -244,21 +244,27 @@ Se o Docker Desktop não for viável:
 
 ---
 
-## 11. ARCH follow-up **obrigatório**
+## 11. Decisão pendente + próximos passos
 
-Esta mudança é uma reversão de stack — precisa passar pelo gate ARCH antes de
-virar canônica:
+Em soft-stage (pré-v1) **não abrimos ADR HARD** — atualizamos as docs existentes
+(já feito: `STACK-CAM-OFICIAL.md`, `DECISION-MEMO §10`, `ADR-001/008/009/012`).
 
-1. **ADR** (Oscar): "Plataforma de execução — Windows+MT5 nativo revoga Linux+Wine".
-2. **Atualizar** `project/STACK-CAM-OFICIAL.md` (hoje diz *Linux+MT5/Wine*) e o
-   `DECISION-MEMO-LINUX-OR-WINDOWS.md` (registrar a reversão e o motivo: Wine inviável).
-3. **Voltaire** (devil's advocate) + **Grace** (arquitetura) + **Vint** (infra) revisam.
-4. **Config:** tornar `mt5_wine_prefix` deprecado/no-op; documentar `mt5_terminal_path` Windows.
-5. **Kevin:** revalidar perímetro de execução no novo SO (DEMO-only, allowlist OrderSend).
+**Decisão de broker — gate do Founder após o 1º teste do MT5:**
 
-> Até o ADR ser aprovado pelo Founder, **este runbook é operacional, mas a stack
-> canônica ainda registra Linux** — divergência conhecida e sinalizada.
+| Saída do 1º teste | Ação |
+|---|---|
+| MT5 convence | Promover MT5 a broker oficial; manter Profit arquivado como fallback |
+| MT5 não convence | **Reativar Profit do standby** (`PROFIT_INTEGRATION_ENABLED=true`, `MT5_INTEGRATION_ENABLED=false` — respeitar o mutex R21.03) |
+
+**Pontos técnicos a validar no teste:**
+1. Bridge ZeroMQ estável em Windows (heartbeat, sem dropar `libzmq.dll`).
+2. `mt5_wine_prefix` é no-op no Windows; `mt5_terminal_path` aponta para o `terminal64.exe`.
+3. **Kevin:** perímetro de execução no Windows (DEMO-only, allowlist `OrderSend`).
+4. Paridade Risk Engine Python × `cam_risk_mirror.mq5` (espelho dos 18 validators).
+
+> **Standby do Profit:** artefatos NTSL seguem em `apps/cam-cockpit/ntsl/`. Nada foi
+> apagado — o Profit é reativável a qualquer momento enquanto não houver decisão.
 
 ---
 
-*Runbook Windows — orquestração Leo · lentes Vint (infra/OPS), Kevin (perímetro), Oscar (ARCH follow-up). FASE_0, sem trade real.*
+*Runbook Windows — orquestração Leo · lentes Vint (infra/OPS), Kevin (perímetro), Oscar (ARCH). Soft-stage, FASE_0, sem trade real. Broker em avaliação (MT5 teste / Profit standby).*

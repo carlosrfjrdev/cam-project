@@ -1,22 +1,25 @@
 ---
 template: ADR
 phase: ARCH
-status: Superseded-in-part
+status: Under-evaluation
 ---
 
-# ADR-008 — Integração ~~Profit~~ **MetaTrader 5** Faseada (F1 → F5)
+# ADR-008 — Integração de Broker Faseada (F1 → F5) — **broker em avaliação**
 
-> ⚠️ **ATUALIZADA (soft-stage, 2026-05-30).** O broker é **MetaTrader 5**, não
-> Profit (ver ADR-001 supersedida). O **princípio de faseamento sequencial
-> permanece válido** (cada camada só avança quando a anterior é estável; falha
-> degrada para "não opera"). Releitura dos termos: "Profit" → MT5; "NTSL" → MQL5
-> EAs; "ProfitDLL/ctypes" → **bridge ZeroMQ** (`cam_bridge.mq5` read-only +
-> `cam_risk_mirror.mq5`), com o `MetaTrader5` package nativo como opção futura
-> (Windows). Soft-stage (pré-v1) — sem ADR HARD.
+> ⚠️ **EM REAVALIAÇÃO (soft-stage, 2026-05-30).** O **princípio de faseamento
+> sequencial permanece válido** independentemente do broker (cada camada só avança
+> quando a anterior é estável; falha degrada para "não opera"). O **broker está em
+> aberto**: **MT5 em avaliação** (caminho em teste), **Profit em STANDBY** (não
+> descartado) — ver ADR-001. Mapeamento por broker:
+> - **Se MT5:** "ProfitDLL/ctypes" → **bridge ZeroMQ** (`cam_bridge.mq5` read-only
+>   + `cam_risk_mirror.mq5`); `MetaTrader5` package nativo como opção futura.
+> - **Se Profit:** integração via CSV/ProfitDLL conforme texto original.
+>
+> Decisão de broker pendente do 1º teste. Soft-stage (pré-v1) — sem ADR HARD.
 > SSoT: [`../../STACK-CAM-OFICIAL.md`](../../STACK-CAM-OFICIAL.md) §6.1.
 
-> **Data:** 2026-05-24 · **Atualizada:** 2026-05-30
-> **Status:** Superseded-in-part (princípio mantido; broker = MT5)
+> **Data:** 2026-05-24 · **Reavaliação:** 2026-05-30
+> **Status:** Under-evaluation (princípio mantido; broker MT5 em teste · Profit standby)
 > **Lead:** Oscar
 > **Aprovador final:** Founder (Carlos Rodrigues Ferreira Junior)
 > **Vive em:** `/project/cam-cockpit/adrs/ADR-008-integracao-profit-faseada.md`

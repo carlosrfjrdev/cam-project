@@ -225,31 +225,34 @@ A stack do CaM **revoga** os Combos A/B/C do catálogo Teczilabs (Java/Spring, F
 **Resumo da stack oficial:**
 
 ```text
-MetaTrader 5 (MQL5 EAs) →  Plataforma de execução — Windows NATIVO (sem Wine)
-Bridge ZeroMQ           →  Python ↔ MT5 em 127.0.0.1 (PUB 5556 / REQ 5557)
-Python 3.12 + FastAPI   →  Cockpit local: Risk Engine, Ledger, Journal, IA, integração
-React 19 + Vite + MUI   →  Frontend SPA local (sem Next.js)
+SO: Windows 11        →  FIRME (Wine/Linux falhou). Único SO, dev + produção.
+Broker: EM AVALIAÇÃO  →  MetaTrader 5 em teste (MQL5 EAs + bridge ZeroMQ 127.0.0.1)
+                          / Profit em STANDBY (NTSL + CSV/ProfitDLL). Decide após 1º teste.
+Python 3.12 + FastAPI →  Cockpit local: Risk Engine, Ledger, Journal, IA, integração
+React 19 + Vite + MUI →  Frontend SPA local (sem Next.js)
 PostgreSQL 16 + TimescaleDB → Banco transacional + tick/candle storage (desde Fase 0)
-DuckDB                  →  Motor analítico auxiliar (research em CSV/Parquet)
-Telegram Bot            →  Canal externo de alerta
+DuckDB                →  Motor analítico auxiliar (research em CSV/Parquet)
+Telegram Bot          →  Canal externo de alerta
 Ollama local + Anthropic → IA auditora/analista, NUNCA executora (Arts. 34–36)
 ```
 
-**SO produção E desenvolvimento:** **Windows 11** (decisão 2026-05-30). O MT5 sob
-Wine no Linux **falhou** → execução em Windows nativo, single-SO. Estamos em
-**soft-stage de concepção** (pré-v1): docs e ADRs são **moldáveis, não-HARD**.
+**SO produção E desenvolvimento:** **Windows 11** (firme, 2026-05-30 — Wine/Linux
+falhou). **Broker em avaliação:** **MT5 em teste** agora; **Profit em STANDBY**
+(não descartado) — a escolha fecha **após o 1º teste do MT5**. Tudo em **soft-stage**
+(pré-v1): docs e ADRs **moldáveis, não-HARD**.
 
 > ⚙️ **Continuar a partir de um `git clone` no Windows:** siga o runbook
 > [`project/runbooks/RUNBOOK-WINDOWS.md`](./project/runbooks/RUNBOOK-WINDOWS.md)
 > (setup, MT5 + EAs, bridge ZeroMQ, guardrails DEMO-only). O `cam-cockpit`
-> (backend/frontend/banco) é multiplataforma; só a camada MT5 é Windows.
-> EAs em `apps/cam-cockpit/mql5/` (`cam_bridge.mq5`, `cam_risk_mirror.mq5`).
+> (backend/frontend/banco) é multiplataforma; só a camada de broker é Windows.
+> EAs MT5 em `apps/cam-cockpit/mql5/` (`cam_bridge.mq5`, `cam_risk_mirror.mq5`);
+> artefatos Profit em `apps/cam-cockpit/ntsl/` (standby).
 
-Convenção de pastas: aplicativos em `/apps/cam-*` (monorepo `apps/cam-cockpit/{backend,frontend,mql5}`). Detalhes, faseamento de integração, riscos: ver [`STACK-CAM-OFICIAL.md`](./project/STACK-CAM-OFICIAL.md).
+Convenção de pastas: aplicativos em `/apps/cam-*` (monorepo `apps/cam-cockpit/{backend,frontend,mql5,ntsl}`). Detalhes, faseamento, riscos: ver [`STACK-CAM-OFICIAL.md`](./project/STACK-CAM-OFICIAL.md).
 
-> ⚠️ **Notas de drift (soft-stage):** o `ntsl/` foi DESATIVADO (broker é MT5, não
-> Profit). ADR-001 (Superseded), ADR-008/009 (Superseded-in-part) **já alinhadas a
-> MT5/MQL5** em 2026-05-30. Estado real (`/apps`) vence intenção (NCC-1701 §2 regra 7).
+> ⚠️ **Notas (soft-stage):** SO Windows é firme; **broker em aberto** (MT5 teste /
+> Profit standby — nada descartado). ADR-001/008 → **Under-evaluation**, ADR-009 →
+> **Active** (recalibradas 2026-05-30). Estado real (`/apps`) vence intenção (NCC-1701 §2 regra 7).
 
 ---
 

@@ -1,22 +1,26 @@
 ---
 template: ADR
 phase: ARCH
-status: Superseded
+status: Under-evaluation
 ---
 
-# ADR-001 — ~~Profit~~ **MetaTrader 5** como Plataforma Oficial de Execução
+# ADR-001 — Plataforma de Execução: **MetaTrader 5 em avaliação · Profit em standby**
 
-> ⚠️ **SUPERSEDIDA (soft-stage, 2026-05-30).** A plataforma de execução do CaM é
-> **MetaTrader 5 (MQL5 + Expert Advisors)**, decidida em 2026-05-25
-> (`DECISION-MEMO-LINUX-OR-WINDOWS.md`) e confirmada rodando em **Windows nativo**
-> em 2026-05-30 (MT5/Wine no Linux falhou). **Profit/Nelogica/NTSL NÃO é mais a
-> plataforma.** O texto abaixo é histórico do raciocínio original. Onde se lê
-> "Profit" → MT5; "NTSL" → MQL5; "ProfitDLL" → bridge ZeroMQ (`MetaTrader5`
-> package nativo é opção futura). Estamos em soft-stage (pré-v1) — sem ADR HARD.
+> ⚠️ **EM REAVALIAÇÃO (soft-stage, 2026-05-30).** A escolha de broker está **em
+> aberto**. Estado atual:
+> - **SO firme:** Windows 11 (o MT5 sob Wine no Linux falhou — isso está decidido).
+> - **MetaTrader 5:** em **avaliação ativa** no Windows (Founder já criou alguns
+>   pontos/setups). É o caminho em teste primeiro.
+> - **Profit/Nelogica:** **NÃO foi descartado** — está em **STANDBY**, mantido como
+>   opção até o **primeiro teste** do MT5 validar (ou não) a migração.
+>
+> **Decisão de broker pendente do primeiro teste.** Soft-stage (pré-v1) — sem ADR
+> HARD; nada aqui é irreversível. O texto abaixo (Profit como padrão) permanece
+> válido como racional do Profit enquanto ele estiver em standby.
 > SSoT da stack: [`../../STACK-CAM-OFICIAL.md`](../../STACK-CAM-OFICIAL.md).
 
-> **Data:** 2026-05-24 · **Supersedida:** 2026-05-30
-> **Status:** Superseded (plataforma = MetaTrader 5)
+> **Data:** 2026-05-24 · **Reavaliação:** 2026-05-30
+> **Status:** Under-evaluation (MT5 em teste · Profit em standby · decide após 1º teste)
 > **Lead:** Oscar
 > **Aprovador final:** Founder (Carlos Rodrigues Ferreira Junior)
 > **Vive em:** `/project/cam-cockpit/adrs/ADR-001-profit-plataforma-execucao.md`

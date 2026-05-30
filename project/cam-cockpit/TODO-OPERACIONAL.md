@@ -97,22 +97,25 @@
 
 ---
 
-## BREAKING CHANGE — Plataforma de execução (2026-05-30)
+## Plataforma — SO Windows firme; broker em avaliação (2026-05-30)
 
-### OP-014 — MT5 no Linux (Wine) falhou → migração para Windows nativo
-**Ação:** O teste do MT5 sob Wine no Linux **não funcionou**. A camada de execução
-migra para **Windows 11 nativo**. Runbook operacional criado:
-[`RUNBOOK-WINDOWS.md`](../runbooks/RUNBOOK-WINDOWS.md).
-**Impacto:** Reverte `DECISION-MEMO-LINUX-OR-WINDOWS.md` (Opção B = Linux+MT5/Wine)
-e ressuscita parte da variante Windows arquivada. O **cockpit** (backend/frontend/
-banco) é multiplataforma e não muda; muda **como o MT5 roda**.
-**Pendência de gate (ARCH — Oscar + Voltaire + Grace + Vint):**
-1. ADR formal "Windows+MT5 nativo revoga Linux+Wine".
-2. Atualizar `project/STACK-CAM-OFICIAL.md` (hoje diz Linux+MT5/Wine) + DECISION-MEMO.
-3. `mt5_wine_prefix` → deprecado/no-op; documentar `mt5_terminal_path` (Windows).
-4. Kevin revalida perímetro de execução no novo SO (DEMO-only, allowlist OrderSend).
-**Estado:** runbook operacional disponível; **stack canônica ainda registra Linux**
-(divergência conhecida, sinalizada no topo do RUNBOOK-WINDOWS §11).
+### OP-014 — Wine/Linux falhou → SO Windows (firme); broker em teste
+**Decidido (firme):** SO = **Windows 11** (dev + produção). O MT5 sob Wine no Linux
+**não funcionou**. Runbook: [`RUNBOOK-WINDOWS.md`](../runbooks/RUNBOOK-WINDOWS.md).
+**Em avaliação (NÃO decidido):** broker. **MT5 em teste** agora (Founder já criou
+alguns pontos/setups). **Profit em STANDBY** — não descartado; reativável.
+**Impacto:** cockpit (backend/frontend/banco) é multiplataforma e não muda; muda só
+o SO e o broker sob teste.
+**Docs atualizadas (soft-stage, sem ADR HARD):** `STACK-CAM-OFICIAL.md` v1.1,
+`DECISION-MEMO §10`, `ADR-001/008` (Under-evaluation), `ADR-009` (Active),
+`ADR-012` (Superseded-in-part), `CLAUDE.md`.
+
+### OP-015 — Decisão de broker (gate Founder após 1º teste do MT5)
+**Ação:** Rodar o 1º teste do MT5 no Windows (bridge ZeroMQ + EAs em DEMO). Decidir:
+- **MT5 convence** → broker oficial; Profit vira fallback arquivado.
+- **MT5 não convence** → reativar Profit do standby (mutex R21.03: um broker por vez).
+**Validar:** bridge estável, paridade Risk Engine × `cam_risk_mirror.mq5`, perímetro
+DEMO-only (Kevin), `mt5_terminal_path` correto. Ver RUNBOOK-WINDOWS §11.
 
 ---
 

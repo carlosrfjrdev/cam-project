@@ -1,22 +1,25 @@
 ---
 template: ADR
 phase: ARCH
-status: Superseded-in-part
+status: Active
 ---
 
-# ADR-009 — Risk Engine Espelhado em ~~NTSL~~ **MQL5** como Segunda Linha de Defesa
+# ADR-009 — Risk Engine Espelhado no Broker como Segunda Linha de Defesa
 
-> ⚠️ **ATUALIZADA (soft-stage, 2026-05-30).** O espelho de risco é implementado em
-> **MQL5**, não NTSL: **`apps/cam-cockpit/mql5/experts/cam_risk_mirror.mq5`** — o
-> ÚNICO arquivo autorizado a `OrderSend` (allowlist enforçada por
-> `scripts/lint_mql5.py`), que entrega **só em conta DEMO**. O **princípio
-> permanece intacto**: regras de risco não-negociáveis espelhadas no broker como
-> segunda linha de defesa hard-coded (Arts. 15º/18º/19º). Releia "NTSL" → MQL5;
-> "estratégia NTSL no Profit" → EA no MT5. Soft-stage (pré-v1) — sem ADR HARD.
-> SSoT: [`../../STACK-CAM-OFICIAL.md`](../../STACK-CAM-OFICIAL.md).
+> ⚠️ **ATUALIZADA (soft-stage, 2026-05-30).** O **princípio permanece intacto e
+> ativo**: regras de risco não-negociáveis espelhadas no broker como segunda linha
+> de defesa hard-coded (Arts. 15º/18º/19º). A **implementação depende do broker**
+> (em avaliação — ver ADR-001):
+> - **MT5 (em teste):** espelho em **MQL5** → `apps/cam-cockpit/mql5/experts/cam_risk_mirror.mq5`,
+>   ÚNICO arquivo autorizado a `OrderSend` (allowlist por `scripts/lint_mql5.py`),
+>   entrega **só em conta DEMO**.
+> - **Profit (standby):** espelho em **NTSL** conforme texto original — reativável
+>   se o Profit sair do standby.
+>
+> Soft-stage (pré-v1) — sem ADR HARD. SSoT: [`../../STACK-CAM-OFICIAL.md`](../../STACK-CAM-OFICIAL.md).
 
 > **Data:** 2026-05-24 · **Atualizada:** 2026-05-30
-> **Status:** Superseded-in-part (princípio mantido; espelho = MQL5 cam_risk_mirror.mq5)
+> **Status:** Active (princípio vigente; implementação = MQL5 se MT5, NTSL se Profit)
 > **Lead:** Oscar · **Cross-cutting:** Kevin (SEC-GOV)
 > **Aprovador final:** Founder (Carlos Rodrigues Ferreira Junior)
 > **Vive em:** `/project/cam-cockpit/adrs/ADR-009-risk-ntsl-segunda-linha-defesa.md`
