@@ -4,7 +4,7 @@ block: BL-UI-2
 plan_ref: ../PLAN-v0.5-COCKPIT-UI.md
 spec_rules: [RU2.01]
 covers_ca: [CA-U2.1]
-status: Pending
+status: Done
 sec: true
 sec_critical: true
 qa_sec: true

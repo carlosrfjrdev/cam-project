@@ -4,7 +4,7 @@ block: BL-UI-4
 plan_ref: ../PLAN-v0.5-COCKPIT-UI.md
 spec_rules: [RU4.03]
 covers_ca: [CA-U4.3]
-status: Pending
+status: Done
 sec: true
 qa_sec: true
 predecessors: [TASK-U004, TASK-U010]

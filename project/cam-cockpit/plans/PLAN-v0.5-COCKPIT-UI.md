@@ -11,7 +11,7 @@ demand_id: PLAN-v0.5-COCKPIT-UI
 pmg: G
 sec: true
 qa_sec: true
-letscode: false
+letscode: true
 ---
 
 # PLAN v0.5 — Cockpit UI (indexador)
@@ -192,8 +192,8 @@ BL-UI-5: U022 → U023
 
 | Campo | Valor |
 |---|---|
-| Status | **`false`** (aguardando aprovação Founder) |
-| Aprovado por | (Founder em ____-__-__) |
+| Status | **`true`** (aprovado verbalmente pelo Founder) |
+| Aprovado por | Founder em 2026-05-29 (execução autônoma noturna) |
 
 ```
 [ ] Carlos aprova o PLAN v0.5-COCKPIT-UI:
@@ -211,6 +211,7 @@ BL-UI-5: U022 → U023
 | Versão | Data | Mudança | Aprovado por |
 |---|---|---|---|
 | 0.5-draft | 2026-05-29 | Indexador + 23 TASKs flat — Nico (Albert sem disputa) | — |
+| 0.5 | 2026-05-29 | `letscode=true` (verbal). CODE autônomo das 23 TASKs concluído: backend 749 testes, frontend 63 testes, todos verdes. Débitos em [`qa/v0.5/TECH-DEBTS-v0.5-COCKPIT-UI.md`](../qa/v0.5/TECH-DEBTS-v0.5-COCKPIT-UI.md). Gates de janela aguardam validação do Founder. | Founder (letscode) |
 
 ---
 
