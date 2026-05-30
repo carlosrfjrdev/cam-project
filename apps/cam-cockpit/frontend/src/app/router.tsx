@@ -1,5 +1,7 @@
+import { Suspense, lazy } from "react";
 import { Routes, Route } from "react-router-dom";
-import { Layout } from "../_shared/components/Layout";
+import { Box, CircularProgress } from "@mui/material";
+import { AppShell } from "../_shared/components/AppShell";
 import { CockpitPage } from "../features/cockpit/CockpitPage";
 import { JournalPage } from "../features/journal/JournalPage";
 import { FiscalPage } from "../features/fiscal/FiscalPage";
@@ -10,22 +12,48 @@ import { SettingsPage } from "../features/settings/SettingsPage";
 import { PaperTradingPage } from "../features/paper-trading/PaperTradingPage";
 import { CarteiraHardPage } from "../features/carteira-hard/CarteiraHardPage";
 import { BacktestPage } from "../features/backtest/BacktestPage";
+import { OrderGatewayPage } from "../features/order-gateway/OrderGatewayPage";
+import { StrategyRegistryPage } from "../features/strategies/StrategyRegistryPage";
+import { EaControlPage } from "../features/ea-control/EaControlPage";
+import { MarketDataPage } from "../features/market-data/MarketDataPage";
+import { RobotOrchestratorPage } from "../features/robot-orchestrator/RobotOrchestratorPage";
+import { ScalingPage } from "../features/scaling/ScalingPage";
+
+// U023 — Research carrega Recharts: rota lazy (bundle isolado).
+const ResearchPage = lazy(() =>
+  import("../features/research/ResearchPage").then((m) => ({ default: m.ResearchPage })),
+);
 
 export function AppRouter() {
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<CockpitPage />} />
-        <Route path="/journal" element={<JournalPage />} />
-        <Route path="/fiscal" element={<FiscalPage />} />
-        <Route path="/harvest" element={<HarvestPage />} />
-        <Route path="/risk" element={<RiskConsolePage />} />
-        <Route path="/constitution" element={<ConstitutionPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/paper-trading" element={<PaperTradingPage />} />
-        <Route path="/carteira-hard" element={<CarteiraHardPage />} />
-        <Route path="/backtest" element={<BacktestPage />} />
-      </Routes>
-    </Layout>
+    <AppShell>
+      <Suspense
+        fallback={
+          <Box sx={{ display: "flex", justifyContent: "center", p: 6 }}>
+            <CircularProgress />
+          </Box>
+        }
+      >
+        <Routes>
+          <Route path="/" element={<CockpitPage />} />
+          <Route path="/order-gateway" element={<OrderGatewayPage />} />
+          <Route path="/risk" element={<RiskConsolePage />} />
+          <Route path="/ea-control" element={<EaControlPage />} />
+          <Route path="/strategies" element={<StrategyRegistryPage />} />
+          <Route path="/robots" element={<RobotOrchestratorPage />} />
+          <Route path="/scaling" element={<ScalingPage />} />
+          <Route path="/market-data" element={<MarketDataPage />} />
+          <Route path="/journal" element={<JournalPage />} />
+          <Route path="/fiscal" element={<FiscalPage />} />
+          <Route path="/harvest" element={<HarvestPage />} />
+          <Route path="/carteira-hard" element={<CarteiraHardPage />} />
+          <Route path="/research" element={<ResearchPage />} />
+          <Route path="/backtest" element={<BacktestPage />} />
+          <Route path="/paper-trading" element={<PaperTradingPage />} />
+          <Route path="/constitution" element={<ConstitutionPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Routes>
+      </Suspense>
+    </AppShell>
   );
 }
