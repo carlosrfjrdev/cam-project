@@ -188,3 +188,45 @@ app.include_router(mt5_router)
 from cam.api.websocket import router as ws_router  # noqa: E402
 
 app.include_router(ws_router)
+
+# ---------------------------------------------------------------------------
+# BL-UI-0 (SPEC v0.5-COCKPIT-UI) — Borda HTTP: expõe features v0.4 à UI.
+# Read + comandos governados/seguros. NENHUM endpoint submete ordem (Art. 35º).
+# ---------------------------------------------------------------------------
+
+# U001 — Strategy Registry (dead route → viva)
+from cam.features.strategies.routes import router as strategies_router  # noqa: E402
+
+app.include_router(strategies_router)
+
+# U002 — Holdings / Carteira Hard (dead route → viva)
+from cam.features.ledger.holdings_router import router as holdings_router  # noqa: E402
+
+app.include_router(holdings_router)
+
+# U003 — Robot Orchestrator (read-only)
+from cam.features.robot_orchestrator.routes import (  # noqa: E402
+    router as robot_orchestrator_router,
+)
+
+app.include_router(robot_orchestrator_router)
+
+# U004 — Scaling / Escalonamento constitucional (Art. 11-B)
+from cam.features.scaling.routes import router as scaling_router  # noqa: E402
+
+app.include_router(scaling_router)
+
+# U005 — Research / AI Workbench (governado; OpenAI bloqueado)
+from cam.features.research.routes import router as research_router  # noqa: E402
+
+app.include_router(research_router)
+
+# U006 — Fundamentals / Dividendos / Policy alerts
+from cam.features.fundamentals.routes import router as fundamentals_router  # noqa: E402
+
+app.include_router(fundamentals_router)
+
+# U007 — Order Gateway decisions (SEC CRÍTICO, read-only)
+from cam.api.order_gateway_routes import router as order_gateway_router  # noqa: E402
+
+app.include_router(order_gateway_router)
