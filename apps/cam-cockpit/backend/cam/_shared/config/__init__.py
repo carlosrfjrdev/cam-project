@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     O .env NUNCA é commitado (pré-commit hook bloqueia + .gitignore).
     """
 
-    database_url: str = "postgresql+psycopg://cam:cam@localhost:5433/cam_db"
+    database_url: str = "postgresql+psycopg://cam:cam@localhost:5434/cam_db"
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
     anthropic_api_key: str = ""
