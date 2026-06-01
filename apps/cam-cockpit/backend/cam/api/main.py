@@ -65,9 +65,26 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     from cam.features.harvest.routes import _service as harvest_service
     event_bus.subscribe(DarfPaid, harvest_service.handle_darf_paid)
 
+    # Inspetor (ADR-014) — conecta a bridge ZeroMQ se autoconnect habilitado.
+    # Best-effort: sem MT5/EA, sobe os sockets mas fica OFFLINE (falha segura).
+    if cam_settings.mt5_bridge_autoconnect:
+        try:
+            from cam.features.mt5_integration.routes import _service as mt5_service
+            await mt5_service.connect()
+        except Exception:
+            # falha de conexão não derruba o app — endpoints retornam 503 OFFLINE
+            pass
+
     # startup completo
     yield
-    # shutdown — recursos serão liberados em Bloco B+
+
+    # shutdown — desconecta bridge se conectada
+    if cam_settings.mt5_bridge_autoconnect:
+        try:
+            from cam.features.mt5_integration.routes import _service as mt5_service
+            await mt5_service.disconnect()
+        except Exception:
+            pass
 
 
 app = FastAPI(
@@ -183,6 +200,18 @@ app.include_router(dashboard_router)
 from cam.features.mt5_integration.routes import router as mt5_router  # noqa: E402
 
 app.include_router(mt5_router)
+
+# Inspetor de Ativo (ADR-014) — market data read-only (candles/symbols/WS)
+from cam.features.mt5_integration.market_routes import (  # noqa: E402
+    router as mt5_market_router,
+)
+
+app.include_router(mt5_market_router)
+
+# Inspetor de Ativo (ADR-014) — overlay de Regime de Markov (read-only)
+from cam.features.regime.routes import router as regime_router  # noqa: E402
+
+app.include_router(regime_router)
 
 # T-TD-026 (SPEC v0.3) — WebSocket P&L stub funcional
 from cam.api.websocket import router as ws_router  # noqa: E402

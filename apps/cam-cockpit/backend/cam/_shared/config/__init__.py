@@ -39,6 +39,15 @@ class Settings(BaseSettings):
     mt5_wine_prefix: Path = Path.home() / ".wine"
     mt5_terminal_path: str = ""
 
+    # Inspetor de Ativo (ADR-014) — fundamentos via brapi.dev
+    # Token opcional (free tier funciona sem token p/ vários tickers).
+    # NUNCA commitado — vive no .env.
+    brapi_token: str = ""
+    brapi_base_url: str = "https://brapi.dev/api"
+    # Conecta a bridge ZeroMQ no startup do app (lifespan). Em CI/dev sem MT5,
+    # deixar False evita sockets ociosos; em produção Windows, True.
+    mt5_bridge_autoconnect: bool = False
+
     # T-TD-012 — CDI diario (risk-free rate) para Sharpe Ratio; default 0
     cdi_daily_rate: float = 0.0
 

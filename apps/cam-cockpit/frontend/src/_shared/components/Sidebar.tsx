@@ -7,7 +7,7 @@ import {
   Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
   Tooltip, Typography, Box,
 } from "@mui/material";
-import { NAV_ITEMS } from "../nav";
+import { MVP_NAV_ITEMS } from "../nav";
 import { useUiStore } from "../state/uiStore";
 
 export const SIDEBAR_WIDTH = 208;
@@ -42,7 +42,7 @@ export function Sidebar() {
       }}
     >
       <List dense sx={{ pt: 1 }}>
-        {NAV_ITEMS.map((item) => {
+        {MVP_NAV_ITEMS.map((item) => {
           const showGroup = !sidebarCollapsed && item.group !== lastGroup;
           lastGroup = item.group;
           const selected = location.pathname === item.path;

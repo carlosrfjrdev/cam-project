@@ -18,6 +18,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from cam._shared.infra import get_db_session
+from cam.features.fundamentals.brapi_source import (
+    BrapiSource,
+    extract_dividends,
+)
+from cam.features.fundamentals.dividends import project_dividends
 from cam.features.fundamentals.multi_source_collector import PlaceholderSource
 from cam.features.ledger.holdings import HoldingsRepository
 from cam.features.ledger.policy_engine import evaluate_holding
@@ -25,19 +30,58 @@ from cam.features.ledger.policy_engine import evaluate_holding
 router = APIRouter(prefix="/api/v1", tags=["fundamentals"])
 
 _source = PlaceholderSource()
+_brapi = BrapiSource()
 _holdings = HoldingsRepository()
+
+
+def _classify(ticker: str) -> str:
+    t = ticker.strip().upper()
+    if "$" in t or t.startswith(("WIN", "WDO", "IND", "DOL")):
+        return "future"
+    if len(t) == 6 and t.endswith("11"):
+        return "fii"
+    if len(t) == 5 and t[-1] in "3456":
+        return "stock"
+    return "unknown"
 
 
 @router.get("/fundamentals/{ticker}")
 async def get_fundamentals(ticker: str) -> dict[str, Any]:
-    """Snapshot fundamentalista (7 indicadores R-20). Read-only."""
-    snap = await _source.fetch(ticker)
+    """
+    Snapshot fundamentalista (7 indicadores R-20) + dividendos + 2 projeções.
+
+    Fonte primária: brapi.dev (R-11). Fallback: PlaceholderSource (fixtures) —
+    garante resposta útil em CI/offline. Read-only. Futuros não têm fundamentos.
+    """
+    t = ticker.strip().upper()
+    kind = _classify(t)
+
+    # brapi primeiro; fallback para placeholder (CI/offline)
+    snap = await _brapi.fetch(t)
+    raw = await _brapi.fetch_raw(t) if snap is not None else None
+    source = "brapi"
+    if snap is None:
+        snap = await _source.fetch(t)
+        source = "placeholder"
+
     if snap is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail={"code": "NO_FUNDAMENTALS", "ticker": ticker.upper()},
+            detail={"code": "NO_FUNDAMENTALS", "ticker": t},
         )
-    return snap.to_dict()
+
+    dividends_history: list[dict[str, Any]] = []
+    price = None
+    if raw is not None:
+        dividends_history = extract_dividends(raw)
+        price = raw.get("regularMarketPrice")
+
+    base = snap.to_dict()
+    base["type"] = kind
+    base["source"] = source
+    base["dividends_history"] = dividends_history
+    base["dividend_projection"] = project_dividends(dividends_history, price)
+    return base
 
 
 @router.get("/dividends/calendar")

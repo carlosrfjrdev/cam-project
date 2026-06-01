@@ -20,16 +20,25 @@ import BiotechIcon from "@mui/icons-material/Biotech";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import SettingsIcon from "@mui/icons-material/Settings";
+import TravelExploreIcon from "@mui/icons-material/TravelExplore";
 
 export interface NavItem {
   label: string;
   path: string;
   icon: ReactNode;
   group: string;
+  /**
+   * MVP Inspetor de Ativo (SCOPE-Inspetor-Consolidado §2). Quando `true`, o item
+   * aparece no sidebar. As telas não-MVP ficam ocultas (sem deletar código —
+   * rota continua registrada em router.tsx, acessível por URL direta).
+   */
+  visibleInMvp?: boolean;
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { label: "Cockpit Live", path: "/", icon: <DashboardIcon />, group: "Operação" },
+  { label: "Inspetor de Ativo", path: "/inspetor", icon: <TravelExploreIcon />, group: "Pesquisa", visibleInMvp: true },
+
+  { label: "Cockpit Live", path: "/", icon: <DashboardIcon />, group: "Operação", visibleInMvp: true },
   { label: "Order Gateway", path: "/order-gateway", icon: <GavelIcon />, group: "Operação" },
   { label: "Risk Console", path: "/risk", icon: <ShieldIcon />, group: "Operação" },
   { label: "EA Control", path: "/ea-control", icon: <MemoryIcon />, group: "Operação" },
@@ -48,6 +57,9 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Backtest", path: "/backtest", icon: <BarChartIcon />, group: "Patrimônio" },
   { label: "Paper Trading", path: "/paper-trading", icon: <ScienceIcon />, group: "Patrimônio" },
 
-  { label: "Constituição", path: "/constitution", icon: <MenuBookIcon />, group: "Sistema" },
-  { label: "Configurações", path: "/settings", icon: <SettingsIcon />, group: "Sistema" },
+  { label: "Constituição", path: "/constitution", icon: <MenuBookIcon />, group: "Sistema", visibleInMvp: true },
+  { label: "Configurações", path: "/settings", icon: <SettingsIcon />, group: "Sistema", visibleInMvp: true },
 ];
+
+/** Telas visíveis no MVP do Inspetor. Trocar `visibleInMvp` revela cada tela. */
+export const MVP_NAV_ITEMS = NAV_ITEMS.filter((i) => i.visibleInMvp);

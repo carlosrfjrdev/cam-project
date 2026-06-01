@@ -66,3 +66,37 @@ class MT5BridgeOfflinePayload(BaseModel):
     error: Literal["MT5_BRIDGE_OFFLINE"] = "MT5_BRIDGE_OFFLINE"
     since: datetime
     message: str = "Bridge MT5 desconectada — verificar EA no MT5 e reiniciar bridge."
+
+
+# ---------------------------------------------------------------------------
+# Inspetor de Ativo (ADR-014 / SPEC-Inspetor) — candles, símbolos, metadata
+# ---------------------------------------------------------------------------
+
+Timeframe = Literal["M1", "M5", "M15", "M30", "H1", "H4", "D1", "W1", "MN1"]
+
+
+class Candle(BaseModel):
+    """Barra OHLCV. `time` em segundos unix (lightweight-charts usa UTCTimestamp)."""
+    time: int
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: int
+
+
+class CandlesResponse(BaseModel):
+    symbol: str
+    timeframe: Timeframe
+    candles: list[Candle]
+
+
+class SymbolMeta(BaseModel):
+    ticker: str
+    mt5_symbol: str
+    type: Literal["stock", "fii", "future", "unknown"]
+    has_fundamentals: bool
+
+
+class SymbolsResponse(BaseModel):
+    symbols: list[str]

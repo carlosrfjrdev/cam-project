@@ -216,9 +216,9 @@ limitar `count`; símbolo MT5 ≠ B3 → resolução; brapi free tier → cache;
 
 | Campo | Valor |
 |---|---|
-| Status | **`false`** |
-| Aprovado por | — (aguarda Founder) |
-| Motivo se `false` ainda | PLAN recém-emitido; aguarda ratificação do Founder para abrir CODE. Sugestão: liberar **T-FE-1** primeiro (independente, baixo risco, alívio imediato de navegação) e o restante em seguida. |
+| Status | **`true`** ✅ |
+| Aprovado por | **Carlos (Founder) — 2026-05-31**, execução autônoma de todos os ambientes |
+| Escopo liberado | Total (T-EA-1, T-BE-1/2/3, T-FE-1..5) + runbook de configuração do MT5 ao final |
 
 ## 9. Histórico
 

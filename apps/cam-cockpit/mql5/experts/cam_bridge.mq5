@@ -19,14 +19,21 @@
 //|   GET_STATE          -> {balance, equity, margin}                  |
 //|   GET_POSITIONS      -> lista de posicoes abertas                  |
 //|   GET_SYMBOL_INFO    -> metadata do simbolo                        |
+//|   GET_CANDLES        -> OHLCV historico (CopyRates) — Inspetor      |
+//|   GET_SYMBOLS        -> lista de simbolos disponiveis — Inspetor    |
+//|   SUBSCRIBE          -> SymbolSelect + MarketBookAdd — Inspetor     |
+//|   UNSUBSCRIBE        -> remove watch do simbolo — Inspetor          |
+//|                                                                   |
+//| Canal PUB adicional (Inspetor):                                   |
+//|   mt5.book           -> profundidade (DOM) via OnBookEvent          |
 //|                                                                   |
 //| CA15.1 — NAO chama OrderSend/OrderClose/PositionOpen/PositionClose|
 //| §7.1 sec — verifica conta DEMO no startup, abort se REAL          |
 //+------------------------------------------------------------------+
 #property copyright "CaM — The Carlos Alternative Money"
-#property version   "0.3"
+#property version   "0.4"
 #property strict
-#property description "CaM Bridge ZeroMQ — Read-only v0.3 (SPEC v0.4 BL-A G2)"
+#property description "CaM Bridge ZeroMQ — Read-only v0.4 (Inspetor de Ativo: candles+book+symbols)"
 
 // TASK-009 (BL-A): Control Plane G2 — PAUSE_EA, RESUME_EA, GET_VERSION
 // Estes comandos NÃO disparam OrderSend — bridge segue READ-ONLY (CA15.1).
@@ -35,19 +42,30 @@
 
 #include <cam_zmq.mqh>
 
-#define CAM_BRIDGE_VERSION "0.3.0-bla"
+#define CAM_BRIDGE_VERSION "0.4.0-inspetor"
 
 input int    InpPubPort = 5556;
 input int    InpReqPort = 5557;
 input int    InpHeartbeatMs = 1000;       // 1 msg/segundo (SPEC R12.04)
 input int    InpMagicNumber = 20260525;   // distinto p/ identificar v0.2
-input bool   InpRequireDemoAccount = true; // sec §7.1 — protege contra ativacao em conta real
+// sec §7.1 / ADR-014 R-10 — defesa em profundidade. Default TRUE (so DEMO).
+// Para o Inspetor em conta REAL (read-only): setar FALSE conscientemente no
+// attach do EA. A bridge nao tem OrderSend; ler dado de conta real e seguro.
+input bool   InpRequireDemoAccount = true;
+// Inspetor — publica profundidade de mercado (DOM) quando o ativo fornece book.
+input bool   InpPublishBook = true;
+// Inspetor — limite de barras por GET_CANDLES (protege heartbeat do EA single-thread).
+input int    InpMaxCandles = 5000;
 
 datetime g_last_heartbeat_ms = 0;
 
 // TASK-009 — flag de pausa: quando true, OnTick NÃO publica em mt5.tick
 // (heartbeat continua via OnTimer — isso é critério CA-A.5).
 bool     g_ontick_paused = false;
+
+// Inspetor — simbolo atualmente observado para tick/book ao vivo.
+// Default: o simbolo do grafico onde o EA esta atachado.
+string   g_watched_symbol = "";
 
 //+------------------------------------------------------------------+
 int OnInit()
@@ -69,8 +87,15 @@ int OnInit()
       return(INIT_FAILED);
      }
 
+   // Inspetor — observa por padrao o simbolo do grafico atual.
+   g_watched_symbol = Symbol();
+   if(InpPublishBook)
+      MarketBookAdd(g_watched_symbol);
+
    EventSetMillisecondTimer(InpHeartbeatMs);
-   Print("[CamBridge] v0.2 read-only ativo. Magic=", InpMagicNumber);
+   PrintFormat("[CamBridge] v%s read-only ativo. Magic=%d Watched=%s Book=%s",
+               CAM_BRIDGE_VERSION, InpMagicNumber, g_watched_symbol,
+               (InpPublishBook ? "on" : "off"));
    return(INIT_SUCCEEDED);
   }
 
@@ -78,7 +103,45 @@ int OnInit()
 void OnDeinit(const int reason)
   {
    EventKillTimer();
+   if(InpPublishBook && StringLen(g_watched_symbol) > 0)
+      MarketBookRelease(g_watched_symbol);
    CamZMQShutdown();
+  }
+
+//+------------------------------------------------------------------+
+//| OnBookEvent — Inspetor: publica DOM (profundidade) em mt5.book    |
+//| READ-ONLY: apenas le MarketBookGet, nunca envia ordem.            |
+//+------------------------------------------------------------------+
+void OnBookEvent(const string &symbol)
+  {
+   if(!InpPublishBook) return;
+   if(symbol != g_watched_symbol) return;
+
+   MqlBookInfo book[];
+   if(!MarketBookGet(symbol, book)) return;
+
+   string bids = "";
+   string asks = "";
+   int n = ArraySize(book);
+   for(int i = 0; i < n; i++)
+     {
+      string level = StringFormat("{\"price\":%.5f,\"vol\":%d}",
+                                  book[i].price, (int)book[i].volume);
+      if(book[i].type == BOOK_TYPE_BUY || book[i].type == BOOK_TYPE_BUY_MARKET)
+        {
+         if(StringLen(bids) > 0) bids += ",";
+         bids += level;
+        }
+      else if(book[i].type == BOOK_TYPE_SELL || book[i].type == BOOK_TYPE_SELL_MARKET)
+        {
+         if(StringLen(asks) > 0) asks += ",";
+         asks += level;
+        }
+     }
+   string payload = StringFormat(
+      "{\"symbol\":\"%s\",\"ts\":%d,\"bids\":[%s],\"asks\":[%s]}",
+      symbol, (int)TimeCurrent(), bids, asks);
+   CamZMQPub("mt5.book", payload);
   }
 
 //+------------------------------------------------------------------+
@@ -106,15 +169,68 @@ void OnTick()
    if(g_ontick_paused)
       return;
 
-   // PUB: tick atual do simbolo onde o EA esta atachado
+   // PUB: tick do simbolo observado (default = simbolo do grafico).
+   string sym = (StringLen(g_watched_symbol) > 0 ? g_watched_symbol : Symbol());
    MqlTick tick;
-   if(SymbolInfoTick(Symbol(), tick))
+   if(SymbolInfoTick(sym, tick))
      {
       string payload = StringFormat(
          "{\"symbol\":\"%s\",\"bid\":%.5f,\"ask\":%.5f,\"last\":%.5f,\"volume\":%d,\"ts_unix_ms\":%d}",
-         Symbol(), tick.bid, tick.ask, tick.last, (int)tick.volume, (int)(tick.time_msc));
+         sym, tick.bid, tick.ask, tick.last, (int)tick.volume, (int)(tick.time_msc));
       CamZMQPub("mt5.tick", payload);
      }
+  }
+
+//+------------------------------------------------------------------+
+//| Helpers minimos de extracao de campo JSON (read-only, sem libs)   |
+//+------------------------------------------------------------------+
+string JsonGetString(const string json, const string key)
+  {
+   string needle = "\"" + key + "\"";
+   int k = StringFind(json, needle);
+   if(k < 0) return("");
+   int colon = StringFind(json, ":", k);
+   if(colon < 0) return("");
+   int q1 = StringFind(json, "\"", colon + 1);
+   if(q1 < 0) return("");
+   int q2 = StringFind(json, "\"", q1 + 1);
+   if(q2 < 0) return("");
+   return(StringSubstr(json, q1 + 1, q2 - q1 - 1));
+  }
+
+int JsonGetInt(const string json, const string key, const int fallback)
+  {
+   string needle = "\"" + key + "\"";
+   int k = StringFind(json, needle);
+   if(k < 0) return(fallback);
+   int colon = StringFind(json, ":", k);
+   if(colon < 0) return(fallback);
+   // pula espacos e aspas
+   int i = colon + 1;
+   string num = "";
+   while(i < StringLen(json))
+     {
+      ushort c = StringGetCharacter(json, i);
+      if((c >= '0' && c <= '9') || c == '-') num += ShortToString(c);
+      else if(StringLen(num) > 0) break;
+      i++;
+     }
+   if(StringLen(num) == 0) return(fallback);
+   return((int)StringToInteger(num));
+  }
+
+ENUM_TIMEFRAMES TimeframeFromString(const string tf)
+  {
+   if(tf == "M1")  return(PERIOD_M1);
+   if(tf == "M5")  return(PERIOD_M5);
+   if(tf == "M15") return(PERIOD_M15);
+   if(tf == "M30") return(PERIOD_M30);
+   if(tf == "H1")  return(PERIOD_H1);
+   if(tf == "H4")  return(PERIOD_H4);
+   if(tf == "D1")  return(PERIOD_D1);
+   if(tf == "W1")  return(PERIOD_W1);
+   if(tf == "MN1") return(PERIOD_MN1);
+   return(PERIOD_H1); // default
   }
 
 //+------------------------------------------------------------------+
@@ -216,9 +332,117 @@ void HandleCommand(const string cmd)
       return;
      }
 
+   // Inspetor (ADR-014) — GET_CANDLES: OHLCV historico via CopyRates (read-only)
+   if(StringFind(c, "GET_CANDLES") >= 0)
+     {
+      HandleGetCandles(c);
+      return;
+     }
+
+   // Inspetor — GET_SYMBOLS: lista de simbolos disponiveis (read-only)
+   if(StringFind(c, "GET_SYMBOLS") >= 0)
+     {
+      HandleGetSymbols();
+      return;
+     }
+
+   // Inspetor — SUBSCRIBE: passa a observar o simbolo (SymbolSelect + book)
+   if(StringFind(c, "UNSUBSCRIBE") >= 0)
+     {
+      string sym = JsonGetString(c, "symbol");
+      if(InpPublishBook && StringLen(g_watched_symbol) > 0)
+         MarketBookRelease(g_watched_symbol);
+      g_watched_symbol = Symbol();
+      if(InpPublishBook)
+         MarketBookAdd(g_watched_symbol);
+      CamZMQSend(StringFormat("{\"status\":\"ok\",\"data\":\"%s\"}", g_watched_symbol));
+      return;
+     }
+   if(StringFind(c, "SUBSCRIBE") >= 0)
+     {
+      string sym = JsonGetString(c, "symbol");
+      if(StringLen(sym) == 0)
+        {
+         CamZMQSend("{\"error\":\"MISSING_SYMBOL\"}");
+         return;
+        }
+      if(!SymbolSelect(sym, true))
+        {
+         CamZMQSend(StringFormat("{\"error\":\"SYMBOL_NOT_FOUND\",\"symbol\":\"%s\"}", sym));
+         return;
+        }
+      if(InpPublishBook && StringLen(g_watched_symbol) > 0 && g_watched_symbol != sym)
+         MarketBookRelease(g_watched_symbol);
+      g_watched_symbol = sym;
+      if(InpPublishBook)
+         MarketBookAdd(g_watched_symbol);
+      CamZMQSend(StringFormat("{\"status\":\"ok\",\"data\":\"%s\"}", sym));
+      return;
+     }
+
    // CA15.3 — comando fora da whitelist
    string err = StringFormat("{\"error\":\"UNAUTHORIZED_COMMAND\",\"cmd\":\"%s\"}", c);
    PrintFormat("[CamBridge] Comando rejeitado: %s", c);
    CamZMQSend(err);
+  }
+
+//+------------------------------------------------------------------+
+//| GET_CANDLES — responde OHLCV via CopyRates (read-only)            |
+//| req: {"cmd":"GET_CANDLES","symbol":"PETR4","timeframe":"D1",      |
+//|       "count":200}                                                |
+//+------------------------------------------------------------------+
+void HandleGetCandles(const string cmd)
+  {
+   string sym = JsonGetString(cmd, "symbol");
+   string tfs = JsonGetString(cmd, "timeframe");
+   int    cnt = JsonGetInt(cmd, "count", 200);
+   if(StringLen(sym) == 0) { CamZMQSend("{\"error\":\"MISSING_SYMBOL\"}"); return; }
+   if(cnt < 1)   cnt = 1;
+   if(cnt > InpMaxCandles) cnt = InpMaxCandles;  // protege heartbeat (ADR-014)
+
+   SymbolSelect(sym, true);
+   ENUM_TIMEFRAMES tf = TimeframeFromString(tfs);
+
+   MqlRates rates[];
+   ArraySetAsSeries(rates, true);
+   int got = CopyRates(sym, tf, 0, cnt, rates);
+   if(got <= 0)
+     {
+      CamZMQSend(StringFormat(
+         "{\"error\":\"NO_RATES\",\"symbol\":\"%s\",\"timeframe\":\"%s\"}", sym, tfs));
+      return;
+     }
+
+   // monta array do mais antigo para o mais recente (lightweight-charts espera asc)
+   string arr = "";
+   for(int i = got - 1; i >= 0; i--)
+     {
+      if(StringLen(arr) > 0) arr += ",";
+      arr += StringFormat(
+         "{\"ts\":%d,\"o\":%.5f,\"h\":%.5f,\"l\":%.5f,\"c\":%.5f,\"v\":%d}",
+         (int)rates[i].time, rates[i].open, rates[i].high,
+         rates[i].low, rates[i].close, (int)rates[i].tick_volume);
+     }
+   string resp = StringFormat(
+      "{\"status\":\"ok\",\"data\":{\"symbol\":\"%s\",\"timeframe\":\"%s\",\"candles\":[%s]}}",
+      sym, tfs, arr);
+   CamZMQSend(resp);
+  }
+
+//+------------------------------------------------------------------+
+//| GET_SYMBOLS — lista simbolos disponiveis (read-only)             |
+//+------------------------------------------------------------------+
+void HandleGetSymbols()
+  {
+   int total = SymbolsTotal(false);
+   string arr = "";
+   for(int i = 0; i < total; i++)
+     {
+      string name = SymbolName(i, false);
+      if(StringLen(name) == 0) continue;
+      if(StringLen(arr) > 0) arr += ",";
+      arr += "\"" + name + "\"";
+     }
+   CamZMQSend(StringFormat("{\"status\":\"ok\",\"data\":[%s]}", arr));
   }
 //+------------------------------------------------------------------+

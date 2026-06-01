@@ -14,6 +14,7 @@ from cam._shared.risk.context import OrderCandidate, RiskContext
 from cam._shared.risk.decision import RiskDecision
 from cam._shared.risk.engine import validate as risk_validate
 from cam.features.mt5_integration.bridge import MT5BridgeClient
+from cam.features.mt5_integration.live_market import MarketHub
 from cam.features.mt5_integration.schemas import MT5BridgeStatus
 
 
@@ -33,10 +34,54 @@ class MT5IntegrationService:
         self.pub_port = pub_port
         self.req_port = req_port
         self._bridge = MT5BridgeClient(host=host, pub_port=pub_port, req_port=req_port)
+        self._hub = MarketHub()
+        self._connected = False
 
     @property
     def bridge(self) -> MT5BridgeClient:
         return self._bridge
+
+    @property
+    def hub(self) -> MarketHub:
+        return self._hub
+
+    # ---------------- lifecycle (lifespan do app) ----------------
+
+    async def connect(self) -> None:
+        """
+        Conecta a bridge e registra os handlers de tick/book no hub.
+
+        Best-effort: se o terminal MT5 / EA não estiverem ativos, os sockets
+        sobem mas nenhum dado chega → is_alive()=False → falha segura (OFFLINE).
+        """
+        if self._connected:
+            return
+        await self._bridge.connect()
+        await self._bridge.subscribe("mt5.tick", self._hub.on_tick)
+        await self._bridge.subscribe("mt5.book", self._hub.on_book)
+        self._connected = True
+
+    async def disconnect(self) -> None:
+        if not self._connected:
+            return
+        await self._bridge.disconnect()
+        self._connected = False
+
+    # ---------------- Inspetor: market data read-only ----------------
+
+    async def get_candles(self, symbol: str, timeframe: str, count: int) -> dict:
+        """REP GET_CANDLES → OHLCV. ADR-014 R-04 (read-only)."""
+        return await self._bridge.request(
+            "GET_CANDLES", symbol=symbol, timeframe=timeframe, count=count
+        )
+
+    async def get_symbols(self) -> dict:
+        """REP GET_SYMBOLS → lista de símbolos disponíveis."""
+        return await self._bridge.request("GET_SYMBOLS")
+
+    async def subscribe_symbol(self, symbol: str) -> dict:
+        """REP SUBSCRIBE → EA passa a observar o símbolo (tick + book ao vivo)."""
+        return await self._bridge.request("SUBSCRIBE", symbol=symbol)
 
     def get_status(self) -> MT5BridgeStatus:
         alive = self._bridge.is_alive()

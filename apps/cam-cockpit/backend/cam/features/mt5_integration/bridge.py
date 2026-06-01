@@ -116,9 +116,25 @@ class MT5BridgeClient:
 
     # ---------------------- REQ/REP ----------------------
 
+    # Allowlist read-only (CA15.3). Comandos do Inspetor (ADR-014) são todos
+    # de leitura: candles, símbolos, assinatura de stream. NENHUM envia ordem.
+    _READ_ONLY_COMMANDS = frozenset(
+        {
+            "PING",
+            "GET_STATE",
+            "GET_POSITIONS",
+            "GET_SYMBOL_INFO",
+            "GET_VERSION",
+            "GET_CANDLES",
+            "GET_SYMBOLS",
+            "SUBSCRIBE",
+            "UNSUBSCRIBE",
+        }
+    )
+
     async def request(self, cmd: str, **params: Any) -> dict:
         """Envia comando read-only e aguarda resposta do EA."""
-        if cmd not in {"GET_STATE", "GET_POSITIONS", "GET_SYMBOL_INFO", "PING"}:
+        if cmd not in self._READ_ONLY_COMMANDS:
             return {"error": "UNAUTHORIZED_COMMAND", "cmd": cmd}
         if self._req_socket is None:
             raise RuntimeError("Bridge nao conectada — chame connect() primeiro")
