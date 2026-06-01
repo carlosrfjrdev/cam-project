@@ -1,12 +1,19 @@
 ---
 template: SCOPE-EVOLUTION2
 phase: DISC
-status: Draft — Aguarda aprovação do Founder
+status: Superseded — consolidado em SCOPE-Inspetor-Consolidado.md (2026-05-31)
 version: 1.0
 date: 2026-05-31
 orchestrator: Leo
 companion_of: SCOPE-Vision-Evolution.md
+superseded_by: SCOPE-Inspetor-Consolidado.md
 ---
+
+> ⚠️ **SUPERSEDED (2026-05-31):** este escopo foi consolidado em
+> [`SCOPE-Inspetor-Consolidado.md`](./SCOPE-Inspetor-Consolidado.md). A abordagem de conexão MT5
+> via `MetaTrader5` (Python lib) aqui descrita foi **substituída** por EA `cam_bridge` + ZeroMQ
+> (estado real do código). A tabela de ocultação das 17 telas foi preservada no consolidado.
+> Mantido apenas como histórico.
 
 # SCOPE-Evolution2 — MVP Asset Research + Simplificação do Cockpit
 
