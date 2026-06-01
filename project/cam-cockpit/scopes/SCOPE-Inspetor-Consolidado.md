@@ -107,7 +107,7 @@ O arquivo `apps/cam-cockpit/frontend/src/_shared/nav.tsx` hoje lista **16 itens*
 | **D10** | Indicadores: **7 do R-20** | DY, P/L, P/VP, ROE, Dívida Líq/EBITDA, Payout, ROIC — **campos já no schema** `cam_fundamentals_snapshot`. EV/EBITDA exibido como **bônus** se a brapi retornar. | estado real + R-20 |
 | **D11** | EA read-only **por construção** | Zero `OrderSend`/`PositionOpen` no arquivo (CA15.1 já vigente). Canal de comando **allowlistado**. | estado real |
 | **D12** | Universo | Ações/FIIs à vista: gráfico + fundamentos. Futuros (WIN/WDO): **só gráfico**, sem bloco de fundamentos, sem erro. | externo + Founder |
-| **D13** | Regime de Markov: **LATER (BL-8)** | Overlay analítico read-only — **fora do núcleo MVP**. Spec'd em alto nível, com gate próprio. Diretriz Founder desta sessão: "simplificar agora, complicar depois". | reconciliação |
+| **D13** | Regime de Markov: **IN (núcleo)** | Overlay analítico **read-only** no Inspetor — **decisão do Founder (2026-05-31): é núcleo do MVP**, não LATER. Bloco "assistente de pesquisa" (Art. 13/34–36, ADR-006). Funções puras vendorizadas, alimentadas pelos candles do CaM (não yfinance). | externo (1) + Founder |
 
 ---
 
@@ -216,6 +216,9 @@ são slices auto-contidos (ADR-013) — um nunca importa o outro.
 - Tabela/painel de ticks recentes; book condicional.
 - 7 indicadores R-20 + histórico de dividendos + 2 estimativas (brapi).
 - Resolução de símbolo (Ação/FII/futuro); futuros sem bloco de fundamentos.
+- **Overlay de Regime de Markov (read-only)** — ver §13 (BL-8). Estado atual, matriz de
+  transição, mix de longo prazo, sinal e Sharpe/maxDD walk-forward, todos rotulados
+  "histórico, não preditivo".
 
 **OUT (não fazer):**
 - Qualquer envio de ordem / rota de execução. Zero `OrderSend`.
@@ -229,7 +232,8 @@ são slices auto-contidos (ADR-013) — um nunca importa o outro.
 - Markov como **gate de entrada ou sizing** (papéis B/C — Parte VII, futuro).
 
 **LATER (próximos blocos, gate próprio):**
-- **BL-8 — Overlay de Regime de Markov (read-only)** — ver §13.
+- Markov como **gate de entrada ou sizing** (papéis B/C — Parte VII); o overlay de leitura (papel A)
+  é **IN** (núcleo, BL-8). Só a autoridade de execução fica LATER.
 - Scraping governado de fundamentos (TD-v0.4-01).
 - Streaming de candles via WS dedicado; alertas de preço.
 - Reexibição progressiva das telas ocultadas conforme pré-requisitos.
@@ -290,13 +294,17 @@ são slices auto-contidos (ADR-013) — um nunca importa o outro.
 9. Sidebar exibe **apenas 4** itens (Inspetor, Cockpit, Constituição, Configurações); as demais
    rotas continuam acessíveis por URL direta (não deletadas).
 10. Header exibe banner **REAL** enquanto a conta MT5 for real.
+11. Para uma **ação**, vejo o bloco de **Regime**: estado atual (Bull/Bear/Sideways), matriz de
+    transição 3×3, mix de longo prazo (distribuição estacionária), sinal ∈ [−1,1] e Sharpe/maxDD
+    walk-forward — **todos rotulados "histórico, não preditivo"**.
 
 ---
 
-## 13. LATER — BL-8: Overlay de Regime de Markov (read-only)
+## 13. BL-8: Overlay de Regime de Markov (read-only) — **NÚCLEO (IN)**
 
-> **Fora do núcleo do MVP.** Spec'd aqui em alto nível para não perder o trabalho; entra com
-> **gate próprio** depois que o núcleo (busca → gráfico + fundamentos) estiver funcionando.
+> **Decisão do Founder (2026-05-31): é núcleo do MVP**, no mesmo gate dos blocos BL-1..BL-7.
+> Continua sendo um overlay **read-only** ("assistente de pesquisa", papel A) — informação, nunca
+> ordem. O que fica fora são os papéis B (confirmar entrada) e C (sizing), que tocam execução.
 
 **Origem.** Framework de Roan (@RohOnChain), refatorado por Lewis Jackson (`markov_regime.py`).
 Rotula cada dia Bull/Bear/Sideways pelo retorno acumulado de N dias (default 20) vs ±limiar
@@ -333,10 +341,11 @@ com atribuição, sob governança do CaM.
 | **BL-5** | Book ao vivo na tela (condicional) | P | — | BL-3 |
 | **BL-6** | Backend `fundamentals`: `BrapiSource` + endpoint + 2 projeções + cache | M | qa-sec | — (paralelo a BL-2/3) |
 | **BL-7** | Frontend: painel 7 indicadores + dividendos + 2 estimativas | M | — | BL-4 + BL-6 |
-| **BL-8** | *(LATER)* Overlay Regime de Markov read-only | M | qa-sec | núcleo entregue + gate Founder |
+| **BL-8** | Backend `features/regime/` (funções puras Markov) + endpoint `GET /regime/{symbol}` + bloco de Regime no frontend (read-only) | M | qa-sec | BL-3 (candles em `cam_candles_*`) + BL-4 (tela) |
 
 **Paralelismo:** BL-1 e BL-6 correm em paralelo a BL-2/BL-3. BL-7 depende de BL-4 + BL-6.
-**Gate Founder único** ao final do núcleo (BL-1..BL-7). BL-8 tem gate separado.
+BL-8 depende de candles persistidos (BL-3) e da tela (BL-4).
+**Gate Founder único** ao final do núcleo (BL-1..BL-8).
 
 ---
 

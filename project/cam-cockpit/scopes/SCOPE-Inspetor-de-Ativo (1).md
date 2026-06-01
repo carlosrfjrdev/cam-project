@@ -12,8 +12,8 @@ superseded_by: SCOPE-Inspetor-Consolidado.md
 
 > ⚠️ **SUPERSEDED (2026-05-31):** consolidado em
 > [`SCOPE-Inspetor-Consolidado.md`](./SCOPE-Inspetor-Consolidado.md). O overlay de Regime de Markov
-> (§14) foi **preservado como BL-8 (LATER)** no consolidado — fora do núcleo do MVP, com gate
-> próprio. Mantido como histórico.
+> (§14) é **BL-8, núcleo do MVP** no consolidado (decisão do Founder 2026-05-31) — overlay
+> read-only no mesmo gate dos demais blocos. Mantido como histórico.
 
 # SCOPE — CaM · Inspetor de Ativo (MVP)
 
