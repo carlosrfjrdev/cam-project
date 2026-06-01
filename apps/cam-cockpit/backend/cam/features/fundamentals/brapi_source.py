@@ -48,7 +48,9 @@ class BrapiSource:
         self.token = token if token is not None else settings.brapi_token
         self._client = client  # injetável para teste (sem rede em CI)
 
-    async def _get_json(self, url: str, params: dict[str, Any]) -> dict[str, Any] | None:
+    async def _get_json(
+        self, url: str, params: dict[str, Any]
+    ) -> dict[str, Any] | None:
         try:
             if self._client is not None:
                 resp = await self._client.get(url, params=params)
@@ -83,7 +85,9 @@ class BrapiSource:
             pl=_dec(r.get("priceEarnings")),
             pvp=_dec(r.get("priceToBook") or r.get("price_to_book") or r.get("pvp")),
             roe=_dec(r.get("returnOnEquity") or r.get("roe")),
-            div_liq_ebitda=_dec(r.get("netDebtToEbitda") or r.get("net_debt_to_ebitda")),
+            div_liq_ebitda=_dec(
+                r.get("netDebtToEbitda") or r.get("net_debt_to_ebitda")
+            ),
             payout=_dec(r.get("payoutRatio") or r.get("payout")),
             roic=_dec(r.get("returnOnInvestedCapital") or r.get("roic")),
         )

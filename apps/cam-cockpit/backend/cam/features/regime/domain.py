@@ -48,7 +48,7 @@ def label_regimes(
 def build_transition_matrix(labels: list[str]) -> list[list[float]]:
     """Matriz de transição 3×3 por contagem (MLE), normalizada por linha."""
     counts = [[0.0] * 3 for _ in range(3)]
-    for a, b in zip(labels, labels[1:]):
+    for a, b in zip(labels, labels[1:], strict=False):
         counts[_IDX[a]][_IDX[b]] += 1.0
     matrix: list[list[float]] = []
     for row in counts:
@@ -160,7 +160,7 @@ def analyze(
         "current_state": current,
         "states": list(STATES),
         "transition_matrix": matrix,
-        "stationary": dict(zip(STATES, [round(x, 4) for x in stat])),
+        "stationary": dict(zip(STATES, [round(x, 4) for x in stat], strict=True)),
         "signal": signal,
         "walk_forward": wf,
     }

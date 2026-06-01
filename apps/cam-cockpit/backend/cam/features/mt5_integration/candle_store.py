@@ -15,7 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 _UPSERT = text(
     """
-    INSERT INTO cam_inspector_candles (symbol, timeframe, ts, open, high, low, close, volume)
+    INSERT INTO cam_inspector_candles
+        (symbol, timeframe, ts, open, high, low, close, volume)
     VALUES (:symbol, :timeframe, to_timestamp(:ts), :o, :h, :l, :c, :v)
     ON CONFLICT (symbol, timeframe, ts) DO UPDATE
       SET open = EXCLUDED.open, high = EXCLUDED.high, low = EXCLUDED.low,

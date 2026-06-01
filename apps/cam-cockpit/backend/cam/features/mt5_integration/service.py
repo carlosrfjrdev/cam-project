@@ -8,7 +8,7 @@ SPEC v0.2.1:
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from cam._shared.risk.context import OrderCandidate, RiskContext
 from cam._shared.risk.decision import RiskDecision
@@ -89,7 +89,7 @@ class MT5IntegrationService:
         age = self._bridge.last_heartbeat_age_ms
         last_hb_at = None
         if self._bridge._last_heartbeat_ts is not None:
-            last_hb_at = datetime.fromtimestamp(self._bridge._last_heartbeat_ts, tz=timezone.utc)
+            last_hb_at = datetime.fromtimestamp(self._bridge._last_heartbeat_ts, tz=UTC)
 
         return MT5BridgeStatus(
             state=state,
@@ -102,7 +102,9 @@ class MT5IntegrationService:
             mt5_path=None,
         )
 
-    def validate_intention(self, candidate: OrderCandidate, context: RiskContext) -> RiskDecision:
+    def validate_intention(
+        self, candidate: OrderCandidate, context: RiskContext
+    ) -> RiskDecision:
         """
         Art. 15o — toda intencao passa pelo Risk Engine antes de qualquer coisa.
 

@@ -136,7 +136,7 @@ async def ws_market(websocket: WebSocket, symbol: str) -> None:
             try:
                 frame = await asyncio.wait_for(queue.get(), timeout=2.0)
                 await websocket.send_json(frame)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 # heartbeat de status — não mente sobre dado fresco (R-09)
                 await websocket.send_json(
                     {

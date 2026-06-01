@@ -15,7 +15,8 @@ Padroes ZeroMQ:
 """
 import asyncio
 import time
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 import zmq
 import zmq.asyncio
@@ -141,7 +142,7 @@ class MT5BridgeClient:
 
         payload = {"cmd": cmd, **params}
         t0 = time.time()
-        # send_json/recv_json: em zmq.asyncio, send_json e sync mas recv_json e awaitable
+        # send_json/recv_json: em zmq.asyncio, send_json e sync, recv_json e awaitable
         await self._req_socket.send_json(payload)
         response = await self._req_socket.recv_json()
         latency = (time.time() - t0) * 1000
@@ -152,7 +153,9 @@ class MT5BridgeClient:
 
     # ---------------------- PUB/SUB ----------------------
 
-    async def subscribe(self, topic: str, handler: Callable[[bytes], Awaitable[None]]) -> None:
+    async def subscribe(
+        self, topic: str, handler: Callable[[bytes], Awaitable[None]]
+    ) -> None:
         self._subscribers.setdefault(topic, []).append(handler)
 
     async def _sub_loop(self) -> None:
