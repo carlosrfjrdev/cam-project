@@ -86,7 +86,8 @@ A hierarquia constitucional `Constituição > Risk Engine > Estratégia validada
 
 | Camada | Responsabilidade | Tecnologia | ADR |
 |---|---|---|---|
-| **Plataforma de execução** | Envio de ordens ao mercado (B3) | Profit Pro/Ultra + NTSL | ADR-001 |
+| **Fonte de market data** | Candles, tick e book read-only do MT5 | EA `cam_bridge` (MQL5) + ZeroMQ 127.0.0.1 | **ADR-014** |
+| **Plataforma de execução** | Envio de ordens ao mercado (B3) — *broker sob reavaliação (OP-014/OP-015)* | Profit Pro/Ultra + NTSL | ADR-001 |
 | **Backend — Shared Kernel** | Risk Engine (autoridade), domain primitives, event bus, audit log, DB sessions | Python 3.12 (Pure Python no risk/) | ADR-007, ADR-013 |
 | **Backend — Features** | Módulos de negócio auto-contidos (journal, fiscal, ledger, backtest, etc.) | Python 3.12 + FastAPI routers | ADR-013 |
 | **Backend — API Composer** | Montar app FastAPI, registrar routers, lifespan, middlewares, WebSocket broker | FastAPI + Uvicorn | ADR-002 |
@@ -118,6 +119,13 @@ A hierarquia constitucional `Constituição > Risk Engine > Estratégia validada
 | ADR-011 | Monorepo único `apps/cam-cockpit/` no MVP | [ADR-011](./adrs/ADR-011-monorepo-cam-cockpit.md) |
 | ADR-012 | Dev em Linux, produção em Windows; code cross-platform | [ADR-012](./adrs/ADR-012-dev-linux-producao-windows.md) |
 | ADR-013 | Feature-Based Vertical Slice + Shared Kernel mínimo | [ADR-013](./adrs/ADR-013-vertical-slice-shared-kernel.md) |
+| ADR-014 | MT5 como fonte de **market data read-only** (EA `cam_bridge` + ZeroMQ) | [ADR-014](./adrs/ADR-014-mt5-market-data-read-only.md) |
+
+> **Nota de recalibração (2026-05-31, ADR-014):** o SO firme é **Windows 11** (Wine/Linux falhou,
+> 2026-05-30) e a **fonte de market data é o MT5** via EA `cam_bridge`+ZeroMQ (read-only). ADR-014
+> corrige a linha de dados deste DAS. ADR-001/008/012 (Profit / dev-Linux) seguem **vigentes mas
+> sob reavaliação** (broker de *execução* pende de OP-014/OP-015) — não revogados aqui. Estado real
+> (`/apps`) vence intenção (NCC-1701 §2).
 
 ---
 
@@ -443,7 +451,7 @@ apps/cam-cockpit/
 | Item | Status | Motivo |
 |---|---|---|
 | ProfitDLL via ctypes | `later` — Fase F4+ | Somente se necessidade real comprovar após F3 |
-| MT5 como fallback | `out-of-scope` no MVP | Variante Linux+MT5 documentada; decisão do Founder ao final da Fase 0 |
+| ~~MT5 como fallback `out-of-scope`~~ | **REVOGADO por ADR-014 (2026-05-31)** | MT5 é agora a **fonte oficial de market data read-only** (EA `cam_bridge`+ZeroMQ). A decisão de broker de **execução** segue aberta (OP-014/OP-015). |
 | Redis como event bus externo | `pending` — só se asyncio.Queue mostrar limitação | Depende de carga real (1 operador, não é sistêmico) |
 | CI/CD automatizado | `later` — GitHub Actions na Fase 1+ | Dev local manual é suficiente para Fase 0 |
 | Autenticação de usuário | `out-of-scope` | Cockpit local, mono-usuário; autenticação adicionaria fricção sem benefício |
@@ -468,6 +476,7 @@ apps/cam-cockpit/
 | Versão | Data | Mudança | Aprovado por |
 |---|---|---|---|
 | 1 | 2026-05-24 | Criação — produzido via NCC-1701 ARCH | — (aguarda Founder) |
+| 1.1 | 2026-05-31 | ADR-014: MT5 como market data read-only (§2, §3, §9 corrigidos) | Carlos (Founder) |
 
 ---
 
