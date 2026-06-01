@@ -4,18 +4,22 @@ phase: SPEC
 status: Draft
 produto: CaM — The Carlos Alternative Money
 slice: Inspetor de Ativo (MVP)
-version: 1.0
+version: 1.1
 date: 2026-05-31
 lead: Albert
 aprovador: Founder
+status: Approved
 ---
 
 # SPEC — INSPETOR · Inspetor de Ativo (MVP)
 
 > **Data:** 2026-05-31
-> **Status:** Draft — aguarda aprovação do Founder
+> **Status:** ✅ **Approved** — Carlos (Founder), 2026-05-31
 > **Produto:** CaM — The Carlos Alternative Money
 > **Lead:** Albert · **Aprovador:** Carlos (Founder)
+> **Cobertura mandatória (diretriz do Founder):** a entrega abrange as **3 camadas** —
+> **EAs (MQL5)** + **Backend (FastAPI)** + **Frontend (React)**. Nenhum bloco é considerado
+> "pronto" sem a camada que lhe cabe. Ver matriz §7.1.
 
 ---
 
@@ -212,6 +216,26 @@ Só para `type:"stock"`. Para FII/futuro → bloco omitido no frontend (sem erro
 
 Blocos (do SCOPE §14): BL-1 (P), BL-2 (M), BL-3 (M), BL-4 (M), BL-5 (P), BL-6 (M), BL-7 (M), BL-8 (M — overlay Regime read-only).
 
+### 7.1 Cobertura por camada — EA · Backend · Frontend
+
+> Diretriz do Founder: a SPEC entrega **as três camadas**. Esta matriz fixa qual artefato cada
+> bloco produz em cada camada — "Done" de um bloco exige todas as células marcadas dele.
+
+| Bloco | EA (MQL5) | Backend (FastAPI) | Frontend (React) |
+|---|---|---|---|
+| **BL-1** | — | — | `nav.tsx` (`visibleInMvp`) + `Sidebar.tsx` + rota `/inspetor` vazia |
+| **BL-2** | **`cam_bridge.mq5`**: `GET_CANDLES`, `mt5.book`, `GET_SYMBOLS`, `SUBSCRIBE`, allowlist, permitir REAL read-only | (contratos ZMQ consumidos em BL-3) | — |
+| **BL-3** | — | **`market_data/`**: subscriber ZMQ + REP client + persistência `cam_market_ticks` + WS + endpoints + resolução de símbolo | (consumido em BL-4) |
+| **BL-4** | — | (endpoints de BL-3) | **`features/inspetor/`**: busca + `lightweight-charts` + timeframe + WS status + banner REAL |
+| **BL-5** | (PUB `mt5.book` de BL-2) | snapshot/relay de book | painel de book condicional |
+| **BL-6** | — | **`fundamentals/`**: `BrapiSource` + endpoint + 2 projeções + cache | (consumido em BL-7) |
+| **BL-7** | — | (endpoint de BL-6) | painel 7 indicadores R-20 + dividendos + 2 estimativas |
+| **BL-8** | — | **`features/regime/`**: funções puras Markov + `GET /regime/{symbol}` | bloco de Regime read-only (estado, matriz, estacionária, sinal, Sharpe/maxDD + disclaimer) |
+
+**Leitura:** as 3 camadas se distribuem assim — **EA:** BL-2 (e o PUB de book usado em BL-5).
+**Backend:** BL-3, BL-5, BL-6, BL-8 (3 slices auto-contidos: `market_data`, `fundamentals`,
+`regime`). **Frontend:** BL-1, BL-4, BL-5, BL-7, BL-8. Governança (ADR-014) é pré-CODE, transversal.
+
 ## 8. Marcadores de segurança
 
 | Marcador | Aplicável | Justificativa |
@@ -253,9 +277,12 @@ MT5 como market data) — capturado em ADR-014, fora desta SPEC de produto.
 | Versão | Data | Mudança | Aprovado por |
 |---|---|---|---|
 | 1.0 | 2026-05-31 | Draft inicial — consolidação de 3 escopos | — (aguarda Founder) |
+| 1.1 | 2026-05-31 | Markov → núcleo (BL-8 IN); matriz de cobertura EA/Backend/Frontend (§7.1); **SPEC aprovada** | **Carlos (Founder)** |
 
 ---
 
-> **Gate SPEC/Founder:** Carlos aprova esta SPEC **e** o `ADR-014` antes do PLAN fechar para CODE.
+> **Gate SPEC/Founder:** ✅ **APROVADA.** Carlos aprovou esta SPEC em 2026-05-31, cobrindo as 3
+> camadas (EA + Backend + Frontend). Pendência de governança: **`ADR-014`** (MT5 read-only +
+> correção do DAS) deve ser ratificado antes do PLAN fechar para CODE.
 >
-> [ ] Carlos Rodrigues Ferreira Junior — Data: ___/___/______
+> [x] Carlos Rodrigues Ferreira Junior — Data: 31/05/2026
