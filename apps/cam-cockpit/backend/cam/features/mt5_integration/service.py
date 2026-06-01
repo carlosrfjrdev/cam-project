@@ -10,12 +10,14 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from cam._shared.infra import async_session_factory
 from cam._shared.risk.context import OrderCandidate, RiskContext
 from cam._shared.risk.decision import RiskDecision
 from cam._shared.risk.engine import validate as risk_validate
 from cam.features.mt5_integration.bridge import MT5BridgeClient
 from cam.features.mt5_integration.live_market import MarketHub
 from cam.features.mt5_integration.schemas import MT5BridgeStatus
+from cam.features.mt5_integration.tick_persister import TickPersister
 
 
 class MT5IntegrationService:
@@ -35,6 +37,7 @@ class MT5IntegrationService:
         self.req_port = req_port
         self._bridge = MT5BridgeClient(host=host, pub_port=pub_port, req_port=req_port)
         self._hub = MarketHub()
+        self._persister = TickPersister(async_session_factory)
         self._connected = False
 
     @property
@@ -59,11 +62,15 @@ class MT5IntegrationService:
         await self._bridge.connect()
         await self._bridge.subscribe("mt5.tick", self._hub.on_tick)
         await self._bridge.subscribe("mt5.book", self._hub.on_book)
+        # Critério 7: persiste ticks ao vivo em cam_market_ticks (corpus).
+        await self._bridge.subscribe("mt5.tick", self._persister.on_tick)
+        self._persister.start()
         self._connected = True
 
     async def disconnect(self) -> None:
         if not self._connected:
             return
+        await self._persister.stop()
         await self._bridge.disconnect()
         self._connected = False
 
