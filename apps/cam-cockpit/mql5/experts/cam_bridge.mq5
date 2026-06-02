@@ -31,7 +31,7 @@
 //| §7.1 sec — verifica conta DEMO no startup, abort se REAL          |
 //+------------------------------------------------------------------+
 #property copyright "CaM — The Carlos Alternative Money"
-#property version   "0.4"
+#property version   "0.40"
 #property strict
 #property description "CaM Bridge ZeroMQ — Read-only v0.4 (Inspetor de Ativo: candles+book+symbols)"
 
@@ -249,7 +249,7 @@ string SerializePositions()
       out += StringFormat(
          "{\"symbol\":\"%s\",\"contracts\":%d,\"direction\":\"%s\",\"entry\":%.5f,\"current\":%.5f,\"pnl_gross\":%.2f}",
          PositionGetString(POSITION_SYMBOL),
-         (int)PositionGetInteger(POSITION_VOLUME),
+         (int)PositionGetDouble(POSITION_VOLUME),
          (PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY ? "LONG" : "SHORT"),
          PositionGetDouble(POSITION_PRICE_OPEN),
          PositionGetDouble(POSITION_PRICE_CURRENT),
@@ -325,7 +325,7 @@ void HandleCommand(const string cmd)
       string resp = StringFormat(
          "{\"status\":\"ok\",\"data\":{\"version\":\"%s\",\"build\":\"%s\",\"magic\":%d,\"paused\":%s}}",
          CAM_BRIDGE_VERSION,
-         __DATE__ " " __TIME__,
+         TimeToString(__DATETIME__, TIME_DATE | TIME_MINUTES),
          InpMagicNumber,
          (g_ontick_paused ? "true" : "false"));
       CamZMQSend(resp);
