@@ -166,8 +166,21 @@ class MT5BridgeClient:
                 msg = await self._sub_socket.recv_multipart()
                 if not msg:
                     continue
-                topic = msg[0].decode("utf-8", errors="replace")
-                payload = msg[1] if len(msg) > 1 else b""
+                # O EA (cam_zmq.mqh::CamZMQPub) publica UM frame único no formato
+                # "topic payload" (separado por espaço). Também aceitamos multipart
+                # [topic, payload] por robustez.
+                if len(msg) == 1:
+                    raw = msg[0]
+                    sep = raw.find(b" ")
+                    if sep >= 0:
+                        topic = raw[:sep].decode("utf-8", errors="replace")
+                        payload = raw[sep + 1:]
+                    else:
+                        topic = raw.decode("utf-8", errors="replace")
+                        payload = b""
+                else:
+                    topic = msg[0].decode("utf-8", errors="replace")
+                    payload = msg[1]
                 if topic == "mt5.heartbeat":
                     self._record_heartbeat()
                 for handler in self._subscribers.get(topic, []):
