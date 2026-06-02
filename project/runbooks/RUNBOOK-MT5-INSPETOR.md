@@ -25,7 +25,8 @@ status: Vigente
 - **MetaTrader 5 instalado e logado** (conta real da corretora — ex.: Genial).
 - Backend e frontend do `cam-cockpit` instalados (ver `RUNBOOK-WINDOWS.md`).
 - PostgreSQL + TimescaleDB de pé (`docker compose up -d db`).
-- `libzmq.dll` (64-bit, compatível com o MT5 64-bit).
+- **`libzmq.dll` já vem no projeto** em `apps/cam-cockpit/mql5/libraries/` (x64,
+  proveniência em `PROVENANCE.md`) — **não** precisa baixar nem buildar.
 
 ---
 
@@ -35,12 +36,20 @@ status: Vigente
 2. Copie do repositório para dentro de `MQL5\`:
    - `apps/cam-cockpit/mql5/include/cam_zmq.mqh` → `MQL5\Include\cam_zmq.mqh`
    - `apps/cam-cockpit/mql5/experts/cam_bridge.mq5` → `MQL5\Experts\cam_bridge.mq5`
-   - `libzmq.dll` → `MQL5\Libraries\libzmq.dll`
+   - **todas as 5 DLLs** de `apps/cam-cockpit/mql5/libraries/` → `MQL5\Libraries\`
+     (`libzmq.dll` + `libsodium-138090d4.dll` + `msvcp140.dll` +
+     `vcruntime140.dll` + `vcruntime140_1.dll`). A `libzmq.dll` **precisa** das outras
+     4 ao lado para carregar.
 3. MT5 → **Ferramentas → Opções → Expert Advisors** → marque
    **"Permitir importação de DLL"**.
 
-> ⚠️ Sem `libzmq.dll` em `MQL5\Libraries\` e sem "Allow DLL imports", o EA falha
+> ⚠️ Sem as DLLs em `MQL5\Libraries\` e sem "Allow DLL imports", o EA falha
 > ao inicializar (`[CamBridge] Falha ao inicializar ZeroMQ`).
+>
+> ℹ️ A `libzmq.dll` (4.3.4 x64) foi reaproveitada do `pyzmq` já instalado e teve
+> a carga + exports verificados (ver `libraries/PROVENANCE.md`). Numa máquina
+> com `pyzmq` instalado, as DLLs já estão em
+> `...\sitepackages\pyzmq.libs\` — o projeto só consolidou e renomeou.
 
 ---
 
