@@ -22,7 +22,9 @@
    long  zmq_ctx_new();
    int   zmq_ctx_term(long context);
    long  zmq_socket(long context, int type);
-   int   zmq_bind(long socket, string endpoint);
+   // endpoint como uchar[] (UTF-8/ANSI). MQL5 passa `string` como UTF-16 (wchar_t*),
+   // incompativel com o `const char*` esperado pela libzmq C — por isso uchar[].
+   int   zmq_bind(long socket, uchar &endpoint[]);
    int   zmq_close(long socket);
    int   zmq_send(long socket, uchar &buf[], int len, int flags);
    int   zmq_recv(long socket, uchar &buf[], int len, int flags);
@@ -38,25 +40,33 @@ long  g_pub_socket  = 0;
 long  g_rep_socket  = 0;
 
 //+------------------------------------------------------------------+
+// Converte endpoint para uchar[] UTF-8/ANSI terminado em null (C string).
+void CamZMQEndpoint(const string ep, uchar &out[])
+  {
+   StringToCharArray(ep, out, 0, StringLen(ep) + 1, CP_UTF8);
+  }
+
 bool CamZMQInit(const int pub_port, const int rep_port)
   {
    g_zmq_context = zmq_ctx_new();
    if(g_zmq_context == 0)
-      return(false);
+     { Print("[CamZMQ] FALHA: zmq_ctx_new retornou 0"); return(false); }
 
    g_pub_socket = zmq_socket(g_zmq_context, ZMQ_PUB);
    if(g_pub_socket == 0)
-      return(false);
-   string pub_endpoint = StringFormat("tcp://*:%d", pub_port);
-   if(zmq_bind(g_pub_socket, pub_endpoint) != 0)
-      return(false);
+     { Print("[CamZMQ] FALHA: zmq_socket(PUB) retornou 0"); return(false); }
+   uchar pub_ep[];
+   CamZMQEndpoint(StringFormat("tcp://*:%d", pub_port), pub_ep);
+   if(zmq_bind(g_pub_socket, pub_ep) != 0)
+     { Print("[CamZMQ] FALHA: zmq_bind(PUB) tcp://*:", pub_port); return(false); }
 
    g_rep_socket = zmq_socket(g_zmq_context, ZMQ_REP);
    if(g_rep_socket == 0)
-      return(false);
-   string rep_endpoint = StringFormat("tcp://*:%d", rep_port);
-   if(zmq_bind(g_rep_socket, rep_endpoint) != 0)
-      return(false);
+     { Print("[CamZMQ] FALHA: zmq_socket(REP) retornou 0"); return(false); }
+   uchar rep_ep[];
+   CamZMQEndpoint(StringFormat("tcp://*:%d", rep_port), rep_ep);
+   if(zmq_bind(g_rep_socket, rep_ep) != 0)
+     { Print("[CamZMQ] FALHA: zmq_bind(REP) tcp://*:", rep_port); return(false); }
 
    Print("[CamZMQ] Bridge inicializada — PUB:", pub_port, " REP:", rep_port);
    return(true);
