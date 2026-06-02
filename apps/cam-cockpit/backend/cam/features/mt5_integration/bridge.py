@@ -144,7 +144,11 @@ class MT5BridgeClient:
         t0 = time.time()
         # send_json/recv_json: em zmq.asyncio, send_json e sync, recv_json e awaitable
         await self._req_socket.send_json(payload)
-        response = await self._req_socket.recv_json()
+        try:
+            response = await self._req_socket.recv_json()
+        except ValueError as exc:
+            # resposta do EA não é JSON válido — não derruba a rota (502, não 500)
+            return {"error": "BAD_EA_RESPONSE", "cmd": cmd, "detail": str(exc)}
         latency = (time.time() - t0) * 1000
         self._latency_samples.append(latency)
         if len(self._latency_samples) > 50:

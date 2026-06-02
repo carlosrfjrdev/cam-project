@@ -79,8 +79,11 @@ bool CamZMQPub(const string topic, const string payload)
 
    string full = topic + " " + payload;
    uchar buf[];
-   StringToCharArray(full, buf, 0, StringLen(full));
-   int sent = zmq_send(g_pub_socket, buf, ArraySize(buf) - 1, ZMQ_DONTWAIT);
+   // WHOLE_ARRAY + CP_UTF8: copia a string + null e retorna a contagem COM o null.
+   // len = bytes reais sem o null (corrige o off-by-one que dropava o ultimo char).
+   int len = StringToCharArray(full, buf, 0, WHOLE_ARRAY, CP_UTF8) - 1;
+   if(len < 0) len = 0;
+   int sent = zmq_send(g_pub_socket, buf, len, ZMQ_DONTWAIT);
    return(sent > 0);
   }
 
@@ -100,8 +103,11 @@ bool CamZMQSend(const string payload)
   {
    if(g_rep_socket == 0) return(false);
    uchar buf[];
-   StringToCharArray(payload, buf, 0, StringLen(payload));
-   return(zmq_send(g_rep_socket, buf, ArraySize(buf) - 1, 0) > 0);
+   // len = bytes reais sem o null (corrige off-by-one que truncava a resposta,
+   // ex.: o `}` final do JSON de GET_CANDLES — causava JSONDecodeError no backend).
+   int len = StringToCharArray(payload, buf, 0, WHOLE_ARRAY, CP_UTF8) - 1;
+   if(len < 0) len = 0;
+   return(zmq_send(g_rep_socket, buf, len, 0) > 0);
   }
 
 //+------------------------------------------------------------------+
