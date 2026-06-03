@@ -5,7 +5,7 @@
  * + 2 estimativas de dividendo + overlay de Regime (ações). 100% READ-ONLY:
  * nenhuma ação envia ordem (Art. 35º).
  */
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Alert, Box, Button, Chip, CircularProgress, Divider, Paper, Stack,
   TextField, ToggleButton, ToggleButtonGroup, Typography,
@@ -53,6 +53,16 @@ export function InspetorPage() {
 
   useMarketSocket(symbol, onFrame);
 
+  // O regime lê cam_inspector_candles, populada pelo fetch de candles D1.
+  // Como as queries disparam em paralelo, refaz o regime quando os candles D1
+  // chegam (a persistência já ocorreu no backend antes da resposta).
+  useEffect(() => {
+    if (isStock && timeframe === "D1" && candles.isSuccess) {
+      regime.refetch();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [candles.dataUpdatedAt, isStock, timeframe]);
+
   const submit = () => {
     const t = input.trim().toUpperCase();
     if (!t) return;
@@ -62,7 +72,7 @@ export function InspetorPage() {
   };
 
   return (
-    <Box sx={{ p: 2, maxWidth: 1100, mx: "auto" }}>
+    <Box sx={{ px: "5%", py: 2, width: "100%", boxSizing: "border-box" }}>
       <Typography variant="h5" sx={{ mb: 0.5 }}>
         Inspetor de Ativo
       </Typography>
@@ -151,26 +161,44 @@ export function InspetorPage() {
 
           {hasFundamentals && (
             <Paper sx={{ p: 2, mb: 2 }}>
-              {fundamentals.isLoading && <CircularProgress size={20} />}
-              {fundamentals.isError && (
-                <Typography variant="body2" color="text.secondary">
-                  Fundamentos indisponíveis para este ativo.
-                </Typography>
-              )}
-              {fundamentals.data && (
+              {fundamentals.isLoading ? (
+                <CircularProgress size={20} />
+              ) : fundamentals.data ? (
                 <>
                   <FundamentalsPanel data={fundamentals.data} />
                   <Divider sx={{ my: 2 }} />
                   <DividendsPanel data={fundamentals.data} />
                 </>
+              ) : (
+                <>
+                  <Typography variant="h6" sx={{ mb: 1 }}>
+                    Fundamentos
+                  </Typography>
+                  <Alert severity="info">
+                    Dados não disponíveis — a brapi.dev não cobre este ativo.
+                  </Alert>
+                </>
               )}
             </Paper>
           )}
 
+          {/* Regime é independente dos fundamentos (brapi). Sempre aparece para ações. */}
           {isStock && (
             <Paper sx={{ p: 2, mb: 2 }}>
-              {regime.isLoading && <CircularProgress size={20} />}
-              {regime.data && <RegimePanel data={regime.data} />}
+              {regime.isLoading ? (
+                <CircularProgress size={20} />
+              ) : regime.data ? (
+                <RegimePanel data={regime.data} />
+              ) : (
+                <>
+                  <Typography variant="h6" sx={{ mb: 1 }}>
+                    Regime de Mercado
+                  </Typography>
+                  <Alert severity="info">
+                    Regime indisponível no momento. Carregue candles diários (D1) deste ativo.
+                  </Alert>
+                </>
+              )}
             </Paper>
           )}
         </>
