@@ -1,11 +1,16 @@
 """
-BrapiSource — fonte de fundamentos/dividendos via brapi.dev (free tier).
+BrapiSource — fonte de fundamentos/dividendos via brapi.dev.
 
 ADR-014 / SPEC-Inspetor R-11, R-12, R-15. Implementa o Protocol
 `FundamentalsSource` já existente. Mapeia os 7 indicadores R-20 quando a brapi
-os fornece; campos ausentes ficam None (→ "N/A" na UI). Sem scraping
-(scraping fica em TD-v0.4-01). Token opcional via settings (`.env`, nunca
-commitado).
+os fornece; campos ausentes ficam None (→ "N/A" na UI). Token via settings
+(`.env`, nunca commitado).
+
+**Modelo da brapi (importante):** os indicadores fundamentalistas NÃO vêm na
+raiz do /quote — vivem nos MÓDULOS `defaultKeyStatistics` e `financialData`,
+pedidos via `modules=` e que exigem plano PRO. Só `priceEarnings`,
+`regularMarketPrice` e `dividendYield` aparecem na raiz. Por isso buscamos cada
+indicador em múltiplos locais/nomes (raiz → defaultKeyStatistics → financialData).
 
 Falha segura: qualquer erro de rede/parse → retorna None (o coletor cai para a
 fonte de fallback). Sem rede em CI: o teste injeta um cliente fake.
@@ -21,16 +26,35 @@ import httpx
 from cam._shared.config import settings
 from cam.features.fundamentals.multi_source_collector import FundamentalsSnapshot
 
-_TIMEOUT = httpx.Timeout(6.0, connect=3.0)
+_TIMEOUT = httpx.Timeout(10.0, connect=4.0)
+
+# Módulos PRO que carregam os fundamentalistas (R-20). Pedidos via modules=.
+_MODULES = "defaultKeyStatistics,financialData,summaryProfile"
 
 
 def _dec(value: Any) -> Decimal | None:
     if value is None:
         return None
     try:
-        return Decimal(str(value))
+        d = Decimal(str(value))
     except (InvalidOperation, ValueError, TypeError):
         return None
+    return d
+
+
+def _pick(result: dict[str, Any], *keys: str) -> Any:
+    """
+    Procura a 1ª chave presente (não-nula) varrendo: raiz do result,
+    defaultKeyStatistics e financialData. brapi varia o local por plano/ativo.
+    """
+    dks = result.get("defaultKeyStatistics") or {}
+    fin = result.get("financialData") or {}
+    for k in keys:
+        for scope in (result, dks, fin):
+            v = scope.get(k)
+            if v is not None:
+                return v
+    return None
 
 
 class BrapiSource:
@@ -63,43 +87,54 @@ class BrapiSource:
         except (httpx.HTTPError, ValueError):
             return None
 
-    async def fetch(self, ticker: str) -> FundamentalsSnapshot | None:
-        t = ticker.strip().upper()
-        params: dict[str, Any] = {"fundamental": "true", "dividends": "true"}
+    def _params(self) -> dict[str, Any]:
+        p: dict[str, Any] = {
+            "fundamental": "true",
+            "dividends": "true",
+            "modules": _MODULES,
+        }
         if self.token:
-            params["token"] = self.token
+            p["token"] = self.token
+        return p
 
-        data = await self._get_json(f"{self.base_url}/quote/{t}", params)
-        if not data:
-            return None
-        results = data.get("results") or []
-        if not results:
-            return None
-        r = results[0]
+    @staticmethod
+    def _snapshot_from(t: str, r: dict[str, Any], name: str) -> FundamentalsSnapshot:
+        # Dívida Líq/EBITDA: brapi raramente expõe direto; deriva de
+        # (totalDebt - cash) / ebitda quando possível; senão usa netDebtToEbitda.
+        div_ebitda = _pick(r, "netDebtToEbitda")
+        if div_ebitda is None:
+            total_debt = _dec(_pick(r, "totalDebt"))
+            cash = _dec(_pick(r, "totalCash", "cash"))
+            ebitda = _dec(_pick(r, "ebitda"))
+            if total_debt is not None and ebitda and ebitda != 0:
+                net = total_debt - (cash or Decimal(0))
+                div_ebitda = net / ebitda
 
-        snap = FundamentalsSnapshot(
+        return FundamentalsSnapshot(
             ticker=t,
-            source=self.name,
+            source=name,
             ts_snapshot=datetime.now(UTC),
-            dy=_dec(r.get("dividendYield") or r.get("dividend_yield")),
-            pl=_dec(r.get("priceEarnings")),
-            pvp=_dec(r.get("priceToBook") or r.get("price_to_book") or r.get("pvp")),
-            roe=_dec(r.get("returnOnEquity") or r.get("roe")),
-            div_liq_ebitda=_dec(
-                r.get("netDebtToEbitda") or r.get("net_debt_to_ebitda")
-            ),
-            payout=_dec(r.get("payoutRatio") or r.get("payout")),
-            roic=_dec(r.get("returnOnInvestedCapital") or r.get("roic")),
+            dy=_dec(_pick(r, "dividendYield", "trailingAnnualDividendYield")),
+            pl=_dec(_pick(r, "priceEarnings", "trailingPE", "forwardPE")),
+            pvp=_dec(_pick(r, "priceToBook", "pvp")),
+            roe=_dec(_pick(r, "returnOnEquity", "roe")),
+            div_liq_ebitda=_dec(div_ebitda),
+            payout=_dec(_pick(r, "payoutRatio", "payout")),
+            # ROIC não é exposto pela brapi. NÃO usar returnOnAssets como
+            # substituto (seria enganoso) — fica None → "N/A" honesto na UI.
+            roic=_dec(_pick(r, "returnOnInvestedCapital", "roic")),
         )
-        return snap
+
+    async def fetch(self, ticker: str) -> FundamentalsSnapshot | None:
+        r = await self.fetch_raw(ticker)
+        if r is None:
+            return None
+        return self._snapshot_from(ticker.strip().upper(), r, self.name)
 
     async def fetch_raw(self, ticker: str) -> dict[str, Any] | None:
-        """Resposta crua (para extrair histórico de dividendos + preço atual)."""
+        """Resposta crua do 1º result (fundamentos + dividendos + preço)."""
         t = ticker.strip().upper()
-        params: dict[str, Any] = {"fundamental": "true", "dividends": "true"}
-        if self.token:
-            params["token"] = self.token
-        data = await self._get_json(f"{self.base_url}/quote/{t}", params)
+        data = await self._get_json(f"{self.base_url}/quote/{t}", self._params())
         if not data:
             return None
         results = data.get("results") or []
