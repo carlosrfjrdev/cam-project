@@ -94,8 +94,13 @@ class MT5IntegrationService:
         """
         REP PROBE_TICKS → diagnóstico: o feed entrega flag de agressor?
         Research v0.5 — decide empiricamente se OFI/tick (Cubo Rápido) é viável.
+
+        Timeout maior: CopyTicks pode disparar sincronização do histórico de
+        ticks do símbolo na 1ª chamada (demora alguns segundos).
         """
-        return await self._bridge.request("PROBE_TICKS", symbol=symbol, count=count)
+        return await self._bridge.request(
+            "PROBE_TICKS", symbol=symbol, count=count, timeout_ms=8000
+        )
 
     def get_status(self) -> MT5BridgeStatus:
         alive = self._bridge.is_alive()

@@ -65,6 +65,16 @@ class MT5BridgeClient:
 
     # ---------------------- Lifecycle ----------------------
 
+    def _new_req_socket(self) -> Any:
+        """Cria/recria o socket REQ. Usado no connect e após timeout (reset)."""
+        assert self._context is not None
+        sock = self._context.socket(zmq.REQ)
+        sock.setsockopt(zmq.RCVTIMEO, REQ_TIMEOUT_MS)
+        sock.setsockopt(zmq.SNDTIMEO, REQ_TIMEOUT_MS)
+        sock.setsockopt(zmq.LINGER, 0)
+        sock.connect(f"tcp://{self.host}:{self.req_port}")
+        return sock
+
     async def connect(self) -> None:
         """Inicializa sockets PUB/SUB e REQ/REP."""
         self._context = zmq.asyncio.Context.instance()
@@ -72,12 +82,20 @@ class MT5BridgeClient:
         self._sub_socket.connect(f"tcp://{self.host}:{self.pub_port}")
         self._sub_socket.setsockopt(zmq.SUBSCRIBE, b"")
 
-        self._req_socket = self._context.socket(zmq.REQ)
-        self._req_socket.setsockopt(zmq.RCVTIMEO, REQ_TIMEOUT_MS)
-        self._req_socket.setsockopt(zmq.SNDTIMEO, REQ_TIMEOUT_MS)
-        self._req_socket.connect(f"tcp://{self.host}:{self.req_port}")
+        self._req_socket = self._new_req_socket()
 
         self._sub_task = asyncio.create_task(self._sub_loop())
+
+    def _reset_req_socket(self) -> None:
+        """
+        Recria o socket REQ. O REQ do ZMQ é uma máquina send→recv estrita:
+        um recv que falha (timeout) deixa o socket travado para os próximos
+        comandos. Recriar restaura o estado (senão candles/símbolos quebram
+        junto após um PROBE_TICKS lento).
+        """
+        if self._req_socket is not None:
+            self._req_socket.close(linger=0)
+        self._req_socket = self._new_req_socket()
 
     async def disconnect(self) -> None:
         if self._sub_task:
@@ -137,7 +155,9 @@ class MT5BridgeClient:
         }
     )
 
-    async def request(self, cmd: str, **params: Any) -> dict:
+    async def request(
+        self, cmd: str, *, timeout_ms: int | None = None, **params: Any
+    ) -> dict:
         """Envia comando read-only e aguarda resposta do EA."""
         if cmd not in self._READ_ONLY_COMMANDS:
             return {"error": "UNAUTHORIZED_COMMAND", "cmd": cmd}
@@ -149,12 +169,23 @@ class MT5BridgeClient:
         # send_json/recv_json: em zmq.asyncio, send_json e sync, recv_json e awaitable.
         # Lock garante 1 ciclo REQ/REP por vez (candles + SUBSCRIBE não colidem).
         async with self._req_lock:
-            await self._req_socket.send_json(payload)
+            if timeout_ms is not None:
+                self._req_socket.setsockopt(zmq.RCVTIMEO, timeout_ms)
             try:
+                await self._req_socket.send_json(payload)
                 response = await self._req_socket.recv_json()
+            except zmq.Again:
+                # timeout — o socket REQ ficou travado no estado recv; reseta
+                # para não derrubar os próximos comandos (candles/símbolos).
+                self._reset_req_socket()
+                return {"error": "EA_TIMEOUT", "cmd": cmd}
             except ValueError as exc:
                 # resposta do EA não é JSON válido — não derruba a rota (502, não 500)
+                self._reset_req_socket()
                 return {"error": "BAD_EA_RESPONSE", "cmd": cmd, "detail": str(exc)}
+            finally:
+                if timeout_ms is not None and self._req_socket is not None:
+                    self._req_socket.setsockopt(zmq.RCVTIMEO, REQ_TIMEOUT_MS)
         latency = (time.time() - t0) * 1000
         self._latency_samples.append(latency)
         if len(self._latency_samples) > 50:
