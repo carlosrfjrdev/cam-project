@@ -1,4 +1,19 @@
-# Constituição Operacional do CaM
+> # ⚰️ DOCUMENTO DESCOMISSIONADO — 2026-06-03
+> **Esta Constituição foi REVOGADA por decisão do Founder.** Ela era a disciplina
+> **pessoal de trader** de Carlos. Com a virada estratégica do projeto para **produto
+> comercial** (o Carlos não opera mais — fornece solução para terceiros), todas as
+> regras abaixo perderam força de lei: hierarquia constitucional, limites de contrato,
+> kill switch obrigatório, DARF bloqueante, journal obrigatório, "IA não opera",
+> "preservar capital". **NADA aqui vincula mais o projeto.**
+>
+> Preservado apenas como **memória histórica**. O Risk Engine (que esta Constituição
+> consagrava como autoridade) sobrevive no código como **feature de produto**
+> configurável (Assets RiskManager), não como dogma. Ver
+> `project/tcam/CONSTITUTION-DECOMMISSION.md`. Estado pré-virada na branch `the_old_cam`.
+
+---
+
+# Constituição Operacional do CaM ~~(VIGENTE)~~ — ARQUIVADA
 
 > **The Carlos Alternative Money**
 > **Versão vigente:** 1.1 — Pós EMENDA-001 v2 (ratificada 2026-05-27)

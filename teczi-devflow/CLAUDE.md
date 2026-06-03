@@ -37,9 +37,14 @@
 - **Founder-only nos gates** — sem exceção nesta versão (NCC-1701 §7).
 - **Sem estimativas em horas/dias/semanas** em qualquer artefato (proibição explícita do Founder).
 
-## Relação com a Constituição do CaM
+## Constituição — DESCOMISSIONADA (2026-06-03)
 
-NCC-1701 é o **método**, a Constituição é a **lei**. Em caso de conflito, prevalece a Constituição (Art. 43º — soberania). Toda fase do NCC-1701 que toque Risk Engine, kill switch, journal, provisão fiscal ou autoridade da IA dispara SEC-GOV (Kevin) automaticamente — esses são gatilhos CaM-específicos somados aos 9 gatilhos canônicos do framework.
+> A Constituição do CaM foi **revogada** com a virada do projeto para produto comercial.
+> NCC-1701 continua sendo o **método de engenharia**. Não há mais "lei suprema" acima
+> dele. Os gatilhos SEC-GOV *constitucionais* (Risk Engine, kill switch, journal, fiscal,
+> autoridade da IA) deixaram de ser obrigatórios — podem virar requisitos de **produto**
+> quando fizer sentido comercial, mas como decisão de engenharia, não dogma. Ver
+> `../project/tcam/` e `../CLAUDE.md`.
 
 ## Git
 

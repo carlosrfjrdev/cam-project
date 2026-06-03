@@ -8,38 +8,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## O que este repositório é
 
-**CaM — The Carlos Alternative Money.** Cockpit pessoal, local, não comercial de Carlos Rodrigues Ferreira Junior para operação disciplinada de mercado, preservação de capital e construção patrimonial via Harvest Rule. Projeto **separado e independente** da Teczilabs (sem perímetro de capital, infraestrutura ou receita compartilhada — Art. 8º).
+**CaM — Cockpit de gestão de ativos.** Plataforma de software para gestão, análise e
+operação de ativos. **Virada estratégica (2026-06-03):** o projeto deixou de ser o
+cockpit *pessoal e não-comercial* de um único trader e passou a ser um **produto** —
+solução de software para terceiros operarem (codinome de produto futuro: **TCaM — Teczi
+Cockpit Assets Manager**; o nome "CaM" e as pastas `cam-cockpit` permanecem até o
+Founder pedir o rebrand de UI). Histórico do projeto pessoal preservado na branch
+`the_old_cam`.
 
-**Fase atual:** **Fase 0 — Construção** (`CONSTITUICAO.md` Anexo II). Sem trade real, sem paper trading. Construção do cockpit: backend, frontend, Risk Engine, journal, backtest engine, integrações.
+**Fase atual:** **Fase 0 — Construção da estrutura do produto.** Reaproveita o que já
+foi construído (features, MT5 bridge, Inspetor, Quant Lab, backtest, etc.) e organiza
+sob o novo paradigma de produto.
 
-Não há comandos de build/lint/test ainda — esta seção será adicionada quando o primeiro app for criado em `/apps`.
-
----
-
-## Hierarquia constitucional — LEIA antes de qualquer ação
-
-```
-Constituição > Risk Engine > Estratégia validada > IA > Operador em decisão manual
-```
-
-A [`CONSTITUICAO.md`](./CONSTITUICAO.md) é **soberana** (Art. 43º). Toda recomendação, código, decisão ou orquestração que você produzir tem que sobreviver a essa hierarquia.
-
-**Artigos não-negociáveis:**
-
-| Artigo | O que vincula |
-|---|---|
-| **Art. 11º** | Limite absoluto: **2 contratos WIN / 2 contratos WDO**. Intocável |
-| **Art. 15º** | Risk Engine bloqueia? CaM não opera. Sem exceções |
-| **Art. 18º** | Kill switch obrigatório, acionável sem justificar oportunidade perdida |
-| **Art. 19º** | Posição aberta sem cobertura sistêmica é risco inaceitável |
-| **Art. 25º** | UIs operacionais exibem resultado **LÍQUIDO de imposto provisionado**, nunca bruto |
-| **Art. 26º** | DARF atrasada bloqueia novas operações |
-| **Art. 31º** | Operação sem registro no journal é falha operacional |
-| **Art. 35º** | IA NÃO PODE: enviar ordem, desabilitar/parametrizar Risk Engine, justificar exceção constitucional |
-| **Art. 36º** | A hierarquia acima — inviolável |
-| **Art. 6º** | Em conflito entre regras, prevalece a que **preserva mais capital** |
-
-Quando estiver em dúvida sobre o que recomendar/codar: aplique o Art. 6º.
+> ⚠️ **A Constituição foi DESCOMISSIONADA (2026-06-03).** O documento
+> `CONSTITUICAO.md` era a disciplina **pessoal de trader** do Carlos (preservação de
+> capital, limites de contrato, kill switch obrigatório, DARF bloqueante, "IA não opera").
+> Como o Carlos não opera mais — vira fornecedor de solução —, essas regras morreram
+> como **lei do projeto**. Ver `project/tcam/CONSTITUTION-DECOMMISSION.md`.
+>
+> **NÃO** aplique mais nenhuma "trava constitucional", hierarquia soberana, "Art. Xº",
+> nem o princípio "preserve mais capital" como regra vinculante. O documento, se ainda
+> existir, está **arquivado** e é apenas memória histórica.
+>
+> **O que sobrevive (como engenharia, não como lei):** o **Risk Engine** (`_shared/risk`)
+> permanece no código — passa a ser **feature de produto** ("Assets RiskManager"),
+> configurável pelo usuário, não um dogma moral. O isolamento research↔live
+> (import-linter) fica como boa prática de arquitetura. O **DevFlow NCC-1701** e as
+> personas continuam — são processo de **engenharia de software**, nunca foram a
+> Constituição do trader.
 
 ---
 
@@ -47,9 +43,10 @@ Quando estiver em dúvida sobre o que recomendar/codar: aplique o Art. 6º.
 
 ```
 CaM-project/
-├── CONSTITUICAO.md             ← Lei suprema (v1.0 consolidada — substitui os .txt antigos)
 ├── CLAUDE.md                   ← Este arquivo (contexto para Claude Code)
 ├── README.md                   ← README institucional do CaM
+├── project/tcam/               ← Virada estratégica → produto (PIVOT, DECOMMISSION, MAP)
+│   (CONSTITUICAO.md descomissionada — arquivada, sem força de lei)
 │
 ├── apps/                       ← APLICATIVOS do cockpit (estado real — código)
 │   └── README.md
@@ -233,7 +230,7 @@ React 19 + Vite + MUI →  Frontend SPA local (sem Next.js)
 PostgreSQL 16 + TimescaleDB → Banco transacional + tick/candle storage (desde Fase 0)
 DuckDB                →  Motor analítico auxiliar (research em CSV/Parquet)
 Telegram Bot          →  Canal externo de alerta
-Ollama local + Anthropic → IA auditora/analista, NUNCA executora (Arts. 34–36)
+Ollama local + Anthropic → IA auditora/analista (papel definido por produto, não por lei)
 ```
 
 **SO produção E desenvolvimento:** **Windows 11** (firme, 2026-05-30 — Wine/Linux
@@ -256,16 +253,18 @@ Convenção de pastas: aplicativos em `/apps/cam-*` (monorepo `apps/cam-cockpit/
 
 ---
 
-## Gatilhos automáticos para SEC-GOV no CaM
+## Segurança (SEC-GOV) no produto
 
-Além dos 9 gatilhos canônicos do NCC-1701, no CaM **sempre** acionar SEC-GOV (Kevin) quando a demanda tocar:
+Os **9 gatilhos canônicos do NCC-1701** para SEC-GOV (Kevin) continuam válidos como
+boa engenharia. Os antigos gatilhos *constitucionais* (Risk Engine como autoridade,
+kill switch obrigatório, journal/DARF, "autoridade da IA" Arts. 34–36) **deixaram de
+ser lei**. Eles podem reaparecer como **requisitos de produto** quando fizer sentido
+comercial — ex.: segurança de dados de cliente, isolamento multi-tenant, segregação
+research↔live — mas como decisão de engenharia/produto, não como dogma.
 
-- **Risk Engine** (Art. 15º)
-- **Kill switch** (Art. 18º)
-- **Journal**, ledger fiscal ou provisão (Arts. 25º, 26º, 31º)
-- **Autoridade da IA** (Arts. 34º–36º)
-
-Esses são **bugs/mudanças constitucionais** — não tratá-los como "comuns".
+> Vender ferramenta para terceiros operarem abre exposição **legal/regulatória** nova
+> (responsabilidade, CVM, termos de uso). Isso é tratado na camada de produto (Fase 2),
+> ver `project/tcam/PIVOT-TCaM-STRATEGY.md` — não é uma trava de código agora.
 
 ---
 
@@ -281,15 +280,15 @@ Quando o cockpit CaM começar a materializar código em `/apps/{codinome}/`, cad
 
 ## Settings note
 
-`.claude/settings.json` define `defaultMode: bypassPermissions` e `skipDangerousModePermissionPrompt: true`. Ferramentas rodam sem prompt — exercer o mesmo cuidado que você teria sob permissões normais, especialmente para ações destrutivas, em estado compartilhado ou que violem a Constituição.
+`.claude/settings.json` define `defaultMode: bypassPermissions` e `skipDangerousModePermissionPrompt: true`. Ferramentas rodam sem prompt — exercer o mesmo cuidado que você teria sob permissões normais, especialmente para ações destrutivas ou em estado compartilhado.
 
 ---
 
 ## Checklist de orientação (para qualquer Claude novo entrando aqui)
 
-1. Leia [`CONSTITUICAO.md`](./CONSTITUICAO.md) — pelo menos Parte I, IV, IX, X
-2. Leia [`teczi-devflow/NCC-1701/process.md`](./teczi-devflow/NCC-1701/process.md)
-3. Confira a fase atual do CaM (Fase 0 — Construção) no Anexo II da Constituição
-4. Para qualquer demanda: acione a skill da fase correspondente via `Skill` tool
-5. Responda em português
-6. Quando em dúvida: **preserve mais capital** (Art. 6º) e **invoque Leo** para orquestrar
+1. Leia esta seção "O que este repositório é" — entenda a **virada para produto** e que a **Constituição está descomissionada** (sem força de lei).
+2. Leia [`project/tcam/`](./project/tcam/) — a estratégia da virada (PIVOT, DECOMMISSION, MAP de módulos).
+3. Leia [`teczi-devflow/NCC-1701/process.md`](./teczi-devflow/NCC-1701/process.md) — o processo de engenharia (continua válido).
+4. Para qualquer demanda: acione a skill da fase correspondente via `Skill` tool.
+5. Responda em português.
+6. Quando em dúvida: **invoque Leo** para orquestrar. Não há mais "preserve mais capital" como regra — o objetivo agora é **construir o produto**.
