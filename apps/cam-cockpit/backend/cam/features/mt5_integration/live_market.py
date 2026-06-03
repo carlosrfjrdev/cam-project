@@ -12,7 +12,10 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from typing import Any
+
+_log = logging.getLogger("cam.inspetor")
 
 
 class MarketHub:
@@ -24,6 +27,8 @@ class MarketHub:
         # último frame conhecido por símbolo (para enviar snapshot ao conectar)
         self._last_tick: dict[str, dict[str, Any]] = {}
         self._last_book: dict[str, dict[str, Any]] = {}
+        # diagnóstico: loga o 1º book recebido por símbolo
+        self._book_seen: set[str] = set()
 
     # ---------------- assinatura WS ----------------
 
@@ -52,6 +57,14 @@ class MarketHub:
         self._dispatch(payload, "tick", self._last_tick)
 
     async def on_book(self, payload: bytes) -> None:
+        try:
+            data = json.loads(payload.decode("utf-8", "replace"))
+            sym = str(data.get("symbol", "")).upper()
+            if sym and sym not in self._book_seen:
+                self._book_seen.add(sym)
+                _log.info("inspetor: 1o book recebido do EA para %s", sym)
+        except (ValueError, AttributeError):
+            pass
         self._dispatch(payload, "book", self._last_book)
 
     def _dispatch(

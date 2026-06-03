@@ -16,6 +16,7 @@ Falha segura: bridge offline → 503 com payload padronizado; WS emite
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
@@ -32,6 +33,7 @@ from cam.features.mt5_integration.schemas import (
 from cam.features.mt5_integration.symbol_resolver import resolve
 
 router = APIRouter(prefix="/api/v1/mt5", tags=["mt5-market-data"])
+_log = logging.getLogger("cam.inspetor")
 
 _VALID_TF = {"M1", "M5", "M15", "M30", "H1", "H4", "D1", "W1", "MN1"}
 
@@ -117,12 +119,15 @@ async def ws_market(websocket: WebSocket, symbol: str) -> None:
     await websocket.accept()
     sym = symbol.upper()
 
-    # pede ao EA para observar este símbolo (best-effort)
+    # pede ao EA para observar este símbolo (tick + book ao vivo via MarketBookAdd)
     if _service.bridge.is_alive():
         try:
-            await _service.subscribe_symbol(sym)
-        except Exception:
-            pass
+            sub = await _service.subscribe_symbol(sym)
+            _log.info("inspetor WS subscribe %s -> %s", sym, sub)
+        except Exception as exc:  # noqa: BLE001
+            _log.warning("inspetor WS subscribe %s FALHOU: %s", sym, exc)
+    else:
+        _log.info("inspetor WS %s: bridge OFFLINE", sym)
 
     queue = _service.hub.subscribe(sym)
     await websocket.send_json(

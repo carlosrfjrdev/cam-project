@@ -59,6 +59,9 @@ class MT5BridgeClient:
         self._latency_samples: list[float] = []
         self._subscribers: dict[str, list[Callable[[bytes], Awaitable[None]]]] = {}
         self._sub_task: asyncio.Task | None = None
+        # Socket REQ do ZMQ é estritamente send→recv: serializa o acesso para
+        # evitar que candles (HTTP) e SUBSCRIBE (WS) usem o socket ao mesmo tempo.
+        self._req_lock = asyncio.Lock()
 
     # ---------------------- Lifecycle ----------------------
 
@@ -142,13 +145,15 @@ class MT5BridgeClient:
 
         payload = {"cmd": cmd, **params}
         t0 = time.time()
-        # send_json/recv_json: em zmq.asyncio, send_json e sync, recv_json e awaitable
-        await self._req_socket.send_json(payload)
-        try:
-            response = await self._req_socket.recv_json()
-        except ValueError as exc:
-            # resposta do EA não é JSON válido — não derruba a rota (502, não 500)
-            return {"error": "BAD_EA_RESPONSE", "cmd": cmd, "detail": str(exc)}
+        # send_json/recv_json: em zmq.asyncio, send_json e sync, recv_json e awaitable.
+        # Lock garante 1 ciclo REQ/REP por vez (candles + SUBSCRIBE não colidem).
+        async with self._req_lock:
+            await self._req_socket.send_json(payload)
+            try:
+                response = await self._req_socket.recv_json()
+            except ValueError as exc:
+                # resposta do EA não é JSON válido — não derruba a rota (502, não 500)
+                return {"error": "BAD_EA_RESPONSE", "cmd": cmd, "detail": str(exc)}
         latency = (time.time() - t0) * 1000
         self._latency_samples.append(latency)
         if len(self._latency_samples) > 50:
