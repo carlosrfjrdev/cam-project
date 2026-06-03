@@ -95,6 +95,7 @@ A hierarquia constitucional `Constituição > Risk Engine > Estratégia validada
 | **Banco transacional** | Operações, posições, journal, decisões Risk Engine, fiscal, checklists | PostgreSQL 16 | ADR-004 |
 | **Banco de séries temporais** | Tick data, book snapshots, candles em múltiplos timeframes | TimescaleDB (extensão Postgres) | ADR-004 |
 | **Motor analítico auxiliar** | Research em CSV/Parquet, backtest exploratório, notebooks Jupyter | DuckDB | ADR-005 |
+| **Research Lane** | Descoberta estatística read-only (Lead-Lag): ingestão MT5→`research_*`, barras canônicas M1→derivadas, análise; **isolada do live por barreira técnica** | Vertical slice `features/research/` + schema `research_*` + TimescaleDB | ADR-015 |
 | **Canal externo de alertas** | Notificações operacionais independentes do cockpit | Telegram Bot | ADR-010 |
 | **IA auditora** | Análise pós-mercado, hipóteses, revisão de journal — SEM autoridade de execução | Ollama local + Anthropic API | ADR-006 |
 | **Integração Profit** | Faseada: CSV → semi-auto → NTSL → ProfitDLL (Fase F4+) | NTSL + ctypes (futuro) | ADR-001, ADR-008 |
@@ -120,6 +121,7 @@ A hierarquia constitucional `Constituição > Risk Engine > Estratégia validada
 | ADR-012 | Dev em Linux, produção em Windows; code cross-platform | [ADR-012](./adrs/ADR-012-dev-linux-producao-windows.md) |
 | ADR-013 | Feature-Based Vertical Slice + Shared Kernel mínimo | [ADR-013](./adrs/ADR-013-vertical-slice-shared-kernel.md) |
 | ADR-014 | MT5 como fonte de **market data read-only** (EA `cam_bridge` + ZeroMQ) | [ADR-014](./adrs/ADR-014-mt5-market-data-read-only.md) |
+| ADR-015 | **Research Lane isolada** com schema `research_*` próprio (Lead-Lag) | [ADR-015](./adrs/ADR-015-research-lane-isolada.md) |
 
 > **Nota de recalibração (2026-05-31, ADR-014):** o SO firme é **Windows 11** (Wine/Linux falhou,
 > 2026-05-30) e a **fonte de market data é o MT5** via EA `cam_bridge`+ZeroMQ (read-only). ADR-014
@@ -341,6 +343,23 @@ cam_backtest_trades      ← trades simulados
 cam_backtest_equity_curve  ← curva de capital (hypertable se grande)
 cam_pattern_studies      ← estudos de padrão
 ```
+
+### Research Lane (schema `research_*` — ISOLADO do live, ADR-015)
+
+```
+research_bars                  ← canônico de barras (M1 + M5/M15/M30/H1 derivados); timeframe é coluna/partição
+research_data_sources          ← provenance por lote (bar_origin, ts_source, hash do lote bruto)
+research_dataset_snapshots     ← snapshot imutável + hash composto (reprodutibilidade)
+research_runs                  ← runs de análise (snapshot_id, grade δ, n_trials, status)
+research_run_results           ← resultado por célula (source, target, delta, correlation, n, verdict)
+research_data_quality_checks   ← missing_bars, bucket_misalignment, partial_bar, m1_is_primary, stale_bar
+```
+
+> **Isolamento (ADR-015 / SEC-GOV):** o slice `features/research/` NÃO importa execução
+> (Order Gateway, bridge de execução, `OrderSend`) — enforce por import-linter; e NÃO escreve
+> em tabelas live (`cam_orders`, `cam_positions`, `cam_journal_entries`). Escrita restrita a
+> `research_*`. Fonte de dado = MT5 via bridge read-only (ADR-014). `cam_candles_*` (live) **não**
+> são canônico de research — falta provenance/snapshot/hash.
 
 ### Relacionamentos Principais
 

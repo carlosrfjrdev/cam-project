@@ -127,3 +127,19 @@ forbidden_modules = [
     "pydantic",
     "apscheduler",
 ]
+
+# ADR-015 / SEC-GOV (Kevin) — Research Lane isolada do live por barreira tecnica.
+# O slice de research NAO importa execucao nem o broker de mercado. A fonte de
+# dado (MT5) e chamada na BORDA (rota de ingestao), nunca por import de dominio.
+[[tool.importlinter.contracts]]
+name = "Research Lane nao importa execucao nem broker (ADR-015)"
+type = "forbidden"
+source_modules = ["cam.features.research"]
+forbidden_modules = [
+    "cam._shared.order_gateway",
+    "cam.api.order_gateway_routes",
+    "cam.features.mt5_integration",
+    "cam.features.profit_integration",
+    "cam.features.paper_trading",
+    "cam.features.robot_orchestrator",
+]
