@@ -90,6 +90,13 @@ class MT5IntegrationService:
         """REP SUBSCRIBE → EA passa a observar o símbolo (tick + book ao vivo)."""
         return await self._bridge.request("SUBSCRIBE", symbol=symbol)
 
+    async def probe_ticks(self, symbol: str, count: int = 500) -> dict:
+        """
+        REP PROBE_TICKS → diagnóstico: o feed entrega flag de agressor?
+        Research v0.5 — decide empiricamente se OFI/tick (Cubo Rápido) é viável.
+        """
+        return await self._bridge.request("PROBE_TICKS", symbol=symbol, count=count)
+
     def get_status(self) -> MT5BridgeStatus:
         alive = self._bridge.is_alive()
         state = "ONLINE" if alive else "OFFLINE"

@@ -113,6 +113,25 @@ async def candles(
     return out
 
 
+@router.get("/probe-ticks")
+async def probe_ticks(
+    symbol: str = Query(..., min_length=1),
+    count: int = Query(500, ge=1, le=5000),
+):
+    """
+    Diagnóstico Research v0.5: o feed do MT5 entrega flag de agressor?
+
+    Decide empiricamente se OFI/tick (Cubo Rápido) é viável no CaM, em vez de
+    assumir no papel. `aggressor_available=true` → há ticks com TICK_FLAG_BUY/SELL.
+    """
+    if not _service.bridge.is_alive():
+        return _offline()
+    resp = await _service.probe_ticks(symbol, count)
+    if resp.get("status") != "ok":
+        return JSONResponse(status_code=502, content=resp)
+    return resp["data"]
+
+
 @router.websocket("/ws/market/{symbol}")
 async def ws_market(websocket: WebSocket, symbol: str) -> None:
     """Stream ao vivo de tick/book + status. Read-only."""

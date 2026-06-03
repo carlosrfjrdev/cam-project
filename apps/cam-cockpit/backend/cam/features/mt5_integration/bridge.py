@@ -133,6 +133,7 @@ class MT5BridgeClient:
             "GET_SYMBOLS",
             "SUBSCRIBE",
             "UNSUBSCRIBE",
+            "PROBE_TICKS",
         }
     )
 

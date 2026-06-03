@@ -346,6 +346,14 @@ void HandleCommand(const string cmd)
       return;
      }
 
+   // Research (v0.5) — PROBE_TICKS: testa se o feed entrega flag de agressor.
+   // Usa CopyTicks (traz MqlTick.flags com TICK_FLAG_BUY/SELL). Read-only.
+   if(StringFind(c, "PROBE_TICKS") >= 0)
+     {
+      HandleProbeTicks(c);
+      return;
+     }
+
    // Inspetor — SUBSCRIBE: passa a observar o simbolo (SymbolSelect + book)
    if(StringFind(c, "UNSUBSCRIBE") >= 0)
      {
@@ -444,5 +452,68 @@ void HandleGetSymbols()
       arr += "\"" + name + "\"";
      }
    CamZMQSend(StringFormat("{\"status\":\"ok\",\"data\":[%s]}", arr));
+  }
+
+//+------------------------------------------------------------------+
+//| PROBE_TICKS — Research v0.5: o feed entrega flag de agressor?      |
+//| req: {"cmd":"PROBE_TICKS","symbol":"WIN$","count":500}            |
+//| Usa CopyTicks (COPY_TICKS_ALL) e conta quais flags vem nos ticks. |
+//| Decide empiricamente se OFI/tick (Cubo Rapido) e viavel no CaM.    |
+//| READ-ONLY: so leitura de historico de tick.                       |
+//+------------------------------------------------------------------+
+void HandleProbeTicks(const string cmd)
+  {
+   string sym = JsonGetString(cmd, "symbol");
+   int    cnt = JsonGetInt(cmd, "count", 500);
+   if(StringLen(sym) == 0) sym = g_watched_symbol;
+   if(StringLen(sym) == 0) sym = Symbol();
+   if(cnt < 1) cnt = 1;
+   if(cnt > 5000) cnt = 5000;
+
+   SymbolSelect(sym, true);
+   MqlTick ticks[];
+   // COPY_TICKS_ALL: todos os ticks (info + trade). flags revela o agressor.
+   int got = CopyTicks(sym, ticks, COPY_TICKS_ALL, 0, cnt);
+   if(got <= 0)
+     {
+      CamZMQSend(StringFormat(
+         "{\"error\":\"NO_TICKS\",\"symbol\":\"%s\",\"copied\":%d}", sym, got));
+      return;
+     }
+
+   int n_buy = 0, n_sell = 0, n_last = 0, n_volume = 0, n_flagged = 0;
+   long first_ms = 0, last_ms = 0;
+   for(int i = 0; i < got; i++)
+     {
+      uint f = ticks[i].flags;
+      if((f & TICK_FLAG_BUY)  != 0) n_buy++;
+      if((f & TICK_FLAG_SELL) != 0) n_sell++;
+      if((f & TICK_FLAG_LAST) != 0) n_last++;
+      if((f & TICK_FLAG_VOLUME) != 0) n_volume++;
+      if(f != 0) n_flagged++;
+      if(i == 0) first_ms = ticks[i].time_msc;
+      last_ms = ticks[i].time_msc;
+     }
+   // aggressor_available = ha ticks com BUY ou SELL marcado.
+   bool aggressor = (n_buy + n_sell) > 0;
+   // amostra dos 3 primeiros ticks (flags crus) para inspecao manual.
+   string sample = "";
+   int smax = (got < 3 ? got : 3);
+   for(int i = 0; i < smax; i++)
+     {
+      if(i > 0) sample += ",";
+      sample += StringFormat(
+         "{\"t_msc\":%I64d,\"last\":%.5f,\"vol\":%I64d,\"flags\":%u}",
+         ticks[i].time_msc, ticks[i].last, ticks[i].volume_real > 0 ?
+         (long)ticks[i].volume_real : (long)ticks[i].volume, ticks[i].flags);
+     }
+   string resp = StringFormat(
+      "{\"status\":\"ok\",\"data\":{\"symbol\":\"%s\",\"copied\":%d,"
+      "\"aggressor_available\":%s,\"n_buy\":%d,\"n_sell\":%d,\"n_last\":%d,"
+      "\"n_volume\":%d,\"n_flagged\":%d,\"span_ms\":%I64d,\"sample\":[%s]}}",
+      sym, got, (aggressor ? "true" : "false"),
+      n_buy, n_sell, n_last, n_volume, n_flagged,
+      (last_ms - first_ms), sample);
+   CamZMQSend(resp);
   }
 //+------------------------------------------------------------------+
