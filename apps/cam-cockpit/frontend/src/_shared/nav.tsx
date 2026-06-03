@@ -37,6 +37,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { label: "Inspetor de Ativo", path: "/inspetor", icon: <TravelExploreIcon />, group: "Pesquisa", visibleInMvp: true },
+  { label: "Quant Lab", path: "/lab", icon: <ScienceIcon />, group: "Pesquisa", visibleInMvp: true },
 
   { label: "Cockpit Live", path: "/", icon: <DashboardIcon />, group: "Operação", visibleInMvp: true },
   { label: "Order Gateway", path: "/order-gateway", icon: <GavelIcon />, group: "Operação" },
