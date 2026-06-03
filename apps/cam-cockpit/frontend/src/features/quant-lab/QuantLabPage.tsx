@@ -15,6 +15,7 @@ import ScienceIcon from "@mui/icons-material/Science";
 import {
   fetchDataHealth, postIngest, type IngestResult,
 } from "./api";
+import { LeadLagAnalysis } from "./LeadLagAnalysis";
 
 const DEFAULT_UNIVERSE = "WIN$, WDO$, VALE3, ITUB4, PETR4, AXIA3, BBDC4, B3SA3";
 
@@ -170,6 +171,13 @@ export function QuantLabPage() {
           </>
         )}
       </Paper>
+
+      {/* 0.5.2 — análise de lead-lag sobre os dados ingeridos */}
+      {health.data && health.data.bars.length > 0 && (
+        <LeadLagAnalysis
+          universe={universe.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean)}
+        />
+      )}
     </Box>
   );
 }

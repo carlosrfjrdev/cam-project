@@ -21,11 +21,13 @@ from pydantic import BaseModel, Field
 
 from cam._shared.infra import async_session_factory
 from cam.features.mt5_integration.routes import _service as _mt5_service
+from cam.features.research.leadlag.run_service import LeadLagRunService
 from cam.features.research.leadlag.service import LeadLagIngestionService
 
 router = APIRouter(prefix="/api/v1/research", tags=["research-leadlag"])
 
 _ingestion = LeadLagIngestionService(async_session_factory)
+_runner = LeadLagRunService(async_session_factory)
 
 # Universo SEED (parametrizável — UNIV): WIN/WDO + 6 maiores do IBOV.
 SEED_UNIVERSE = ["WIN$", "WDO$", "VALE3", "ITUB4", "PETR4", "AXIA3", "BBDC4", "B3SA3"]
@@ -99,3 +101,55 @@ async def data_health():
     """Cobertura por símbolo/TF + liquidez de tick (R-08). Antes de qualquer análise."""
     health = await _ingestion.data_health()
     return {"seed_universe": SEED_UNIVERSE, **health}
+
+
+# --------------------------------------------------------------------------- #
+# 0.5.2 — análise de lead-lag (correlação defasada bar-time)
+# --------------------------------------------------------------------------- #
+class RunRequest(BaseModel):
+    sources: list[str] = Field(..., min_length=1)
+    target: str
+    # grade de defasagem (lookback em barras) — "últimos 50 timeframes" = 1..50
+    delta_grid: list[int] = Field(default_factory=lambda: list(range(1, 51)))
+    timeframe: str = "M1"
+    min_samples: int = Field(default=30, ge=2)
+    cost: float = 0.0
+    snapshot_id: int | None = None
+
+
+@router.post("/runs")
+async def create_run(body: RunRequest):
+    """
+    Lança uma análise de lead-lag parametrizável (R-25/R-30). Cria **job de
+    pesquisa**, NUNCA ordem (Kevin). Retorna run_id + contador de tentativas.
+    """
+    return await _runner.run(
+        sources=body.sources,
+        target=body.target,
+        delta_grid=body.delta_grid,
+        timeframe=body.timeframe,
+        min_samples=body.min_samples,
+        cost=body.cost,
+        snapshot_id=body.snapshot_id,
+    )
+
+
+@router.get("/runs")
+async def list_runs():
+    """Lista runs + status + contador de tentativas."""
+    return {"runs": await _runner.list_runs()}
+
+
+@router.get("/runs/{run_id}")
+async def get_run(run_id: int):
+    """Resultado: matriz C(δ) por par, n por célula, veredito (R-31)."""
+    res = await _runner.get_result(run_id)
+    if res is None:
+        return JSONResponse(status_code=404, content={"error": "RUN_NOT_FOUND"})
+    return res
+
+
+@router.get("/stats/trials")
+async def stats_trials():
+    """Contador global de tentativas (alimenta a deflação estatística — 0.5.3)."""
+    return {"total_trials": await _runner.total_trials()}
