@@ -12,6 +12,7 @@ pesquisa (não ordem). Sub-versão 0.5.1: ingest + data-health.
 """
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from fastapi import APIRouter
@@ -41,8 +42,28 @@ class IngestRequest(BaseModel):
 
 
 async def _candle_fetcher(symbol: str, timeframe: str, count: int) -> dict[str, Any]:
-    """Borda: chama o bridge MT5. O serviço de research recebe isto injetado."""
-    return await _mt5_service.get_candles(symbol, timeframe, count)
+    """
+    Borda: chama o bridge MT5. O serviço de research recebe isto injetado.
+
+    Ingestão pede milhares de M1 → timeout grande (10s). O EA, na 1ª chamada de
+    um símbolo, dispara o download assíncrono do histórico (CopyRates) e pode
+    voltar vazio/curto: por isso seleciona o símbolo (SUBSCRIBE) e faz alguns
+    retries até o histórico sincronizar.
+    """
+    try:
+        await _mt5_service.subscribe_symbol(symbol)
+    except Exception:
+        pass
+    last: dict[str, Any] = {"status": "error", "error": "NO_DATA"}
+    for _ in range(4):
+        resp = await _mt5_service.get_candles(
+            symbol, timeframe, count, timeout_ms=10000
+        )
+        if resp.get("status") == "ok" and resp.get("data", {}).get("candles"):
+            return resp
+        last = resp
+        await asyncio.sleep(1.0)  # dá tempo do CopyRates sincronizar
+    return last
 
 
 async def _tick_fetcher(symbol: str, count: int) -> dict[str, Any]:

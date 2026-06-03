@@ -76,10 +76,22 @@ class MT5IntegrationService:
 
     # ---------------- Inspetor: market data read-only ----------------
 
-    async def get_candles(self, symbol: str, timeframe: str, count: int) -> dict:
-        """REP GET_CANDLES → OHLCV. ADR-014 R-04 (read-only)."""
+    async def get_candles(
+        self, symbol: str, timeframe: str, count: int, timeout_ms: int | None = None
+    ) -> dict:
+        """
+        REP GET_CANDLES → OHLCV. ADR-014 R-04 (read-only).
+
+        `timeout_ms` opcional: ingestão de research pede milhares de candles M1
+        (payload grande + CopyRates sincroniza histórico na 1ª chamada) e precisa
+        de timeout maior que o default de 1.5s.
+        """
         return await self._bridge.request(
-            "GET_CANDLES", symbol=symbol, timeframe=timeframe, count=count
+            "GET_CANDLES",
+            symbol=symbol,
+            timeframe=timeframe,
+            count=count,
+            timeout_ms=timeout_ms,
         )
 
     async def get_symbols(self) -> dict:
