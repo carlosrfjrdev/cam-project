@@ -213,6 +213,13 @@ from cam.features.regime.routes import router as regime_router  # noqa: E402
 
 app.include_router(regime_router)
 
+# Research Lane v0.5.1 (ADR-015) — Lead-Lag: ingestão MT5→research_* + Data Health.
+# Composição vive em cam/api/ (autorizado a conhecer features — ADR-013); o slice
+# cam.features.research NÃO importa MT5 (import-linter enforce).
+from cam.api.research_routes import router as research_leadlag_router  # noqa: E402
+
+app.include_router(research_leadlag_router)
+
 # T-TD-026 (SPEC v0.3) — WebSocket P&L stub funcional
 from cam.api.websocket import router as ws_router  # noqa: E402
 

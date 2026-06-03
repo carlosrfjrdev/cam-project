@@ -1,0 +1,125 @@
+"""
+Repository da Research Lane — escreve APENAS em research_* (R-34, ADR-015).
+
+Isolamento técnico: nenhuma escrita em tabelas live. SQL explícito (sem ORM
+para manter o slice leve). Funções assíncronas sobre AsyncSession.
+"""
+from __future__ import annotations
+
+from typing import Any
+
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+_INSERT_SOURCE = text(
+    """
+    INSERT INTO research_data_sources
+        (bar_origin, ts_source, aggressor_source, symbol, source_timeframe,
+         window_start, window_end, raw_batch_hash)
+    VALUES (:bar_origin, :ts_source, :aggressor_source, :symbol, :source_tf,
+            to_timestamp(:w_start), to_timestamp(:w_end), :hash)
+    RETURNING id
+    """
+)
+
+_INSERT_BAR = text(
+    """
+    INSERT INTO research_bars
+        (symbol, timeframe, ts_open, ts_close, session_date, open, high, low,
+         close, volume, financial, trades, vwap, is_partial, price_series,
+         provenance_id)
+    VALUES (:symbol, :timeframe, to_timestamp(:ts_open), to_timestamp(:ts_close),
+            :session_date, :open, :high, :low, :close, :volume, :financial,
+            :trades, :vwap, :is_partial, :price_series, :provenance_id)
+    ON CONFLICT (symbol, timeframe, price_series, ts_open) DO UPDATE
+      SET high=EXCLUDED.high, low=EXCLUDED.low, close=EXCLUDED.close,
+          volume=EXCLUDED.volume, is_partial=EXCLUDED.is_partial
+    """
+)
+
+_INSERT_TICK = text(
+    """
+    INSERT INTO research_ticks
+        (symbol, t_msc, ts, price, volume, aggressor, flags_raw, provenance_id)
+    VALUES (:symbol, :t_msc, to_timestamp(:ts_s), :price, :volume, :aggressor,
+            :flags_raw, :provenance_id)
+    """
+)
+
+_INSERT_SNAPSHOT = text(
+    """
+    INSERT INTO research_dataset_snapshots
+        (symbols, timeframes_included, mode, composite_hash, calendar_version,
+         with_ticks)
+    VALUES (:symbols, :timeframes, :mode, :composite_hash, :calendar_version,
+            :with_ticks)
+    RETURNING id
+    """
+)
+
+_INSERT_QC = text(
+    """
+    INSERT INTO research_data_quality_checks
+        (snapshot_id, symbol, timeframe, check_name, value)
+    VALUES (:snapshot_id, :symbol, :timeframe, :check_name, :value)
+    """
+)
+
+
+async def insert_source(session: AsyncSession, **kw: Any) -> int:
+    row = await session.execute(_INSERT_SOURCE, kw)
+    return int(row.scalar_one())
+
+
+async def insert_bars(session: AsyncSession, rows: list[dict[str, Any]]) -> int:
+    if not rows:
+        return 0
+    await session.execute(_INSERT_BAR, rows)
+    return len(rows)
+
+
+async def insert_ticks(session: AsyncSession, rows: list[dict[str, Any]]) -> int:
+    if not rows:
+        return 0
+    await session.execute(_INSERT_TICK, rows)
+    return len(rows)
+
+
+async def insert_snapshot(session: AsyncSession, **kw: Any) -> int:
+    row = await session.execute(_INSERT_SNAPSHOT, kw)
+    return int(row.scalar_one())
+
+
+async def insert_quality_check(session: AsyncSession, **kw: Any) -> None:
+    await session.execute(_INSERT_QC, kw)
+
+
+async def data_health(session: AsyncSession) -> dict[str, Any]:
+    """Cobertura por símbolo/TF + liquidez de tick (R-08 / Data Health)."""
+    bars = await session.execute(
+        text(
+            """
+            SELECT symbol, timeframe, count(*) AS n,
+                   min(ts_open) AS first_ts, max(ts_open) AS last_ts
+            FROM research_bars
+            GROUP BY symbol, timeframe
+            ORDER BY symbol, timeframe
+            """
+        )
+    )
+    ticks = await session.execute(
+        text(
+            """
+            SELECT symbol, count(*) AS n_ticks,
+                   sum(CASE WHEN aggressor <> 0 THEN 1 ELSE 0 END) AS n_aggressor,
+                   min(ts) AS first_ts, max(ts) AS last_ts
+            FROM research_ticks
+            GROUP BY symbol
+            ORDER BY symbol
+            """
+        )
+    )
+    return {
+        "bars": [dict(r._mapping) for r in bars],
+        "ticks": [dict(r._mapping) for r in ticks],
+    }

@@ -1,7 +1,7 @@
 ---
 template: SPEC
 phase: SPEC
-status: Draft v0.5 (rev. 2) — pendente gate do Founder
+status: APROVADO v0.5 (rev. 2) — Founder ratificou 2026-06-03
 produto: CaM
 codinome: research-cubo-leadlag · tese completa v0.5
 versao: v0.5
@@ -11,7 +11,7 @@ lead: Albert
 co_lead_sec: Kevin (SEC-GOV)
 co_participacao: Ada (dados), Jim (quant), Nassim (risco), Don (UX), Voltaire (challenger)
 aprovador: Founder
-gate: Founder pendente
+gate: APROVADO — Founder 2026-06-03
 ---
 
 # SPEC v0.5 — Cubo de Lead-Lag Cross-Asset (TESE COMPLETA, faseada)

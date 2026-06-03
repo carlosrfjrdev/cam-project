@@ -1,7 +1,7 @@
 ---
 template: SCOPE
 phase: DISC → SPEC (research lane)
-status: Draft v0.5 (rev. 2) — pendente gate do Founder
+status: APROVADO v0.5 (rev. 2) — Founder ratificou 2026-06-03
 produto: CaM
 codinome: research-cubo-leadlag ("O Cubo") · tese completa v0.5
 versao: v0.5
