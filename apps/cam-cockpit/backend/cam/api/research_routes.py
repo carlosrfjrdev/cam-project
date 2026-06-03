@@ -114,6 +114,7 @@ class RunRequest(BaseModel):
     timeframe: str = "M1"
     min_samples: int = Field(default=30, ge=2)
     cost: float = 0.0
+    fdr_q: float = Field(default=0.05, gt=0.0, lt=1.0)  # taxa de falsa descoberta
     snapshot_id: int | None = None
 
 
@@ -130,6 +131,7 @@ async def create_run(body: RunRequest):
         timeframe=body.timeframe,
         min_samples=body.min_samples,
         cost=body.cost,
+        fdr_q=body.fdr_q,
         snapshot_id=body.snapshot_id,
     )
 

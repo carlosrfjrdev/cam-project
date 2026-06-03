@@ -67,6 +67,7 @@ export interface RunSummary {
   delta_grid: number[];
   timeframe: string;
   cells: number;
+  survivors: number;
 }
 
 export interface CellResult {
@@ -77,7 +78,9 @@ export interface CellResult {
   correlation: number | null;
   mu_net: number | null;
   n_samples: number;
-  verdict: string;
+  dsr: number | null;
+  fdr_q: number | null;
+  verdict: string; // SURVIVOR | KILLED | INSUFFICIENT_DATA
 }
 
 export interface RunResult {

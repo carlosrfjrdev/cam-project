@@ -41,15 +41,26 @@ export function LeadLagAnalysis({ universe }: { universe: string[] }) {
     },
   });
 
-  // melhor |correlação| por fonte (descritivo, não sinal)
+  // por fonte: prioriza SURVIVOR; senão a melhor |C| medida (descritivo, não sinal)
   const bestBySource = new Map<string, CellResult>();
   for (const c of cells) {
-    if (c.verdict !== "OK" || c.correlation === null) continue;
+    if (c.correlation === null) continue;
     const cur = bestBySource.get(c.source);
-    if (!cur || Math.abs(c.correlation) > Math.abs(cur.correlation ?? 0)) {
-      bestBySource.set(c.source, c);
-    }
+    const better =
+      !cur ||
+      (c.verdict === "SURVIVOR" && cur.verdict !== "SURVIVOR") ||
+      (c.verdict === cur.verdict &&
+        Math.abs(c.correlation) > Math.abs(cur.correlation ?? 0));
+    if (better) bestBySource.set(c.source, c);
   }
+
+  const verdictChip = (v: string) => {
+    if (v === "SURVIVOR")
+      return <Chip size="small" color="success" label="sobrevivente" />;
+    if (v === "KILLED")
+      return <Chip size="small" color="error" variant="outlined" label="morta (FDR)" />;
+    return <Chip size="small" variant="outlined" label="dado insuficiente" />;
+  };
 
   return (
     <Paper sx={{ p: 2, mt: 2 }}>
@@ -99,6 +110,11 @@ export function LeadLagAnalysis({ universe }: { universe: string[] }) {
             <Chip size="small" color="info" label={`tentativas: ${summary.n_trials}`} />
             <Chip
               size="small"
+              color={summary.survivors > 0 ? "success" : "default"}
+              label={`sobreviventes: ${summary.survivors}`}
+            />
+            <Chip
+              size="small"
               color={summary.status === "done" ? "success" : "default"}
               label={summary.status}
             />
@@ -115,6 +131,7 @@ export function LeadLagAnalysis({ universe }: { universe: string[] }) {
                 <TableCell align="right">melhor |C|</TableCell>
                 <TableCell align="right">δ (barras)</TableCell>
                 <TableCell align="right">n</TableCell>
+                <TableCell align="right">DSR</TableCell>
                 <TableCell>veredito</TableCell>
               </TableRow>
             </TableHead>
@@ -128,29 +145,32 @@ export function LeadLagAnalysis({ universe }: { universe: string[] }) {
                       <TableCell align="right">—</TableCell>
                       <TableCell align="right">—</TableCell>
                       <TableCell align="right">—</TableCell>
-                      <TableCell>
-                        <Chip size="small" variant="outlined" label="dado insuficiente" />
-                      </TableCell>
+                      <TableCell align="right">—</TableCell>
+                      <TableCell>{verdictChip("INSUFFICIENT_DATA")}</TableCell>
                     </TableRow>
                   );
                 }
                 return (
                   <TableRow key={src}>
                     <TableCell>{src}</TableCell>
-                    <TableCell align="right">{best.correlation?.toFixed(3)}</TableCell>
+                    <TableCell align="right">{best.correlation?.toFixed(3) ?? "—"}</TableCell>
                     <TableCell align="right">{best.delta_or_tau}</TableCell>
                     <TableCell align="right">{best.n_samples}</TableCell>
-                    <TableCell>
-                      <Chip size="small" color="success" label="OK" />
+                    <TableCell align="right">
+                      {best.dsr != null ? best.dsr.toFixed(2) : "—"}
                     </TableCell>
+                    <TableCell>{verdictChip(best.verdict)}</TableCell>
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>
           <Alert severity="info" sx={{ mt: 2 }}>
-            Correlação ≠ causa, ≠ edge. Validação honesta (DSR/FDR, walk-forward,
-            mata-Epps) vem na sub-versão 0.5.3 — até lá, isto é exploração.
+            <b>Sobrevivente</b> = correlação que passou o controle de falsa descoberta (FDR)
+            entre todas as células testadas. <b>Morta (FDR)</b> = mediu correlação, mas não
+            resistiu ao denominador de tentativas. <b>DSR</b> deflaciona o data-snooping.
+            Correlação ≠ edge: o event study líquido + walk-forward + mata-Epps (HY) entram
+            na promoção a paper. Matar é evidência (Voltaire).
           </Alert>
         </Box>
       )}

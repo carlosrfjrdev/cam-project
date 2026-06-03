@@ -127,9 +127,9 @@ _INSERT_RESULT = text(
     """
     INSERT INTO research_run_results
         (run_id, source, target, timeframe, delta_or_tau, correlation, mu_net,
-         n_samples, verdict)
+         n_samples, dsr, fdr_q, verdict)
     VALUES (:run_id, :source, :target, :timeframe, :delta, :correlation,
-            :mu_net, :n_samples, :verdict)
+            :mu_net, :n_samples, :dsr, :fdr_q, :verdict)
     """
 )
 
@@ -191,7 +191,7 @@ async def get_run_results(
     res = await session.execute(
         text(
             "SELECT source, target, timeframe, delta_or_tau, correlation, "
-            "mu_net, n_samples, verdict FROM research_run_results "
+            "mu_net, n_samples, dsr, fdr_q, verdict FROM research_run_results "
             "WHERE run_id = :id ORDER BY source, target, delta_or_tau"
         ),
         {"id": run_id},
