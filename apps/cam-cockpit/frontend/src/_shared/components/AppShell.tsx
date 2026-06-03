@@ -27,6 +27,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const { isActive } = useKillSwitch();
   const crumb = useCrumbLabel(location.pathname);
+  // Inspetor é tela read-only (sem ordens, sem Risk Engine): esconde o chrome
+  // operacional (banner de ambiente). O kill switch global segue intacto nas
+  // demais telas e no backend — apenas oculto aqui (ver Header).
+  const isReadOnlyResearch = location.pathname === "/inspetor";
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "background.default" }}>
@@ -36,12 +40,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         component="main"
         sx={{ flexGrow: 1, minWidth: 0, mt: `${HEADER_HEIGHT}px`, display: "flex", flexDirection: "column" }}
       >
-        {/* Defesa de capital — sempre no topo, toda rota operacional */}
-        <EnvBanner />
-        <RiskEngineStatusBanner
-          killSwitchActive={isActive}
-          riskEngineBlocked={false}
-        />
+        {/* Defesa de capital — toda rota operacional. Oculta no Inspetor (read-only). */}
+        {!isReadOnlyResearch && (
+          <>
+            <EnvBanner />
+            <RiskEngineStatusBanner
+              killSwitchActive={isActive}
+              riskEngineBlocked={false}
+            />
+          </>
+        )}
 
         <Box sx={{ px: 3, pt: 2 }}>
           <Breadcrumbs aria-label="trilha">
