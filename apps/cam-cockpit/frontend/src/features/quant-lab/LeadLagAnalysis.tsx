@@ -12,6 +12,8 @@ import {
   TableCell, TableHead, TableRow, TextField, Typography,
 } from "@mui/material";
 import { fetchRun, postRun, type CellResult, type RunSummary } from "./api";
+import { LeadLagHeatmap } from "./charts/LeadLagHeatmap";
+import { LagProfileChart } from "./charts/LagProfileChart";
 
 const TFS = ["M1", "M5", "M15", "M30", "H1"];
 
@@ -21,6 +23,7 @@ export function LeadLagAnalysis({ universe }: { universe: string[] }) {
   const [maxDelta, setMaxDelta] = useState(50);
   const [summary, setSummary] = useState<RunSummary | null>(null);
   const [cells, setCells] = useState<CellResult[]>([]);
+  const [focusSource, setFocusSource] = useState<string | null>(null);
 
   const sources = universe.filter((s) => s !== target);
 
@@ -124,7 +127,22 @@ export function LeadLagAnalysis({ universe }: { universe: string[] }) {
             entra na deflação estatística (0.5.3).
           </Typography>
 
-          <Table size="small" sx={{ mt: 1 }}>
+          {/* Heatmap do cubo (fonte × δ) — visão de relance */}
+          <Box sx={{ mt: 2 }}>
+            <LeadLagHeatmap sources={sources} cells={cells} />
+          </Box>
+
+          {/* Perfil C(δ) da fonte em foco (clique numa fonte na tabela) */}
+          {focusSource && (
+            <Box sx={{ mt: 2, p: 1, border: "1px solid", borderColor: "divider", borderRadius: 1 }}>
+              <LagProfileChart source={focusSource} target={summary.target} cells={cells} />
+            </Box>
+          )}
+
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 2 }}>
+            Clique numa fonte para ver o perfil de correlação por δ.
+          </Typography>
+          <Table size="small" sx={{ mt: 0.5 }}>
             <TableHead>
               <TableRow>
                 <TableCell>Fonte</TableCell>
@@ -151,7 +169,13 @@ export function LeadLagAnalysis({ universe }: { universe: string[] }) {
                   );
                 }
                 return (
-                  <TableRow key={src}>
+                  <TableRow
+                    key={src}
+                    hover
+                    selected={focusSource === src}
+                    onClick={() => setFocusSource(src)}
+                    sx={{ cursor: "pointer" }}
+                  >
                     <TableCell>{src}</TableCell>
                     <TableCell align="right">{best.correlation?.toFixed(3) ?? "—"}</TableCell>
                     <TableCell align="right">{best.delta_or_tau}</TableCell>
