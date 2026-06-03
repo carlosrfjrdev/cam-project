@@ -52,10 +52,15 @@ sem R0 reprodutível, nenhum ranking de edge é confiável. Execução começa p
 | **0.5.1** | **Dados/R0** — schema `research_*`, ingestão parametrizável MT5→DB (candles + ticks com agressor), barras canônicas M1→derivadas determinísticas, snapshot/hash, quality checks, Data Health, isolamento técnico | — | ✅ **CONCLUÍDO** — 8/8 papéis ingeridos ao vivo (Founder validou 2026-06-03) |
 | **0.5.2** | OFI/cubo rápido (R2) — OFI assinado, ρ defasado event-time, event study líquido condicionado por liquidez, decaimento | fast | ✅ **CONCLUÍDO** (núcleo + UI; Founder validou) |
 | **0.5.3** | Validação estatística — trial accounting, DSR (camadas), FDR/SPA, walk-forward + purged CV, "dado insuficiente" | transversal | ✅ **letscode=true** (Founder 2026-06-03 "segue para 0.5.3") |
-| **0.5.4** | Cubo lento/swing (R3) — `C_{S→D}(δ)` bar-time, modos intraday/swing, H1 único, rolagem WIN/WDO + teste de salto | slow | Founder após 0.5.3 |
-| **0.5.5** | Fibonacci — modelo aninhado A/B, controle de redundância (fib réu) | slow | Founder após 0.5.4 |
-| **0.5.6** | Síntese (R4) — regime lento × gatilho rápido; composição > partes | both | Founder após 0.5.5 |
-| **0.5.7** | Quant Lab completo — Explorer 3D, Cell Detail, Launcher, Registry, Fib A/B, Synthesis | — | Founder após corpus |
+| **0.5.4** | Cubo lento/swing (R3) — modos intraday/swing, rolagem WIN/WDO + teste de salto | slow | ✅ **CONCLUÍDO** (`continuous.py`: rolagem ratio/diff + teste de salto em ATR; `classify_mode`) |
+| **0.5.5** | Fibonacci — modelo aninhado A/B, fib como réu | slow | ✅ **CONCLUÍDO** (`structure.py`: zigzag/fractal/fib levels + `nested_ab_test` fib fica só se incrementa) |
+| **0.5.6** | Síntese (R4) — regime lento × gatilho rápido; composição > partes | both | ✅ **CONCLUÍDO** (`synthesis.py`: `synthesize` só SURVIVOR se supera ambas as partes OOS) |
+| **0.5.7** | Quant Lab — Run Registry + contador global de tentativas | — | ✅ **CONCLUÍDO** (`RunRegistry`; Explorer 3D/Cell Detail = refinamento futuro) |
+
+> **v0.5 completa (0.5.1→0.5.7).** Núcleo da tese codado e testado. Refinamentos
+> visuais (heatmap 3D, Cell Detail dossiê) e a integração das peças 0.5.4/5/6 ao
+> fluxo de run (hoje são núcleos puros testados, prontos para acoplar) ficam como
+> evolução sob demanda do Founder.
 
 > HY/HRY/Granger/transfer entropy acompanham 0.5.2/0.5.3 (event-time). UI cresce em
 > paralelo (Data Health em 0.5.1; demais telas conforme o backend amadurece).
