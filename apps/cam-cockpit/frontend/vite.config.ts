@@ -9,6 +9,10 @@ export default defineConfig({
       "/api": {
         target: "http://localhost:8000",
         changeOrigin: true,
+        // WebSocket do Inspetor vive em /api/v1/mt5/ws/market/{symbol}
+        // (e o WS de P&L em /api/v1/ws/pnl). Sem ws:true o upgrade falha
+        // silenciosamente e tick/book ao vivo ficam mudos.
+        ws: true,
       },
       "/ws": {
         target: "ws://localhost:8000",
