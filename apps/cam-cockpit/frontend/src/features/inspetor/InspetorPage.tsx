@@ -3,12 +3,16 @@
  *
  * Busca → gráfico (candles + tick/book ao vivo MT5) + fundamentos (Ação/FII)
  * + 2 estimativas de dividendo + overlay de Regime (ações). 100% READ-ONLY:
- * nenhuma ação envia ordem (Art. 35º).
+ * nenhuma ação envia ordem.
+ *
+ * Multiativo / multitela: o ativo vive na URL (`/inspetor?ativo=PETR4`). Cada aba
+ * é uma tela independente; o link é compartilhável e a busca atualiza a query.
  */
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Alert, Box, Button, Chip, CircularProgress, Divider, Paper, Stack,
-  TextField, ToggleButton, ToggleButtonGroup, Typography,
+  TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography,
 } from "@mui/material";
 import { useMarketSocket, type MarketFrame } from "./useMarketSocket";
 import { TIMEFRAMES, type Timeframe } from "./api";
@@ -26,12 +30,23 @@ interface LiveTick {
 }
 
 export function InspetorPage() {
-  const [input, setInput] = useState("");
-  const [symbol, setSymbol] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Fonte da verdade do ativo = query param `?ativo=`. Multiativo/multitela.
+  const symbol = (searchParams.get("ativo") || "").toUpperCase() || null;
+
+  const [input, setInput] = useState(symbol ?? "");
   const [timeframe, setTimeframe] = useState<Timeframe>("D1");
   const [tick, setTick] = useState<LiveTick>({});
   const [book, setBook] = useState<BookSnapshot | null>(null);
   const [wsState, setWsState] = useState<"ONLINE" | "OFFLINE">("OFFLINE");
+
+  // Mantém o campo de busca em sincronia quando o ativo muda pela URL
+  // (link compartilhado, navegação voltar/avançar, nova aba).
+  useEffect(() => {
+    setInput(symbol ?? "");
+    setTick({});
+    setBook(null);
+  }, [symbol]);
 
   const meta = useSymbolMeta(symbol);
   const candles = useCandles(symbol, timeframe);
@@ -66,9 +81,8 @@ export function InspetorPage() {
   const submit = () => {
     const t = input.trim().toUpperCase();
     if (!t) return;
-    setTick({});
-    setBook(null);
-    setSymbol(t);
+    // Atualiza a URL — a query param dirige todo o estado da página.
+    setSearchParams({ ativo: t });
   };
 
   return (
@@ -94,6 +108,20 @@ export function InspetorPage() {
           <Button variant="contained" onClick={submit}>
             Buscar
           </Button>
+          <Tooltip title="Abrir o ativo pesquisado em uma nova aba (multitela)">
+            <span>
+              <Button
+                variant="outlined"
+                disabled={!input.trim()}
+                onClick={() => {
+                  const t = input.trim().toUpperCase();
+                  if (t) window.open(`/inspetor?ativo=${encodeURIComponent(t)}`, "_blank");
+                }}
+              >
+                Nova aba
+              </Button>
+            </span>
+          </Tooltip>
         </Stack>
       </Paper>
 
