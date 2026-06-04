@@ -6,7 +6,7 @@
  * carrega a honestidade do MVP — nunca parágrafo.
  */
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Box, Button, Chip, MenuItem, Stack, Table, TableBody, TableCell,
   TableHead, TableRow, TextField, Tooltip, Typography,
@@ -18,8 +18,8 @@ import { StatStrip, type StatItem } from "../../_shared/components/StatStrip";
 import { DetailDisclosure } from "../../_shared/components/DetailDisclosure";
 import { EquityChart } from "./EquityChart";
 import {
-  fetchEquity, fetchRun, fetchStrategies, postBacktest, postWalkForward,
-  type BacktestResult, type WalkForwardResult,
+  fetchEquity, fetchRun, fetchRuns, fetchStrategies, postBacktest, postWalkForward,
+  type BacktestResult, type GrossMetrics, type WalkForwardResult,
 } from "./api";
 
 function GrossChip() {
@@ -46,6 +46,7 @@ export function AssetsRunTestsPage() {
   });
   const runnable = strategies.data?.strategies.filter((s) => s.runnable) ?? [];
 
+  const qc = useQueryClient();
   const backtest = useMutation({
     mutationFn: (): Promise<BacktestResult> =>
       postBacktest(strategyId, {
@@ -57,7 +58,16 @@ export function AssetsRunTestsPage() {
           target_points: targetPoints,
         },
       }),
-    onSuccess: (r) => setRunId(r.error ? null : r.run_id),
+    onSuccess: (r) => {
+      setRunId(r.error ? null : r.run_id);
+      qc.invalidateQueries({ queryKey: ["strategy-lab", "runs"] });
+    },
+  });
+
+  const runs = useQuery({
+    queryKey: ["strategy-lab", "runs"],
+    queryFn: () => fetchRuns(),
+    retry: false,
   });
 
   const equity = useQuery({
@@ -87,7 +97,10 @@ export function AssetsRunTestsPage() {
       }),
   });
 
-  const m = backtest.data?.metrics;
+  // métrica vem da mutation fresca OU do run salvo (clique no histórico).
+  const m: GrossMetrics | null | undefined =
+    backtest.data?.metrics ??
+    (run.data?.run?.metrics as GrossMetrics | null | undefined);
   const stats: StatItem[] = m
     ? [
         { label: "Trades", value: m.n_trades },
@@ -293,6 +306,54 @@ export function AssetsRunTestsPage() {
             Configure acima e clique <strong>Rodar</strong> para ver a curva de equity.
           </Typography>
         </Box>
+      )}
+
+      {/* Histórico: backtests recentes (clique recarrega) */}
+      {runs.data && runs.data.runs.length > 0 && (
+        <DetailDisclosure title="Backtests recentes" count={runs.data.runs.length}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>#</TableCell>
+                <TableCell>Estratégia</TableCell>
+                <TableCell>Símbolo</TableCell>
+                <TableCell>Quando</TableCell>
+                <TableCell align="right">Trades</TableCell>
+                <TableCell align="right">Bruto</TableCell>
+                <TableCell />
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {runs.data.runs.map((r) => {
+                const pnl = r.metrics?.pnl_bruto_total ?? 0;
+                return (
+                  <TableRow
+                    key={r.id}
+                    hover
+                    selected={r.id === runId}
+                    sx={{ cursor: "pointer" }}
+                    onClick={() => setRunId(r.id)}
+                  >
+                    <TableCell>{r.id}</TableCell>
+                    <TableCell>{r.strategy_id}</TableCell>
+                    <TableCell>{r.symbols?.join(", ")}</TableCell>
+                    <TableCell>{r.created_at?.slice(0, 16).replace("T", " ")}</TableCell>
+                    <TableCell align="right">{r.metrics?.n_trades ?? "—"}</TableCell>
+                    <TableCell
+                      align="right"
+                      sx={{ color: pnl >= 0 ? "success.main" : "error.main" }}
+                    >
+                      {r.metrics ? pnl.toFixed(2) : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <Chip size="small" variant="outlined" label="abrir" />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </DetailDisclosure>
       )}
     </PageContainer>
   );
