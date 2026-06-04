@@ -220,6 +220,13 @@ from cam.api.research_routes import router as research_leadlag_router  # noqa: E
 
 app.include_router(research_leadlag_router)
 
+# StrategyLab (Onda 1 — D1 ORB-30): Assets Strategy + RunTests + Experts.
+# Composição vive em cam/api/ (ADR-013); o slice cam.features.strategy_lab NÃO
+# importa MT5 nem execução (import-linter enforce). Valores BRUTOS (R-11).
+from cam.api.strategy_lab_routes import router as strategy_lab_router  # noqa: E402
+
+app.include_router(strategy_lab_router)
+
 # T-TD-026 (SPEC v0.3) — WebSocket P&L stub funcional
 from cam.api.websocket import router as ws_router  # noqa: E402
 

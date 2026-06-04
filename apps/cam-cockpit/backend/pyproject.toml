@@ -89,6 +89,7 @@ modules = [
     "cam.features.constitution",
     "cam.features.mt5_integration",
     "cam.features.regime",
+    "cam.features.strategy_lab",
 ]
 # ignore_imports: transitividades via cam.api.main são legítimas —
 # main.py é o único compositor autorizado (ADR-013).
@@ -143,3 +144,28 @@ forbidden_modules = [
     "cam.features.paper_trading",
     "cam.features.robot_orchestrator",
 ]
+# Testes HTTP importam o app FastAPI (cam.api.main, o ÚNICO compositor — ADR-013):
+# a transitividade tests→main→broker passa pela borda autorizada, não é import de
+# dominio do slice de research. Mesma convenção do contrato de independencia.
+ignore_imports = ["cam.features.research.tests.* -> cam.api.main"]
+unmatched_ignore_imports_alerting = "none"
+
+# ADR-SL-01/02 — StrategyLab: o slice NAO importa execucao/broker (a orquestracao
+# de EA e feita na borda, cam/api/) e o MOTOR de backtest NAO importa o Risk
+# Engine (modo bruto desacoplado — R-12/R-26). Paridade Py<->EA e a defesa.
+[[tool.importlinter.contracts]]
+name = "StrategyLab nao importa execucao, broker nem Risk Engine (ADR-SL-01/02)"
+type = "forbidden"
+source_modules = ["cam.features.strategy_lab"]
+forbidden_modules = [
+    "cam._shared.risk",
+    "cam._shared.order_gateway",
+    "cam.api.order_gateway_routes",
+    "cam.features.mt5_integration",
+    "cam.features.profit_integration",
+    "cam.features.paper_trading",
+    "cam.features.robot_orchestrator",
+]
+# Transitividade legitima pelo compositor (ADR-013) — ver contrato de research.
+ignore_imports = ["cam.features.strategy_lab.tests.* -> cam.api.main"]
+unmatched_ignore_imports_alerting = "none"
