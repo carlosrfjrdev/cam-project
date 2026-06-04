@@ -123,6 +123,40 @@ def test_d1_sl_estatico_stop_relativo_a_entrada() -> None:
     assert trades[0].price_exit == 98  # entrada 102 - 4 pontos
 
 
+def test_d1_stop_movel_trava_lucro_no_pico() -> None:
+    """Stop móvel (R-15c): segue o pico e sai travando lucro, sem TP fixo."""
+    bars = _session_long_breakout()[:7]            # ...09:30 sinal (close 101)
+    bars.append(_bar(9, 35, 102, 103, 101, 102))   # fill no open 102
+    # sobe ao pico 120 → trailing sobe o stop para 120-4=116
+    bars.append(_bar(9, 40, 118, 120, 110, 118))
+    # recua e toca 116 → sai no stop móvel travando +14 (não no SL inicial 82)
+    bars.append(_bar(9, 45, 117, 119, 114, 115))
+    params = D1Params(
+        or_minutes=30, stop_points=20, target_points=0, trail_points=4
+    )
+    sigs = generate_signals(bars, params)
+    assert sigs[0].trail_points == 4
+    trades = run_d1_backtest(bars, sigs, params, point_value=1.0)
+    assert len(trades) == 1
+    t = trades[0]
+    assert t.exit_reason == "stop"
+    assert t.price_exit == 116          # stop móvel (120 - 4), não o SL inicial 82
+    assert t.pnl_bruto == 14.0          # lucro travado pelo trailing
+
+
+def test_d1_sem_tp_fixo_quando_target_zero() -> None:
+    """target_points=0 ⇒ sem TP fixo (has_target False); só SL/trailing/sessão."""
+    bars = _session_long_breakout()[:7]
+    bars.append(_bar(9, 35, 102, 103, 101, 102))    # fill 102
+    bars.append(_bar(9, 40, 102, 200, 101, 150))    # subiria muito; sem TP, segue
+    bars.append(_bar(9, 55, 150, 151, 80, 81))      # toca SL inicial 82 (102-20)
+    params = D1Params(or_minutes=30, stop_points=20, target_points=0, trail_points=0)
+    sigs = generate_signals(bars, params)
+    trades = run_d1_backtest(bars, sigs, params, point_value=1.0)
+    assert trades[0].exit_reason == "stop"   # nunca saiu por "target"
+    assert trades[0].price_exit == 82
+
+
 def test_metricas_brutas() -> None:
     bars = _session_long_breakout()
     sigs = generate_signals(bars, D1Params(or_minutes=30))

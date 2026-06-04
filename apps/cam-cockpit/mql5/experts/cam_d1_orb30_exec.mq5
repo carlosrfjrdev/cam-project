@@ -39,8 +39,9 @@
 input int    InpOrMinutes        = 30;     // janela do opening range (min)
 // SL/TP ESTATICOS em pontos, relativos ao preco de entrada (R-15b). Ativos
 // quando ambos > 0 (prioridade sobre o modo range/InpTargetR).
-input double InpStopPoints        = 200.0; // SL estatico (pontos da entrada)
-input double InpTargetPoints      = 400.0; // TP estatico (pontos da entrada)
+input double InpStopPoints        = 500.0; // SL inicial (pontos da entrada)
+input double InpTargetPoints      = 0.0;   // TP fixo (pontos); 0 = sem TP (deixa correr)
+input double InpTrailPoints        = 200.0; // STOP MOVEL (pontos atras do pico); 0 = off
 input double InpTargetR          = 1.0;    // modo range (fallback): TP = R x range
 input int    InpSessionOpenHour  = 9;      // abertura do pregao (hora)
 input int    InpSessionOpenMin   = 0;
@@ -65,6 +66,7 @@ bool     g_or_ready    = false;
 bool     g_long_armed  = true;
 bool     g_short_armed = true;
 datetime g_last_bar    = 0;
+double   g_max_favor   = 0.0;    // pico a favor desde a entrada (p/ stop movel)
 
 //+------------------------------------------------------------------+
 int OnInit()
@@ -130,6 +132,10 @@ void ProcessBar(datetime t, double h, double l, double c)
       g_short_armed = true;
      }
 
+   // stop movel: ratcheta o SL a cada barra enquanto ha posicao (R-15c).
+   if(InpTrailPoints > 0 && HasPosition())
+      ManageTrailing(h, l);
+
    int tod     = MinutesOfDay(t);
    int or_beg  = InpSessionOpenHour * 60 + InpSessionOpenMin;
    int or_end  = or_beg + InpOrMinutes;
@@ -174,17 +180,21 @@ void ProcessBar(datetime t, double h, double l, double c)
    if(HasPosition())
       return;
 
-   // 4) gatilhos na quebra — entra A MERCADO; SL/TP geridos pelo tester.
-   //    SL/TP estaticos relativos ao preco de fill (Ask na compra, Bid na venda);
-   //    fallback para os niveis do range quando os pontos nao estao setados.
-   bool   static_exits = (InpStopPoints > 0 && InpTargetPoints > 0);
+   // 4) gatilhos na quebra — entra A MERCADO. Modo estatico quando StopPoints>0:
+   //    SL inicial em pontos, TP fixo OPCIONAL (0 = sem TP), stop movel via
+   //    ManageTrailing. Fallback range quando StopPoints=0.
+   bool   static_exits = (InpStopPoints > 0);
    if(g_long_armed && c > g_or_high)
      {
       g_long_armed = false;
       double ref = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
       double sl  = static_exits ? ref - InpStopPoints : g_or_low;
-      double tp  = static_exits ? ref + InpTargetPoints : g_or_high + InpTargetR * rng;
-      if(!g_trade.Buy(InpLots, _Symbol, 0.0, NormTick(sl), NormTick(tp), "cam_d1_exec"))
+      double tp  = static_exits
+                   ? (InpTargetPoints > 0 ? ref + InpTargetPoints : 0.0)
+                   : g_or_high + InpTargetR * rng;
+      if(g_trade.Buy(InpLots, _Symbol, 0.0, NormTick(sl), NormTick(tp), "cam_d1_exec"))
+         g_max_favor = ref;   // reseta o pico p/ o stop movel
+      else
          PrintFormat("[CamD1Exec] Buy falhou ret=%d", g_trade.ResultRetcode());
      }
    else if(g_short_armed && c < g_or_low)
@@ -192,10 +202,49 @@ void ProcessBar(datetime t, double h, double l, double c)
       g_short_armed = false;
       double ref = SymbolInfoDouble(_Symbol, SYMBOL_BID);
       double sl  = static_exits ? ref + InpStopPoints : g_or_high;
-      double tp  = static_exits ? ref - InpTargetPoints : g_or_low - InpTargetR * rng;
-      if(!g_trade.Sell(InpLots, _Symbol, 0.0, NormTick(sl), NormTick(tp), "cam_d1_exec"))
+      double tp  = static_exits
+                   ? (InpTargetPoints > 0 ? ref - InpTargetPoints : 0.0)
+                   : g_or_low - InpTargetR * rng;
+      if(g_trade.Sell(InpLots, _Symbol, 0.0, NormTick(sl), NormTick(tp), "cam_d1_exec"))
+         g_max_favor = ref;
+      else
          PrintFormat("[CamD1Exec] Sell falhou ret=%d", g_trade.ResultRetcode());
      }
+  }
+
+//+------------------------------------------------------------------+
+//| Stop movel (R-15c): segue o pico a InpTrailPoints; o SL so anda a |
+//| favor (sobe na compra, desce na venda) via PositionModify.        |
+//+------------------------------------------------------------------+
+void ManageTrailing(double h, double l)
+  {
+   if(!PositionSelect(_Symbol))
+      return;
+   if(PositionGetInteger(POSITION_MAGIC) != InpMagic)
+      return;
+   long   type   = PositionGetInteger(POSITION_TYPE);
+   double cur_sl = PositionGetDouble(POSITION_SL);
+   double cur_tp = PositionGetDouble(POSITION_TP);
+   double new_sl = cur_sl;
+
+   if(type == POSITION_TYPE_BUY)
+     {
+      g_max_favor = MathMax(g_max_favor, h);
+      double cand = NormTick(g_max_favor - InpTrailPoints);
+      if(cand > cur_sl)
+         new_sl = cand;
+     }
+   else
+     {
+      if(g_max_favor <= 0.0)
+         g_max_favor = l;
+      g_max_favor = MathMin(g_max_favor, l);
+      double cand = NormTick(g_max_favor + InpTrailPoints);
+      if(cur_sl <= 0.0 || cand < cur_sl)
+         new_sl = cand;
+     }
+   if(new_sl != cur_sl)
+      g_trade.PositionModify(_Symbol, new_sl, cur_tp);
   }
 
 //+------------------------------------------------------------------+

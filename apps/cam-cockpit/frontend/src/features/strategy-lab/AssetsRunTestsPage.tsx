@@ -35,8 +35,9 @@ export function AssetsRunTestsPage() {
   const [symbol, setSymbol] = useState("WIN$");
   const [timeframe, setTimeframe] = useState("M1");
   const [orMinutes, setOrMinutes] = useState(30);
-  const [stopPoints, setStopPoints] = useState(200);
-  const [targetPoints, setTargetPoints] = useState(400);
+  const [stopPoints, setStopPoints] = useState(500);
+  const [targetPoints, setTargetPoints] = useState(0);
+  const [trailPoints, setTrailPoints] = useState(200);
   const [runId, setRunId] = useState<number | null>(null);
 
   const strategies = useQuery({
@@ -56,6 +57,7 @@ export function AssetsRunTestsPage() {
           or_minutes: orMinutes,
           stop_points: stopPoints,
           target_points: targetPoints,
+          trail_points: trailPoints,
         },
       }),
     onSuccess: (r) => {
@@ -93,6 +95,7 @@ export function AssetsRunTestsPage() {
           or_minutes: orMinutes,
           stop_points: stopPoints,
           target_points: targetPoints,
+          trail_points: trailPoints,
         },
       }),
   });
@@ -153,10 +156,18 @@ export function AssetsRunTestsPage() {
           size="small" type="number" label="SL (pontos)" value={stopPoints}
           onChange={(e) => setStopPoints(Number(e.target.value))} sx={{ width: 110 }}
         />
-        <TextField
-          size="small" type="number" label="TP (pontos)" value={targetPoints}
-          onChange={(e) => setTargetPoints(Number(e.target.value))} sx={{ width: 110 }}
-        />
+        <Tooltip title="TP fixo em pontos. 0 = sem TP (deixa correr no stop móvel).">
+          <TextField
+            size="small" type="number" label="TP (pontos)" value={targetPoints}
+            onChange={(e) => setTargetPoints(Number(e.target.value))} sx={{ width: 110 }}
+          />
+        </Tooltip>
+        <Tooltip title="Stop móvel: pontos atrás do pico. O stop só anda a favor. 0 = desligado.">
+          <TextField
+            size="small" type="number" label="Trail (pontos)" value={trailPoints}
+            onChange={(e) => setTrailPoints(Number(e.target.value))} sx={{ width: 120 }}
+          />
+        </Tooltip>
         <Button
           variant="contained"
           onClick={() => backtest.mutate()}

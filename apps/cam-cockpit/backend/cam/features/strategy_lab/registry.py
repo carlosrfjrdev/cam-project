@@ -48,16 +48,20 @@ _D1 = StrategyDef(
     unit=Unit.SINGLE,
     timeframe="M1",
     description=(
-        "Quebra do range dos primeiros 30 min do pregão; entrada na quebra com "
-        "SL e TP ESTÁTICOS em pontos (relativos à entrada); flat no fim da sessão."
+        "Quebra do range dos primeiros 30 min do pregão; SL inicial em pontos + "
+        "STOP MÓVEL (trailing) que segue o pico; TP fixo opcional; flat na sessão."
     ),
-    # Modo estático por padrão (SL/TP fixos em pontos). Para WIN, 1 ponto do
-    # índice; ajuste stop_points/target_points conforme o ativo/risco.
-    default_params={"or_minutes": 30, "stop_points": 200.0, "target_points": 400.0},
+    # Modo estático com STOP MÓVEL por padrão: SL inicial 500, sem TP fixo
+    # (target=0 → deixa correr), trailing 200 pts atrás do pico. Para WIN.
+    # Ajuste conforme o ativo/risco.
+    default_params={
+        "or_minutes": 30, "stop_points": 500.0,
+        "target_points": 0.0, "trail_points": 200.0,
+    },
     param_space={
-        "or_minutes": [15, 30],
-        "stop_points": [100.0, 150.0, 200.0, 300.0],
-        "target_points": [200.0, 300.0, 400.0, 600.0],
+        "stop_points": [300.0, 500.0, 700.0],
+        "target_points": [0.0, 400.0, 800.0],   # 0 = sem TP (só trailing)
+        "trail_points": [0.0, 100.0, 200.0, 300.0],  # 0 = sem stop móvel
     },
     runnable=True,
 )
@@ -110,6 +114,7 @@ def _d1_params(params: dict) -> D1Params:
         target_r=float(params.get("target_r", base.target_r)),
         stop_points=float(params.get("stop_points", base.stop_points)),
         target_points=float(params.get("target_points", base.target_points)),
+        trail_points=float(params.get("trail_points", base.trail_points)),
         session_open=base.session_open,
         session_close=base.session_close,
         entry_until=base.entry_until,

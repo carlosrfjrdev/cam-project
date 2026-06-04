@@ -26,18 +26,22 @@ from cam._shared.research_kernel.bars import Bar
 class D1Params:
     or_minutes: int = 30
     target_r: float = 1.0           # modo RANGE: alvo = target_r × range
-    # modo ESTÁTICO (R-15b): SL/TP fixos em pontos do ativo, RELATIVOS à entrada.
-    # Ativo quando ambos > 0 (tem prioridade sobre o modo range). Ex.: WIN com
-    # stop_points=200 e target_points=400 → SL a 200 pts e TP a 400 pts da entrada.
+    # modo ESTÁTICO (R-15b): exits fixos em pontos do ativo, RELATIVOS à entrada.
+    # Ativo quando stop_points > 0 (tem prioridade sobre o range). Componentes:
+    #   stop_points    — SL inicial (obrigatório no modo estático).
+    #   target_points  — TP fixo OPCIONAL (0 = sem TP; deixa correr no trailing).
+    #   trail_points   — STOP MÓVEL OPCIONAL (R-15c): segue o pico a `trail_points`
+    #                    de distância; o stop só anda a favor, nunca recua. 0 = off.
     stop_points: float = 0.0
     target_points: float = 0.0
+    trail_points: float = 0.0
     session_open: time = time(9, 0)
     session_close: time = time(17, 55)
     entry_until: time = time(17, 0)  # não abre nova posição após este horário
 
     @property
     def static_exits(self) -> bool:
-        return self.stop_points > 0 and self.target_points > 0
+        return self.stop_points > 0
 
 
 @dataclass(frozen=True)
@@ -56,6 +60,7 @@ class Signal:
     target_price: float = 0.0
     stop_points: float = 0.0
     target_points: float = 0.0
+    trail_points: float = 0.0
 
 
 def _session_of(bar: Bar) -> str:
@@ -121,12 +126,13 @@ def _make_signal(
 ) -> Signal:
     """Emite o sinal no modo estático (pontos) ou range (preço absoluto)."""
     if params.static_exits:
-        # SL/TP estáticos resolvidos no fill (relativos à entrada — R-15b).
+        # Exits estáticos resolvidos no fill (relativos à entrada — R-15b/R-15c).
         return Signal(
             bar_index=i,
             side=side,
             stop_points=params.stop_points,
             target_points=params.target_points,
+            trail_points=params.trail_points,
         )
     # modo range: stop no extremo oposto, alvo = target_r × range (absolutos).
     if side == "long":

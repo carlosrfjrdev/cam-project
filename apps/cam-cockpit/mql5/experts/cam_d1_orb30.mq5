@@ -38,8 +38,9 @@ input int    InpOrMinutes        = 30;     // janela do opening range (min)
 // SL/TP ESTATICOS em pontos, relativos a entrada (R-15b). Ativos quando ambos
 // > 0 (tem prioridade sobre o modo range/InpTargetR). Espelham stop_points/
 // target_points do Python — DEVEM ser identicos no backtest do CAM p/ paridade.
-input double InpStopPoints        = 200.0; // SL estatico (pontos da entrada)
-input double InpTargetPoints      = 400.0; // TP estatico (pontos da entrada)
+input double InpStopPoints        = 500.0; // SL inicial (pontos da entrada)
+input double InpTargetPoints      = 0.0;   // TP fixo (pontos); 0 = sem TP (deixa correr)
+input double InpTrailPoints        = 200.0; // STOP MOVEL (pontos atras do pico); 0 = off
 input double InpTargetR          = 1.0;    // modo range (fallback): alvo = R x range
 input int    InpSessionOpenHour  = 9;      // abertura do pregao (hora)
 input int    InpSessionOpenMin   = 0;      // abertura do pregao (min)
@@ -76,6 +77,8 @@ datetime g_pos_ts_entry  = 0;
 double   g_pos_entry     = 0.0;
 double   g_pos_stop      = 0.0;
 double   g_pos_tgt       = 0.0;
+bool     g_pos_has_tgt   = true;     // ha TP fixo? (target_points>0)
+double   g_pos_maxfavor  = 0.0;      // pico a favor (p/ stop movel)
 int      g_pair_id       = 0;
 
 datetime g_last_bar      = 0;        // deteccao de nova barra
@@ -196,17 +199,23 @@ void ProcessBar(datetime t, double o, double h, double l, double c)
       g_pos_side     = g_pending_side;
       g_pos_ts_entry = t;
       g_pos_entry    = o;                 // fill next-bar-open
-      // SL/TP estaticos resolvidos no FILL (relativos a entrada) — espelha
-      // _resolve_levels do backtest_engine.py. Fallback: niveis do range.
-      if(InpStopPoints > 0 && InpTargetPoints > 0)
+      g_pos_maxfavor = o;                 // pico inicial = entrada (stop movel)
+      // Exits resolvidos no FILL (relativos a entrada) — espelha _resolve_levels
+      // do backtest_engine.py. Modo estatico quando StopPoints>0; TP opcional
+      // (TargetPoints=0 => sem TP). Fallback: niveis do range.
+      if(InpStopPoints > 0)
         {
+         g_pos_has_tgt = (InpTargetPoints > 0);
          if(g_pending_side > 0)
            { g_pos_stop = o - InpStopPoints; g_pos_tgt = o + InpTargetPoints; }
          else
            { g_pos_stop = o + InpStopPoints; g_pos_tgt = o - InpTargetPoints; }
         }
       else
-        { g_pos_stop = g_pending_stop; g_pos_tgt = g_pending_tgt; }
+        {
+         g_pos_has_tgt = true;
+         g_pos_stop = g_pending_stop; g_pos_tgt = g_pending_tgt;
+        }
      }
    g_pending = false;                     // consome (ou descarta) pendente
 
@@ -275,29 +284,46 @@ bool ResolveExit(double o, double h, double l, double c, datetime t,
    bool is_long = (g_pos_side > 0);
    double stop = g_pos_stop;
    double tgt  = g_pos_tgt;
+   bool has_tgt = g_pos_has_tgt;
 
    // gap honesto no open
    if(is_long)
      {
-      if(o <= stop) { xprice = o; reason = "stop";   return true; }
-      if(o >= tgt)  { xprice = o; reason = "target"; return true; }
+      if(o <= stop)            { xprice = o; reason = "stop";   return true; }
+      if(has_tgt && o >= tgt)  { xprice = o; reason = "target"; return true; }
      }
    else
      {
-      if(o >= stop) { xprice = o; reason = "stop";   return true; }
-      if(o <= tgt)  { xprice = o; reason = "target"; return true; }
+      if(o >= stop)            { xprice = o; reason = "stop";   return true; }
+      if(has_tgt && o <= tgt)  { xprice = o; reason = "target"; return true; }
      }
 
    // intrabar — pior caso: stop antes do alvo
    if(is_long)
      {
-      if(l <= stop) { xprice = stop; reason = "stop";   return true; }
-      if(h >= tgt)  { xprice = tgt;  reason = "target"; return true; }
+      if(l <= stop)            { xprice = stop; reason = "stop";   return true; }
+      if(has_tgt && h >= tgt)  { xprice = tgt;  reason = "target"; return true; }
      }
    else
      {
-      if(h >= stop) { xprice = stop; reason = "stop";   return true; }
-      if(l <= tgt)  { xprice = tgt;  reason = "target"; return true; }
+      if(h >= stop)            { xprice = stop; reason = "stop";   return true; }
+      if(has_tgt && l <= tgt)  { xprice = tgt;  reason = "target"; return true; }
+     }
+
+   // stop movel (R-15c): ratcheta o stop com o extremo desta barra (vale p/ as
+   // proximas). Espelha exatamente o backtest_engine.py — o stop nunca recua.
+   if(InpTrailPoints > 0)
+     {
+      if(is_long)
+        {
+         g_pos_maxfavor = MathMax(g_pos_maxfavor, h);
+         g_pos_stop = MathMax(g_pos_stop, g_pos_maxfavor - InpTrailPoints);
+        }
+      else
+        {
+         g_pos_maxfavor = MathMin(g_pos_maxfavor, l);
+         g_pos_stop = MathMin(g_pos_stop, g_pos_maxfavor + InpTrailPoints);
+        }
      }
 
    // flat compulsorio no fechamento da sessao (sem overnight).

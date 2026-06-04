@@ -64,14 +64,17 @@ def run_d1_backtest(
             if sig is not None:
                 leg = Leg.LONG if sig.side == "long" else Leg.SHORT
                 entry = bar.open  # fill next-bar-open
-                stop_price, target_price = _resolve_levels(sig, leg, entry)
+                stop, target, has_target, trail = _resolve_levels(sig, leg, entry)
                 open_pos = _Position(
                     pair_id=pair_id,
                     leg=leg,
                     ts_entry=bar.ts_open,
                     price_entry=entry,
-                    stop_price=stop_price,
-                    target_price=target_price,
+                    stop_price=stop,
+                    target_price=target,
+                    has_target=has_target,
+                    trail_points=trail,
+                    max_favor=entry,
                 )
                 pair_id += 1
 
@@ -96,26 +99,40 @@ def run_d1_backtest(
     return trades
 
 
-def _resolve_levels(sig: Signal, leg: Leg, entry: float) -> tuple[float, float]:
+def _resolve_levels(
+    sig: Signal, leg: Leg, entry: float
+) -> tuple[float, float, bool, float]:
     """
-    Resolve stop/alvo ABSOLUTOS no momento do fill. Modo estático: relativos à
-    entrada (entry ∓ pontos). Modo range: já vêm absolutos no sinal.
+    Resolve (stop, alvo, has_target, trail) ABSOLUTOS no momento do fill.
+    Modo estático (stop_points>0): SL relativo à entrada; TP opcional
+    (target_points=0 ⇒ sem TP); trailing opcional. Modo range: absolutos do sinal.
     """
-    if sig.stop_points > 0 and sig.target_points > 0:
+    if sig.stop_points > 0:
+        has_target = sig.target_points > 0
         if leg == Leg.LONG:
-            return (entry - sig.stop_points, entry + sig.target_points)
-        return (entry + sig.stop_points, entry - sig.target_points)
-    return (sig.stop_price, sig.target_price)
+            stop = entry - sig.stop_points
+            target = entry + sig.target_points
+        else:
+            stop = entry + sig.stop_points
+            target = entry - sig.target_points
+        return (stop, target, has_target, sig.trail_points)
+    return (sig.stop_price, sig.target_price, True, 0.0)
 
 
 class _Position:
-    def __init__(self, pair_id, leg, ts_entry, price_entry, stop_price, target_price):
+    def __init__(
+        self, pair_id, leg, ts_entry, price_entry, stop_price, target_price,
+        has_target=True, trail_points=0.0, max_favor=0.0,
+    ):
         self.pair_id = pair_id
         self.leg = leg
         self.ts_entry = ts_entry
         self.price_entry = price_entry
         self.stop_price = stop_price
         self.target_price = target_price
+        self.has_target = has_target
+        self.trail_points = trail_points
+        self.max_favor = max_favor
 
 
 def _resolve_exit(
@@ -124,7 +141,11 @@ def _resolve_exit(
     """
     Resolve a saída de `pos` dentro de `bar`. Pior caso intrabar (C5): se a barra
     toca stop e alvo, stop primeiro. Gap honesto (C6): se o open já passou do
-    nível, sai no open real. Flat na sessão (C11) se for a última barra do dia.
+    nível, sai no open real. TP opcional (`has_target`). Flat na sessão (C11).
+
+    Stop móvel (R-15c): checa a saída com o stop VIGENTE (pico das barras
+    ANTERIORES — pior caso); só DEPOIS ratcheta o stop com o extremo desta barra,
+    valendo para as próximas. O stop nunca recua.
     """
     is_long = pos.leg == Leg.LONG
     stop, target = pos.stop_price, pos.target_price
@@ -133,25 +154,34 @@ def _resolve_exit(
     if is_long:
         if bar.open <= stop:
             return (bar.open, "stop")
-        if bar.open >= target:
+        if pos.has_target and bar.open >= target:
             return (bar.open, "target")
     else:
         if bar.open >= stop:
             return (bar.open, "stop")
-        if bar.open <= target:
+        if pos.has_target and bar.open <= target:
             return (bar.open, "target")
 
     # intrabar — pior caso: stop antes do alvo
     if is_long:
         if bar.low <= stop:
             return (stop, "stop")
-        if bar.high >= target:
+        if pos.has_target and bar.high >= target:
             return (target, "target")
     else:
         if bar.high >= stop:
             return (stop, "stop")
-        if bar.low <= target:
+        if pos.has_target and bar.low <= target:
             return (target, "target")
+
+    # stop móvel: ratcheta o stop com o extremo desta barra (vale p/ as próximas)
+    if pos.trail_points > 0:
+        if is_long:
+            pos.max_favor = max(pos.max_favor, bar.high)
+            pos.stop_price = max(pos.stop_price, pos.max_favor - pos.trail_points)
+        else:
+            pos.max_favor = min(pos.max_favor, bar.low)
+            pos.stop_price = min(pos.stop_price, pos.max_favor + pos.trail_points)
 
     # flat compulsório no fechamento da sessão (sem overnight)
     if _is_session_close(bar, params):
