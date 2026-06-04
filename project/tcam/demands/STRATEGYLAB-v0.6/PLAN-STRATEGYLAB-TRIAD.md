@@ -257,6 +257,29 @@ T-063, T-064, T-065`.
 > ⛔ **GATE FOUNDER — "Founder validou D1".** Carlos testa o EA e o backtest via CAM e dá o OK.
 > **As ondas seguintes não começam antes deste gate.** (Q2/R-33.)
 
+#### 📍 Status da Onda 1 (2026-06-04 — para validação do Founder)
+
+**Entregue e validado em código (banco real WINM25/M1):**
+- ✅ **Backtest D1** fim-a-fim (equity + ledger + métricas brutas) — rota + tela RunTests.
+- ✅ **SL/TP estático** em pontos (R-15b) nos 3 lados (Python + 2 EAs) — decisão do Founder.
+- ✅ **Dois EAs** (ADR-SL-04): `cam_d1_orb30` (gravador/paridade) + `cam_d1_orb30_exec`
+  (executor, opera no tester, DEMO-only).
+- ✅ **Otimizador on-demand** (sugere, não aplica) + **gestão de param_sets** (salvar/listar).
+- ✅ **Paridade** Py↔EA (comparador + gate 409 + painel na tela Experts).
+- ✅ **Walk-forward OOS** (T-023) — consistência temporal no RunTests.
+- ✅ **Histórico de runs** + **Experts com status real do MT5** (T-043, observação read-only).
+- ✅ Rótulo **BRUTO** em todas as telas; guard-rail DEMO; isolamento (import-linter) intacto.
+- ✅ Bug corrigido: `AmbiguousParameter` no `load_bars` (CAST timestamptz).
+
+**Pendente da validação do Founder (precisa do MT5 aberto):**
+- ⬜ **Paridade PASS real**: rodar `cam_d1_orb30` no Strategy Tester (mesmo símbolo/período/
+  pontos do backtest CAM) → colar o CSV no painel Paridade → confirmar PASS (critério 3).
+- ⬜ **Ver o executor operando**: rodar `cam_d1_orb30_exec` no tester (aba Negociações).
+- ⬜ Calibrar `stop_points`/`target_points` (200/400 ficou apertado para o WIN no período).
+
+> Itens que dependem do MT5 ao vivo (orquestração de start/stop do EA via backend,
+> multi-símbolo em DEMO) são das **Ondas 2+** — não bloqueiam o gate da D1.
+
 ### Ondas seguintes — atrás do gate (granularidade maior; refina quando o Founder liberar)
 
 - **ONDA 2 — Par (D3, LS1) — multi-símbolo 2 pernas.** Habilita: `T-013` (DSL pair/spread/z-score),
