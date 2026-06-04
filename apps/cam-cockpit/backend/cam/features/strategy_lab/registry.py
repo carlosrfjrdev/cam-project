@@ -48,13 +48,16 @@ _D1 = StrategyDef(
     unit=Unit.SINGLE,
     timeframe="M1",
     description=(
-        "Quebra do range dos primeiros 30 min do pregão; stop no extremo "
-        "oposto, alvo = target_r × tamanho do range; flat no fim da sessão."
+        "Quebra do range dos primeiros 30 min do pregão; entrada na quebra com "
+        "SL e TP ESTÁTICOS em pontos (relativos à entrada); flat no fim da sessão."
     ),
-    default_params={"or_minutes": 30, "target_r": 1.0},
+    # Modo estático por padrão (SL/TP fixos em pontos). Para WIN, 1 ponto do
+    # índice; ajuste stop_points/target_points conforme o ativo/risco.
+    default_params={"or_minutes": 30, "stop_points": 200.0, "target_points": 400.0},
     param_space={
-        "or_minutes": [15, 30, 45, 60],
-        "target_r": [0.5, 1.0, 1.5, 2.0],
+        "or_minutes": [15, 30],
+        "stop_points": [100.0, 150.0, 200.0, 300.0],
+        "target_points": [200.0, 300.0, 400.0, 600.0],
     },
     runnable=True,
 )
@@ -105,6 +108,8 @@ def _d1_params(params: dict) -> D1Params:
     return D1Params(
         or_minutes=int(params.get("or_minutes", base.or_minutes)),
         target_r=float(params.get("target_r", base.target_r)),
+        stop_points=float(params.get("stop_points", base.stop_points)),
+        target_points=float(params.get("target_points", base.target_points)),
         session_open=base.session_open,
         session_close=base.session_close,
         entry_until=base.entry_until,

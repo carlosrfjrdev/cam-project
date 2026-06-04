@@ -53,8 +53,11 @@ def test_registry_d1_runnable_e_tem_param_space() -> None:
     d1 = registry.get("d1")
     assert d1 is not None
     assert d1.runnable is True
-    assert "or_minutes" in d1.param_space
-    assert "target_r" in d1.param_space
+    assert "stop_points" in d1.param_space
+    assert "target_points" in d1.param_space
+    # D1 do produto usa SL/TP estaticos por padrao
+    assert d1.default_params["stop_points"] > 0
+    assert d1.default_params["target_points"] > 0
 
 
 def test_registry_lista_catalogo_com_nao_runnable() -> None:

@@ -90,6 +90,39 @@ def test_d1_stop_pior_caso_intrabar() -> None:
     assert trades[0].price_exit == 90  # stop, não alvo
 
 
+def test_d1_sl_tp_estatico_relativo_a_entrada() -> None:
+    """Modo estático: SL/TP fixos em pontos, relativos ao fill (não ao range)."""
+    bars = _session_long_breakout()[:7]      # ...09:30 sinal (close 101)
+    bars.append(_bar(9, 35, 102, 103, 101, 102))  # fill no open 102
+    bars.append(_bar(9, 40, 102, 110, 101, 109))  # toca TP estatico (102+5=107)
+    params = D1Params(or_minutes=30, stop_points=4.0, target_points=5.0)
+    sigs = generate_signals(bars, params)
+    assert len(sigs) == 1
+    # sinal carrega pontos, NAO preco absoluto (resolvido no fill)
+    assert sigs[0].stop_points == 4.0
+    assert sigs[0].target_points == 5.0
+    trades = run_d1_backtest(bars, sigs, params, point_value=1.0)
+    assert len(trades) == 1
+    t = trades[0]
+    assert t.price_entry == 102
+    # TP estatico = entrada + 5 = 107 (relativo a entrada, nao 110 do range)
+    assert t.price_exit == 107
+    assert t.exit_reason == "target"
+    assert t.pnl_bruto == 5.0
+
+
+def test_d1_sl_estatico_stop_relativo_a_entrada() -> None:
+    """SL estatico relativo a entrada, pior caso intrabar."""
+    bars = _session_long_breakout()[:7]
+    bars.append(_bar(9, 35, 102, 103, 101, 102))   # fill no open 102
+    bars.append(_bar(9, 40, 102, 110, 95, 96))     # toca SL estatico (102-4=98)
+    params = D1Params(or_minutes=30, stop_points=4.0, target_points=20.0)
+    sigs = generate_signals(bars, params)
+    trades = run_d1_backtest(bars, sigs, params, point_value=1.0)
+    assert trades[0].exit_reason == "stop"
+    assert trades[0].price_exit == 98  # entrada 102 - 4 pontos
+
+
 def test_metricas_brutas() -> None:
     bars = _session_long_breakout()
     sigs = generate_signals(bars, D1Params(or_minutes=30))

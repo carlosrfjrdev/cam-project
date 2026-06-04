@@ -63,13 +63,15 @@ def run_d1_backtest(
             sig = sig_by_bar.get(i - 1)
             if sig is not None:
                 leg = Leg.LONG if sig.side == "long" else Leg.SHORT
+                entry = bar.open  # fill next-bar-open
+                stop_price, target_price = _resolve_levels(sig, leg, entry)
                 open_pos = _Position(
                     pair_id=pair_id,
                     leg=leg,
                     ts_entry=bar.ts_open,
-                    price_entry=bar.open,  # fill next-bar-open
-                    stop_price=sig.stop_price,
-                    target_price=sig.target_price,
+                    price_entry=entry,
+                    stop_price=stop_price,
+                    target_price=target_price,
                 )
                 pair_id += 1
 
@@ -92,6 +94,18 @@ def run_d1_backtest(
         )
 
     return trades
+
+
+def _resolve_levels(sig: Signal, leg: Leg, entry: float) -> tuple[float, float]:
+    """
+    Resolve stop/alvo ABSOLUTOS no momento do fill. Modo estático: relativos à
+    entrada (entry ∓ pontos). Modo range: já vêm absolutos no sinal.
+    """
+    if sig.stop_points > 0 and sig.target_points > 0:
+        if leg == Leg.LONG:
+            return (entry - sig.stop_points, entry + sig.target_points)
+        return (entry + sig.stop_points, entry - sig.target_points)
+    return (sig.stop_price, sig.target_price)
 
 
 class _Position:

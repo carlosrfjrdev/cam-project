@@ -35,7 +35,8 @@ export function AssetsRunTestsPage() {
   const [symbol, setSymbol] = useState("WIN$");
   const [timeframe, setTimeframe] = useState("M1");
   const [orMinutes, setOrMinutes] = useState(30);
-  const [targetR, setTargetR] = useState(1.0);
+  const [stopPoints, setStopPoints] = useState(200);
+  const [targetPoints, setTargetPoints] = useState(400);
   const [runId, setRunId] = useState<number | null>(null);
 
   const strategies = useQuery({
@@ -50,7 +51,11 @@ export function AssetsRunTestsPage() {
       postBacktest(strategyId, {
         symbol,
         timeframe,
-        params: { or_minutes: orMinutes, target_r: targetR },
+        params: {
+          or_minutes: orMinutes,
+          stop_points: stopPoints,
+          target_points: targetPoints,
+        },
       }),
     onSuccess: (r) => setRunId(r.error ? null : r.run_id),
   });
@@ -119,9 +124,12 @@ export function AssetsRunTestsPage() {
           onChange={(e) => setOrMinutes(Number(e.target.value))} sx={{ width: 100 }}
         />
         <TextField
-          size="small" type="number" label="Alvo (R)" value={targetR}
-          onChange={(e) => setTargetR(Number(e.target.value))} sx={{ width: 100 }}
-          inputProps={{ step: 0.5 }}
+          size="small" type="number" label="SL (pontos)" value={stopPoints}
+          onChange={(e) => setStopPoints(Number(e.target.value))} sx={{ width: 110 }}
+        />
+        <TextField
+          size="small" type="number" label="TP (pontos)" value={targetPoints}
+          onChange={(e) => setTargetPoints(Number(e.target.value))} sx={{ width: 110 }}
         />
         <Button
           variant="contained"

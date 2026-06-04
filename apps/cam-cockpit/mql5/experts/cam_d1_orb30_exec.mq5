@@ -37,7 +37,11 @@
 
 //--- Parametros da estrategia (espelham D1Params do Python) ---------
 input int    InpOrMinutes        = 30;     // janela do opening range (min)
-input double InpTargetR          = 1.0;    // TP = target_r x tamanho do range
+// SL/TP ESTATICOS em pontos, relativos ao preco de entrada (R-15b). Ativos
+// quando ambos > 0 (prioridade sobre o modo range/InpTargetR).
+input double InpStopPoints        = 200.0; // SL estatico (pontos da entrada)
+input double InpTargetPoints      = 400.0; // TP estatico (pontos da entrada)
+input double InpTargetR          = 1.0;    // modo range (fallback): TP = R x range
 input int    InpSessionOpenHour  = 9;      // abertura do pregao (hora)
 input int    InpSessionOpenMin   = 0;
 input int    InpEntryUntilHour   = 17;     // nao abre nova posicao apos esta hora
@@ -171,22 +175,38 @@ void ProcessBar(datetime t, double h, double l, double c)
       return;
 
    // 4) gatilhos na quebra — entra A MERCADO; SL/TP geridos pelo tester.
+   //    SL/TP estaticos relativos ao preco de fill (Ask na compra, Bid na venda);
+   //    fallback para os niveis do range quando os pontos nao estao setados.
+   bool   static_exits = (InpStopPoints > 0 && InpTargetPoints > 0);
    if(g_long_armed && c > g_or_high)
      {
       g_long_armed = false;
-      double sl = NormalizeDouble(g_or_low, _Digits);
-      double tp = NormalizeDouble(g_or_high + InpTargetR * rng, _Digits);
-      if(!g_trade.Buy(InpLots, _Symbol, 0.0, sl, tp, "cam_d1_exec"))
+      double ref = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+      double sl  = static_exits ? ref - InpStopPoints : g_or_low;
+      double tp  = static_exits ? ref + InpTargetPoints : g_or_high + InpTargetR * rng;
+      if(!g_trade.Buy(InpLots, _Symbol, 0.0, NormTick(sl), NormTick(tp), "cam_d1_exec"))
          PrintFormat("[CamD1Exec] Buy falhou ret=%d", g_trade.ResultRetcode());
      }
    else if(g_short_armed && c < g_or_low)
      {
       g_short_armed = false;
-      double sl = NormalizeDouble(g_or_high, _Digits);
-      double tp = NormalizeDouble(g_or_low - InpTargetR * rng, _Digits);
-      if(!g_trade.Sell(InpLots, _Symbol, 0.0, sl, tp, "cam_d1_exec"))
+      double ref = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+      double sl  = static_exits ? ref + InpStopPoints : g_or_high;
+      double tp  = static_exits ? ref - InpTargetPoints : g_or_low - InpTargetR * rng;
+      if(!g_trade.Sell(InpLots, _Symbol, 0.0, NormTick(sl), NormTick(tp), "cam_d1_exec"))
          PrintFormat("[CamD1Exec] Sell falhou ret=%d", g_trade.ResultRetcode());
      }
+  }
+
+//+------------------------------------------------------------------+
+//| Normaliza um preco ao tick size do simbolo (ex.: WIN = 5).        |
+//+------------------------------------------------------------------+
+double NormTick(double price)
+  {
+   double ts = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
+   if(ts <= 0.0)
+      ts = _Point;
+   return NormalizeDouble(MathRound(price / ts) * ts, _Digits);
   }
 
 //+------------------------------------------------------------------+

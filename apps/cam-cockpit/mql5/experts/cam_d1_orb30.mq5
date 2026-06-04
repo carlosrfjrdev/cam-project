@@ -35,7 +35,12 @@
 
 //--- Parametros da estrategia (espelham D1Params do Python) ---------
 input int    InpOrMinutes        = 30;     // janela do opening range (min)
-input double InpTargetR          = 1.0;    // alvo = target_r x tamanho do range
+// SL/TP ESTATICOS em pontos, relativos a entrada (R-15b). Ativos quando ambos
+// > 0 (tem prioridade sobre o modo range/InpTargetR). Espelham stop_points/
+// target_points do Python — DEVEM ser identicos no backtest do CAM p/ paridade.
+input double InpStopPoints        = 200.0; // SL estatico (pontos da entrada)
+input double InpTargetPoints      = 400.0; // TP estatico (pontos da entrada)
+input double InpTargetR          = 1.0;    // modo range (fallback): alvo = R x range
 input int    InpSessionOpenHour  = 9;      // abertura do pregao (hora)
 input int    InpSessionOpenMin   = 0;      // abertura do pregao (min)
 input int    InpEntryUntilHour   = 17;     // nao abre nova posicao apos esta hora
@@ -191,8 +196,17 @@ void ProcessBar(datetime t, double o, double h, double l, double c)
       g_pos_side     = g_pending_side;
       g_pos_ts_entry = t;
       g_pos_entry    = o;                 // fill next-bar-open
-      g_pos_stop     = g_pending_stop;
-      g_pos_tgt      = g_pending_tgt;
+      // SL/TP estaticos resolvidos no FILL (relativos a entrada) — espelha
+      // _resolve_levels do backtest_engine.py. Fallback: niveis do range.
+      if(InpStopPoints > 0 && InpTargetPoints > 0)
+        {
+         if(g_pending_side > 0)
+           { g_pos_stop = o - InpStopPoints; g_pos_tgt = o + InpTargetPoints; }
+         else
+           { g_pos_stop = o + InpStopPoints; g_pos_tgt = o - InpTargetPoints; }
+        }
+      else
+        { g_pos_stop = g_pending_stop; g_pos_tgt = g_pending_tgt; }
      }
    g_pending = false;                     // consome (ou descarta) pendente
 

@@ -25,19 +25,37 @@ from cam._shared.research_kernel.bars import Bar
 @dataclass(frozen=True)
 class D1Params:
     or_minutes: int = 30
-    target_r: float = 1.0           # alvo = target_r × range
+    target_r: float = 1.0           # modo RANGE: alvo = target_r × range
+    # modo ESTÁTICO (R-15b): SL/TP fixos em pontos do ativo, RELATIVOS à entrada.
+    # Ativo quando ambos > 0 (tem prioridade sobre o modo range). Ex.: WIN com
+    # stop_points=200 e target_points=400 → SL a 200 pts e TP a 400 pts da entrada.
+    stop_points: float = 0.0
+    target_points: float = 0.0
     session_open: time = time(9, 0)
     session_close: time = time(17, 55)
     entry_until: time = time(17, 0)  # não abre nova posição após este horário
 
+    @property
+    def static_exits(self) -> bool:
+        return self.stop_points > 0 and self.target_points > 0
+
 
 @dataclass(frozen=True)
 class Signal:
-    """Intenção emitida no fechamento de uma barra. O motor preenche em t+1."""
+    """
+    Intenção emitida no fechamento de uma barra. O motor preenche em t+1.
+
+    Modo RANGE: carrega `stop_price`/`target_price` absolutos (conhecidos no
+    sinal, pois vêm do opening range). Modo ESTÁTICO: carrega `stop_points`/
+    `target_points` (pontos relativos à entrada — o motor resolve no fill, pois
+    a entrada só é conhecida em t+1).
+    """
     bar_index: int
     side: str            # "long" | "short"
-    stop_price: float
-    target_price: float
+    stop_price: float = 0.0
+    target_price: float = 0.0
+    stop_points: float = 0.0
+    target_points: float = 0.0
 
 
 def _session_of(bar: Bar) -> str:
@@ -90,26 +108,36 @@ def generate_signals(bars: list[Bar], params: D1Params) -> list[Signal]:
         # 3) gatilhos na quebra (decisão no fechamento da barra t)
         if long_armed and bar.close > or_high:
             long_armed = False
-            signals.append(
-                Signal(
-                    bar_index=i,
-                    side="long",
-                    stop_price=or_low,
-                    target_price=or_high + params.target_r * rng,
-                )
-            )
+            signals.append(_make_signal(i, "long", or_high, or_low, rng, params))
         elif short_armed and bar.close < or_low:
             short_armed = False
-            signals.append(
-                Signal(
-                    bar_index=i,
-                    side="short",
-                    stop_price=or_high,
-                    target_price=or_low - params.target_r * rng,
-                )
-            )
+            signals.append(_make_signal(i, "short", or_high, or_low, rng, params))
 
     return signals
+
+
+def _make_signal(
+    i: int, side: str, or_high: float, or_low: float, rng: float, params: D1Params
+) -> Signal:
+    """Emite o sinal no modo estático (pontos) ou range (preço absoluto)."""
+    if params.static_exits:
+        # SL/TP estáticos resolvidos no fill (relativos à entrada — R-15b).
+        return Signal(
+            bar_index=i,
+            side=side,
+            stop_points=params.stop_points,
+            target_points=params.target_points,
+        )
+    # modo range: stop no extremo oposto, alvo = target_r × range (absolutos).
+    if side == "long":
+        return Signal(
+            bar_index=i, side="long",
+            stop_price=or_low, target_price=or_high + params.target_r * rng,
+        )
+    return Signal(
+        bar_index=i, side="short",
+        stop_price=or_high, target_price=or_low - params.target_r * rng,
+    )
 
 
 def _add_minutes(t: time, minutes: int) -> time:
