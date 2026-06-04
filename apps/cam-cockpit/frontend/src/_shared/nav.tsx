@@ -22,6 +22,7 @@ import MenuBookIcon from "@mui/icons-material/MenuBook";
 import SettingsIcon from "@mui/icons-material/Settings";
 import TravelExploreIcon from "@mui/icons-material/TravelExplore";
 import TuneIcon from "@mui/icons-material/Tune";
+import StorageIcon from "@mui/icons-material/Storage";
 
 export interface NavItem {
   label: string;
@@ -38,6 +39,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { label: "Inspetor de Ativo", path: "/inspetor", icon: <TravelExploreIcon />, group: "Pesquisa", visibleInMvp: true },
+  { label: "Dataset", path: "/dataset", icon: <StorageIcon />, group: "Pesquisa", visibleInMvp: true },
   { label: "Quant Lab", path: "/lab", icon: <ScienceIcon />, group: "Pesquisa", visibleInMvp: true },
 
   { label: "Estratégias", path: "/strategy-lab/strategies", icon: <HubIcon />, group: "StrategyLab", visibleInMvp: true },

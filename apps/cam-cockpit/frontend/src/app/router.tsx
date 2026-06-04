@@ -20,6 +20,7 @@ import { RobotOrchestratorPage } from "../features/robot-orchestrator/RobotOrche
 import { ScalingPage } from "../features/scaling/ScalingPage";
 import { InspetorPage } from "../features/inspetor/InspetorPage";
 import { QuantLabPage } from "../features/quant-lab/QuantLabPage";
+import { DatasetPage } from "../features/dataset/DatasetPage";
 import { AssetsStrategyPage } from "../features/strategy-lab/AssetsStrategyPage";
 import { AssetsRunTestsPage } from "../features/strategy-lab/AssetsRunTestsPage";
 import { AssetsExpertsPage } from "../features/strategy-lab/AssetsExpertsPage";
@@ -42,6 +43,7 @@ export function AppRouter() {
         <Routes>
           <Route path="/" element={<CockpitPage />} />
           <Route path="/inspetor" element={<InspetorPage />} />
+          <Route path="/dataset" element={<DatasetPage />} />
           <Route path="/lab" element={<QuantLabPage />} />
           <Route path="/strategy-lab/strategies" element={<AssetsStrategyPage />} />
           <Route path="/strategy-lab/runtests" element={<AssetsRunTestsPage />} />
