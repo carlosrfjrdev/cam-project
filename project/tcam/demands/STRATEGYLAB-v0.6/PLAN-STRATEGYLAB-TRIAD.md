@@ -164,11 +164,24 @@ EA **novo**, escrito à mão seguindo a DEF como especificação (R-21, dupla im
 deliberada). Execução **exclusiva no MQL5**; backend só orquestra/observa (R-26). **Kevin entra
 neste bloco** (guard-rail DEMO — marcador `sec` da SPEC §8).
 
+> **⚙️ Ajuste de diretriz — dois EAs entregues na Onda 1 (ADR-SL-04, 2026-06-03).** O bloco
+> materializou **DOIS `.mq5`** para a D1, em vez de um:
+> - **`cam_d1_orb30.mq5` — gravador (T-041/T-042):** roda a lógica D1 e **exporta o ledger**
+>   (pior-caso canônico) **sem ordem** — é o lado MQL5 da **paridade** (BL-PARIDADE). Fora da
+>   allowlist `lint_mql5`.
+> - **`cam_d1_orb30_exec.mq5` — executor (T-045, NOVO):** **opera de fato** a mercado com SL/TP
+>   (`CTrade`), **visível no Strategy Tester** — atende o pedido do Founder de "ver a estratégia
+>   operando". Estratégia pura, **sem Risk Engine** nesta onda. Dentro da allowlist (testado).
+>
+> A paridade (BL-PARIDADE) é checada contra o **gravador**; o executor entrega validação
+> visual. T-040 (guard-rail DEMO duplo) vale para **os dois**.
+
 | ID | TASK | Saída esperada | Depende de | R-* | TDD |
 |---|---|---|---|---|---|
-| 🟢 **T-040** | **Scaffold do EA executor + guard-rail DEMO duplo** | Novo `.mq5` em `apps/cam-cockpit/mql5/experts/` (distinto de `cam_bridge`). **Guard-rail duplo (R-24, sec):** (1) `input` apontando conta/servidor DEMO; (2) checagem runtime `AccountInfoInteger(ACCOUNT_TRADE_MODE)` — se ≠ DEMO, **recusa operar** e loga. Sem caminho de promoção silenciosa a real. **Kevin valida.** | — | R-21, R-24 | n/a (MQL5; teste via Strategy Tester) |
-| 🟢 **T-041** | **Lógica D1 ORB-30 no EA (single-symbol)** | `.mq5` implementa **à mão** a lógica D1 conforme a DEF (T-011): opening range 30min, entrada na quebra, stop/alvo mecânicos, flat at close, sessão SP. Roda no **Strategy Tester** (every tick based on real ticks — R-23 single). | T-040, T-011 | R-21, R-23 | n/a |
-| 🟢 **T-042** | **Export do ledger do EA no schema canônico** | EA exporta ledger de trades no schema único (SPEC §4.5) para a paridade consumir (R-27). | T-041, T-021 | R-27, R-35 | n/a |
+| 🟢 **T-040** | **Scaffold do EA + guard-rail DEMO duplo (ambos os EAs)** | Novos `.mq5` em `apps/cam-cockpit/mql5/experts/` (distintos de `cam_bridge`). **Guard-rail duplo (R-24, sec):** (1) `input` apontando conta/servidor DEMO; (2) checagem runtime `AccountInfoInteger(ACCOUNT_TRADE_MODE)` — se ≠ DEMO, **recusa operar** e loga. Sem caminho de promoção silenciosa a real. **Kevin valida.** | — | R-21, R-24 | n/a (MQL5; teste via Strategy Tester) |
+| 🟢 **T-041** | **Lógica D1 ORB-30 no EA gravador (single-symbol)** | `cam_d1_orb30.mq5` implementa **à mão** a lógica D1 conforme a DEF (T-011): opening range 30min, entrada na quebra, stop/alvo mecânicos, flat at close, sessão SP. **Sem ordem** (gravador). | T-040, T-011 | R-21, R-23 | n/a |
+| 🟢 **T-042** | **Export do ledger do EA no schema canônico** | EA gravador exporta ledger de trades (CSV) no schema único (SPEC §4.5) para a paridade consumir (R-27). | T-041, T-021 | R-27, R-35 | n/a |
+| 🟢 **T-045** | **EA executor D1 (opera de fato) — ADR-SL-04** | `cam_d1_orb30_exec.mq5`: mesma lógica D1, mas **envia ordem a mercado** com SL/TP (`CTrade`), flat na sessão, visível no Strategy Tester. **Sem Risk Engine** (estratégia pura, decisão do Founder). Entra na **allowlist `lint_mql5`** (junto de `cam_risk_mirror`); guard-rail DEMO duplo (T-040). Testes do lint cobrem allowlist. | T-040, T-041 | R-21, R-24 | sim (lint allowlist) |
 | 🟢 **T-043** | **Orquestração/observação via `mt5_integration` (sem feature→feature)** | EA disparado/observado por **evento** ou endpoint da própria `mt5_integration` (`ea_dispatcher`/`multi_ea_manager`/`fill_subscriber`). `strategy_lab` **não importa** `mt5_integration` (R-26). Mecanismo fino (evento vs API interna) decidido no CODE dentro do princípio. | T-040 | R-26 | sim (lado Python da orquestração) |
 | **T-044** | **Execução atômica das pernas (par) + short mecânico** | EA monta posição de par só com **as duas pernas** (book aceitável); se uma não preenche, **não monta meia-posição** (R-22); saída das duas no mesmo evento. Perna short mecânica (`SELL`), **sem modelar aluguel** (R-25). **(Onda multi-símbolo — DEMO ao vivo, R-23.)** | T-040, T-024 | R-22, R-23, R-25 | n/a |
 
@@ -222,14 +235,14 @@ Fundação      T-001 → T-002 → T-003 → T-004 → T-005 → T-006
 Contrato D1   T-010 → T-011 → T-012
 Backtest D1   T-020 → T-021 → T-022 → T-023
 Otimizador    T-030 → T-031 → T-032
-EA D1 (sec)   T-040 → T-041 → T-042 → T-043
+EA D1 (sec)   T-040 → T-041 → T-042 → T-045 (executor) → T-043
 Paridade      T-050 → T-051 → T-052
 Frontend      T-060 → T-061 → T-063 → T-064 → T-062 → T-065
 ```
 
 **TASKs da Onda 1 (lista fechada que o CODE ataca primeiro):**
 `T-001, T-002, T-003, T-004, T-005, T-006, T-010, T-011, T-012, T-020, T-021, T-022, T-023,
-T-030, T-031, T-032, T-040, T-041, T-042, T-043, T-050, T-051, T-052, T-060, T-061, T-062,
+T-030, T-031, T-032, T-040, T-041, T-042, T-045, T-043, T-050, T-051, T-052, T-060, T-061, T-062,
 T-063, T-064, T-065`.
 
 **Critério de fechamento da Onda 1 (= "Go de D1" da SPEC §10):**

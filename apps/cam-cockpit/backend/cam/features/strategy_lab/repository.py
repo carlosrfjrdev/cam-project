@@ -24,8 +24,10 @@ _SELECT_BARS = text(
            open, high, low, close, volume, financial, trades, vwap, is_partial
     FROM research_bars
     WHERE symbol = :symbol AND timeframe = :timeframe AND price_series = 'raw'
-      AND (:w_start IS NULL OR ts_open >= :w_start)
-      AND (:w_end   IS NULL OR ts_open <  :w_end)
+      AND (CAST(:w_start AS timestamptz) IS NULL
+           OR ts_open >= CAST(:w_start AS timestamptz))
+      AND (CAST(:w_end AS timestamptz) IS NULL
+           OR ts_open <  CAST(:w_end AS timestamptz))
     ORDER BY ts_open ASC
     """
 )

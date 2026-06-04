@@ -215,6 +215,22 @@ estratégia em Python** sobre a(s) série(s) temporal(is) escolhida(s).
 **O que é:** a gestão dos robôs MT5 — e, distinto do `cam_bridge` (read-only), um **EA executor**
 que **envia/modifica/fecha ordem** no **Strategy Tester** e em **conta DEMO**.
 
+> **⚙️ Ajuste de diretriz de EA — Onda 1 (ADR-SL-04, 2026-06-03).** A Onda 1 materializou
+> **DOIS EAs** para a mesma estratégia D1, com papéis distintos — o SCOPE original assumia um
+> único EA executor:
+> - **`cam_d1_orb30.mq5` — gravador de paridade (sem ordem):** computa a D1 e exporta o ledger
+>   canônico em CSV para casar com o backtest Python. Fica **fora** da allowlist de `OrderSend`.
+>   É a defesa de paridade.
+> - **`cam_d1_orb30_exec.mq5` — executor efetivo (envia ordem):** opera a D1 a mercado com
+>   SL/TP (`CTrade`), **visível na aba Negociações** do Strategy Tester. Estratégia **pura,
+>   sem Risk Engine ainda** (decisão verbatim do Founder: *"ainda não estamos verificando os
+>   riscos"*). Guard-rail duplo DEMO; **dentro** da allowlist `lint_mql5`.
+>
+> O executor **não é tick-idêntico** ao backtest (modelo de fill real do broker vs pior-caso
+> canônico) — por isso a **paridade continua sendo papel do gravador**, e o executor serve à
+> validação visual/comportamental. Detalhe e dívida (três implementações da lógica D1) em
+> ADR-SL-04.
+
 **In (MVP):**
 - Gestão/listagem dos robôs MT5 (reusa `robot-orchestrator` + `ea-control` + `multi_ea_manager`).
 - **EA executor novo (Nikola):** EA MQL5 que **opera de fato** no Strategy Tester/DEMO —

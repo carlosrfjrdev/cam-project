@@ -77,7 +77,21 @@ Especifica a tríade **Assets Strategy + Assets RunTests + Assets Experts**: ges
 
 ### 3.3 Assets Experts (EA executor MQL5 multi-símbolo, DEMO)
 
-- **R-21.** Nasce um **EA executor novo** em MQL5 (`apps/cam-cockpit/mql5/experts/`), distinto do `cam_bridge` (read-only): envia/modifica/fecha ordem no **Strategy Tester** e em **conta DEMO**. É **escrito à mão**, seguindo a DEF comum como especificação — **dupla implementação deliberada** da lógica Python (ADR-SL-01).
+> **⚙️ Ajuste de diretriz — dois EAs por estratégia (ADR-SL-04, 2026-06-03).** A Onda 1
+> materializou **dois EAs** para a D1, e esta é a diretriz para as próximas estratégias:
+> - **EA gravador (`cam_d1_orb30.mq5`):** computa a estratégia e **exporta o ledger canônico**
+>   (R-27) **sem enviar ordem** — fica **fora** da allowlist de `OrderSend`. É o lado MQL5 que
+>   **prova a paridade** contra o backtest Python (R-28..R-31), em pior-caso canônico.
+> - **EA executor (`cam_d1_orb30_exec.mq5`):** **opera de fato** (R-21) a mercado com SL/TP,
+>   **visível no Strategy Tester**; **dentro** da allowlist `lint_mql5`. Na Onda 1 executa a
+>   **estratégia pura, sem Risk Engine** (decisão do Founder: "ainda não verificando riscos").
+>
+> O executor usa o modelo de fill real do broker (SL/TP intrabar) e **não é tick-idêntico** ao
+> backtest — portanto **a paridade (R-28..R-31) é checada contra o GRAVADOR**, não contra o
+> executor. O executor entrega validação **visual/comportamental** ao Founder. Evolução prevista:
+> quando o Assets RiskManager existir, o executor passa a consultá-lo (como `cam_risk_mirror`).
+
+- **R-21.** Nasce um **EA executor novo** em MQL5 (`apps/cam-cockpit/mql5/experts/`), distinto do `cam_bridge` (read-only): envia/modifica/fecha ordem no **Strategy Tester** e em **conta DEMO**. É **escrito à mão**, seguindo a DEF comum como especificação — **dupla implementação deliberada** da lógica Python (ADR-SL-01). **Acompanhado de um EA gravador** que exporta o ledger sem operar (ADR-SL-04 — ver nota acima); a paridade roda contra o gravador.
 - **R-22.** **Execução atômica das pernas** (par como unidade — C14): o EA só monta a posição de um par se conseguir **as duas pernas** com book aceitável; se uma perna não preenche, **não monta meia-posição** (perna solta = direcional não-intencional). Saída das duas pernas no **mesmo evento**.
 - **R-23.** **Multi-símbolo híbrido por classe** (ADR-SL-03 §2.1):
   - **Single-symbol** (D1, D2, V1, V2, S2) → **Strategy Tester** (every tick based on real ticks): fidelidade e reprodutibilidade máximas.
