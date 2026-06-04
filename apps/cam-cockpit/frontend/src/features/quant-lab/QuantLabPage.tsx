@@ -8,7 +8,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Alert, Box, Button, Chip, CircularProgress, Divider, Paper, Stack,
+  Alert, Box, Button, Checkbox, Chip, CircularProgress, Divider,
+  FormControlLabel, Paper, Stack,
   Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography,
 } from "@mui/material";
 import ScienceIcon from "@mui/icons-material/Science";
@@ -23,6 +24,8 @@ const DEFAULT_UNIVERSE = "WIN$, WDO$, VALE3, ITUB4, PETR4, AXIA3, BBDC4, B3SA3";
 export function QuantLabPage() {
   const qc = useQueryClient();
   const [universe, setUniverse] = useState(DEFAULT_UNIVERSE);
+  const [count, setCount] = useState(40000);
+  const [withTicks, setWithTicks] = useState(false);
   const [lastIngest, setLastIngest] = useState<IngestResult | null>(null);
 
   const health = useQuery({
@@ -35,7 +38,8 @@ export function QuantLabPage() {
     mutationFn: () =>
       postIngest({
         sources: universe.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean),
-        with_ticks: true,
+        count,
+        with_ticks: withTicks,
       }),
     onSuccess: (res) => {
       setLastIngest(res);
@@ -71,6 +75,14 @@ export function QuantLabPage() {
             onChange={(e) => setUniverse(e.target.value)}
             label="Símbolos (vírgula)"
           />
+          <TextField
+            size="small"
+            type="number"
+            label="Barras (M1)"
+            value={count}
+            onChange={(e) => setCount(Number(e.target.value))}
+            sx={{ width: 130 }}
+          />
           <Button
             variant="contained"
             onClick={() => ingest.mutate()}
@@ -79,6 +91,17 @@ export function QuantLabPage() {
             {ingest.isPending ? "Ingerindo…" : "Ingerir do MT5"}
           </Button>
         </Stack>
+        <FormControlLabel
+          control={
+            <Checkbox
+              size="small"
+              checked={withTicks}
+              onChange={(e) => setWithTicks(e.target.checked)}
+            />
+          }
+          label="Incluir ticks (só p/ Lead-Lag; o backtest D1 não usa ticks)"
+          sx={{ mt: 0.5 }}
+        />
         {ingest.isError && (
           <Alert severity="warning" sx={{ mt: 1 }}>
             Falha na ingestão. Verifique se o MT5 está aberto e o EA cam_bridge atachado.
