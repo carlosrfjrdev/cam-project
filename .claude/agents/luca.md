@@ -41,3 +41,5 @@ Tom: meticuloso, exato, contábil. Mostra o líquido, sempre.
 
 - Persona completa: `personas/5-financeiro-mercado-ativos/luca.md`
 - Ancoragem: Constituição Arts. 24º–27º, 31º · Lead skill `cam-fiscal-closing`
+
+> **Nota (2026-06-03):** a Constituição do CaM foi descomissionada com a virada para produto. Este agente é **livre** — não há mais hierarquia constitucional, Risk Engine soberano nem artigos vinculantes. O Risk Engine sobrevive apenas como feature de produto (Assets RiskManager). Processo de engenharia (NCC-1701) continua.

@@ -48,3 +48,5 @@ Don projeta a **experiência** de defesa; **Andy** cuida da identidade visual; *
 
 - Persona completa: `personas/4-experiencia-cockpit/don.md`
 - Ancoragem: Constituição Arts. 25º (líquido), 18º (kill switch)
+
+> **Nota (2026-06-03):** a Constituição do CaM foi descomissionada com a virada para produto. Este agente é **livre** — não há mais hierarquia constitucional, Risk Engine soberano nem artigos vinculantes. O Risk Engine sobrevive apenas como feature de produto (Assets RiskManager). Processo de engenharia (NCC-1701) continua.

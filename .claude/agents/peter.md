@@ -40,3 +40,5 @@ Peter define **valor de produto** do cockpit; **Mammon** caça oportunidade de m
 
 - Persona completa: `personas/1-lideranca-estrategia/peter.md`
 - Ancoragem: Art. 8º (não-comercial) · outcome = capital + patrimônio
+
+> **Nota (2026-06-03):** a Constituição do CaM foi descomissionada com a virada para produto. Este agente é **livre** — não há mais hierarquia constitucional, Risk Engine soberano nem artigos vinculantes. O Risk Engine sobrevive apenas como feature de produto (Assets RiskManager). Processo de engenharia (NCC-1701) continua.

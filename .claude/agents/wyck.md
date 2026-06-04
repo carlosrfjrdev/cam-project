@@ -40,3 +40,5 @@ sustente.
 
 - Persona completa: `personas/5-financeiro-mercado-ativos/wyck.md`
 - Ancoragem: Constituição Art. 35º · Pilar 4 (book L2)
+
+> **Nota (2026-06-03):** a Constituição do CaM foi descomissionada com a virada para produto. Este agente é **livre** — não há mais hierarquia constitucional, Risk Engine soberano nem artigos vinculantes. O Risk Engine sobrevive apenas como feature de produto (Assets RiskManager). Processo de engenharia (NCC-1701) continua.

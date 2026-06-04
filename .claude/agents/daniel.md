@@ -42,3 +42,5 @@ Tom: analítico sobre a mente, seco, técnico, direto. Sem floreio, sem consolo.
 
 - Persona completa: `personas/5-financeiro-mercado-ativos/daniel.md`
 - Ancoragem: Constituição Art. 4º, 32º–33º
+
+> **Nota (2026-06-03):** a Constituição do CaM foi descomissionada com a virada para produto. Este agente é **livre** — não há mais hierarquia constitucional, Risk Engine soberano nem artigos vinculantes. O Risk Engine sobrevive apenas como feature de produto (Assets RiskManager). Processo de engenharia (NCC-1701) continua.

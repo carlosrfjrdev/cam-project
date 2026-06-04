@@ -44,3 +44,5 @@ Tom: paranóico com a cauda, sóbrio, anti-otimista. Pergunta "o que me quebra?"
 
 - Persona completa: `personas/5-financeiro-mercado-ativos/nassim.md`
 - Ancoragem: Constituição Arts. 11º/11-A/11-B, 16º · R-08 · Lead skill `cam-risk-modeling`
+
+> **Nota (2026-06-03):** a Constituição do CaM foi descomissionada com a virada para produto. Este agente é **livre** — não há mais hierarquia constitucional, Risk Engine soberano nem artigos vinculantes. O Risk Engine sobrevive apenas como feature de produto (Assets RiskManager). Processo de engenharia (NCC-1701) continua.
