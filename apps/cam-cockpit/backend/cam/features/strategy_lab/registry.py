@@ -48,20 +48,20 @@ _D1 = StrategyDef(
     unit=Unit.SINGLE,
     timeframe="M1",
     description=(
-        "Quebra do range dos primeiros 30 min do pregão; SL inicial em pontos + "
-        "STOP MÓVEL (trailing) que segue o pico; TP fixo opcional; flat na sessão."
+        "Quebra do range dos primeiros 30 min, A FAVOR da tendência (~1 dia); "
+        "SL inicial + STOP MÓVEL (trailing); TP fixo opcional; flat na sessão."
     ),
-    # Modo estático com STOP MÓVEL por padrão: SL inicial 500, sem TP fixo
-    # (target=0 → deixa correr), trailing 200 pts atrás do pico. Para WIN.
-    # Ajuste conforme o ativo/risco.
+    # Default = melhor risco-ajustado provado no WINM26 (6 meses): SL 100, sem TP,
+    # trailing 400, GATE de tendência de ~1 dia (400 barras M1). Reduz drawdown e
+    # eleva consistência walk-forward. Ajuste conforme o ativo/risco.
     default_params={
-        "or_minutes": 30, "stop_points": 500.0,
-        "target_points": 0.0, "trail_points": 200.0,
+        "or_minutes": 30, "stop_points": 100.0, "target_points": 0.0,
+        "trail_points": 400.0, "trend_filter_bars": 400, "min_or_points": 0.0,
     },
     param_space={
-        "stop_points": [300.0, 500.0, 700.0],
-        "target_points": [0.0, 400.0, 800.0],   # 0 = sem TP (só trailing)
-        "trail_points": [0.0, 100.0, 200.0, 300.0],  # 0 = sem stop móvel
+        "stop_points": [100.0, 200.0, 300.0],
+        "trail_points": [100.0, 200.0, 400.0],   # 0 = sem stop móvel
+        "trend_filter_bars": [0, 400, 800],       # 0 = sem gate de tendência
     },
     runnable=True,
 )
@@ -108,6 +108,9 @@ def get(strategy_id: str) -> StrategyDef | None:
 
 
 def _d1_params(params: dict) -> D1Params:
+    # Fallback nos default_params do CATÁLOGO (não nos defaults do dataclass),
+    # para que params={} reproduza o default anunciado (gate, trailing etc.).
+    params = {**_D1.default_params, **params}
     base = D1Params()
     return D1Params(
         or_minutes=int(params.get("or_minutes", base.or_minutes)),
@@ -115,6 +118,8 @@ def _d1_params(params: dict) -> D1Params:
         stop_points=float(params.get("stop_points", base.stop_points)),
         target_points=float(params.get("target_points", base.target_points)),
         trail_points=float(params.get("trail_points", base.trail_points)),
+        min_or_points=float(params.get("min_or_points", base.min_or_points)),
+        trend_filter_bars=int(params.get("trend_filter_bars", base.trend_filter_bars)),
         session_open=base.session_open,
         session_close=base.session_close,
         entry_until=base.entry_until,

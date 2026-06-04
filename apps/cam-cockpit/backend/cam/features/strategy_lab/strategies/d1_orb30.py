@@ -35,6 +35,15 @@ class D1Params:
     stop_points: float = 0.0
     target_points: float = 0.0
     trail_points: float = 0.0
+    # GATE DE REGIME (R-15d) — filtros de ENTRADA, espelháveis no EA (proxy
+    # simples de regime, não o Markov do overlay — paridade exige algo computável
+    # em MQL5). Ambos opcionais (0 = desligado):
+    #   min_or_points      — só opera o dia se o range do OR ≥ este valor
+    #                        (suprime dias de baixa volatilidade / chop).
+    #   trend_filter_bars  — só entra A FAVOR da tendência: long se close >
+    #                        close[N barras atrás]; short se menor. 0 = off.
+    min_or_points: float = 0.0
+    trend_filter_bars: int = 0
     session_open: time = time(9, 0)
     session_close: time = time(17, 55)
     entry_until: time = time(17, 0)  # não abre nova posição após este horário
@@ -110,15 +119,38 @@ def generate_signals(bars: list[Bar], params: D1Params) -> list[Signal]:
         if rng <= 0:
             continue
 
+        # GATE DE REGIME A (R-15d): só opera o dia se o OR tiver range mínimo
+        # (dia de baixa volatilidade = chop → breakout falha). Day-level.
+        if params.min_or_points > 0 and rng < params.min_or_points:
+            continue
+
+        # GATE DE REGIME B (R-15d): só a FAVOR da tendência. O breakout só dispara
+        # (e desarma) quando preço rompe E a tendência confirma; senão fica armado.
+        up = _trend_ok(bars, i, "long", params)
+        down = _trend_ok(bars, i, "short", params)
+
         # 3) gatilhos na quebra (decisão no fechamento da barra t)
-        if long_armed and bar.close > or_high:
+        if long_armed and bar.close > or_high and up:
             long_armed = False
             signals.append(_make_signal(i, "long", or_high, or_low, rng, params))
-        elif short_armed and bar.close < or_low:
+        elif short_armed and bar.close < or_low and down:
             short_armed = False
             signals.append(_make_signal(i, "short", or_high, or_low, rng, params))
 
     return signals
+
+
+def _trend_ok(bars: list[Bar], i: int, side: str, params: D1Params) -> bool:
+    """Filtro de tendência (R-15d). off (=0) → sempre True. Espelhado no EA."""
+    n = params.trend_filter_bars
+    if n <= 0:
+        return True
+    ref = i - n
+    if ref < 0:
+        return False  # sem histórico suficiente p/ confirmar tendência
+    if side == "long":
+        return bars[i].close > bars[ref].close
+    return bars[i].close < bars[ref].close
 
 
 def _make_signal(

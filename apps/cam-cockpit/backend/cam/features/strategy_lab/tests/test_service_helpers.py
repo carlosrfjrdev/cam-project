@@ -89,6 +89,11 @@ def test_registry_run_d1_produz_ledger() -> None:
     bars.append(bar(9, 36, 104, 106, 103, 105))   # entrada no open 104
     bars.append(bar(9, 37, 105, 120, 104, 119))   # toca alvo (101+ (101-99)=103)
     _ = time  # silencia import não-usado em alguns linters
-    legs = registry.run("D1", bars, {"or_minutes": 30, "target_r": 1.0}, 0.20, 1)
+    # gate de tendência off (só 5 barras sintéticas) + range mode p/ o smoke.
+    legs = registry.run(
+        "D1", bars,
+        {"or_minutes": 30, "target_r": 1.0, "stop_points": 0, "trend_filter_bars": 0},
+        0.20, 1,
+    )
     assert len(legs) >= 1
     assert legs[0].leg.value == "long"

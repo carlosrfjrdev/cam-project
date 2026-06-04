@@ -39,9 +39,12 @@
 input int    InpOrMinutes        = 30;     // janela do opening range (min)
 // SL/TP ESTATICOS em pontos, relativos ao preco de entrada (R-15b). Ativos
 // quando ambos > 0 (prioridade sobre o modo range/InpTargetR).
-input double InpStopPoints        = 500.0; // SL inicial (pontos da entrada)
+input double InpStopPoints        = 100.0; // SL inicial (pontos da entrada)
 input double InpTargetPoints      = 0.0;   // TP fixo (pontos); 0 = sem TP (deixa correr)
-input double InpTrailPoints        = 200.0; // STOP MOVEL (pontos atras do pico); 0 = off
+input double InpTrailPoints        = 400.0; // STOP MOVEL (pontos atras do pico); 0 = off
+// GATE DE REGIME (R-15d) — devem ser IDENTICOS ao backtest do CAM (paridade):
+input int    InpTrendFilterBars   = 400;   // so a favor da tendencia de N barras; 0 = off
+input double InpMinOrPoints        = 0.0;   // range minimo do OR p/ operar o dia; 0 = off
 input double InpTargetR          = 1.0;    // modo range (fallback): TP = R x range
 input int    InpSessionOpenHour  = 9;      // abertura do pregao (hora)
 input int    InpSessionOpenMin   = 0;
@@ -176,15 +179,23 @@ void ProcessBar(datetime t, double h, double l, double c)
    if(rng <= 0.0)
       return;
 
+   // GATE DE REGIME A (R-15d): range minimo do OR (suprime chop). Day-level.
+   if(InpMinOrPoints > 0 && rng < InpMinOrPoints)
+      return;
+
    // 3) uma posicao por vez (single-symbol).
    if(HasPosition())
       return;
+
+   // GATE DE REGIME B (R-15d): so a FAVOR da tendencia (~N barras).
+   bool up   = TrendOk(c, +1);
+   bool down = TrendOk(c, -1);
 
    // 4) gatilhos na quebra — entra A MERCADO. Modo estatico quando StopPoints>0:
    //    SL inicial em pontos, TP fixo OPCIONAL (0 = sem TP), stop movel via
    //    ManageTrailing. Fallback range quando StopPoints=0.
    bool   static_exits = (InpStopPoints > 0);
-   if(g_long_armed && c > g_or_high)
+   if(g_long_armed && c > g_or_high && up)
      {
       g_long_armed = false;
       double ref = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
@@ -197,7 +208,7 @@ void ProcessBar(datetime t, double h, double l, double c)
       else
          PrintFormat("[CamD1Exec] Buy falhou ret=%d", g_trade.ResultRetcode());
      }
-   else if(g_short_armed && c < g_or_low)
+   else if(g_short_armed && c < g_or_low && down)
      {
       g_short_armed = false;
       double ref = SymbolInfoDouble(_Symbol, SYMBOL_BID);
@@ -245,6 +256,21 @@ void ManageTrailing(double h, double l)
      }
    if(new_sl != cur_sl)
       g_trade.PositionModify(_Symbol, new_sl, cur_tp);
+  }
+
+//+------------------------------------------------------------------+
+//| Filtro de tendencia (R-15d). Espelha _trend_ok do Python: compara |
+//| o close da barra atual (shift 1) com o de N barras antes.         |
+//+------------------------------------------------------------------+
+bool TrendOk(double c_now, int side)
+  {
+   int n = InpTrendFilterBars;
+   if(n <= 0)
+      return true;
+   double ref = iClose(_Symbol, _Period, 1 + n);
+   if(ref <= 0.0)
+      return false;
+   return (side > 0) ? (c_now > ref) : (c_now < ref);
   }
 
 //+------------------------------------------------------------------+

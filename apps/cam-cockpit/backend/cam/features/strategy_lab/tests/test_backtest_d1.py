@@ -157,6 +157,26 @@ def test_d1_sem_tp_fixo_quando_target_zero() -> None:
     assert trades[0].price_exit == 82
 
 
+def test_d1_gate_tendencia() -> None:
+    """Gate de regime (R-15d): só entra a favor da tendência de N barras."""
+    bars = _session_long_breakout()[:7]  # sinal long no idx 6 (09:30, close 101)
+    # ref idx 6-3=3 (09:15, close 97) < 101 → alta confirmada → long PERMITIDO.
+    sig_up = generate_signals(bars, D1Params(or_minutes=30, trend_filter_bars=3))
+    assert len(sig_up) == 1 and sig_up[0].side == "long"
+    # lookback maior que o histórico → sem como confirmar tendência → BLOQUEIA.
+    sig_block = generate_signals(bars, D1Params(or_minutes=30, trend_filter_bars=999))
+    assert sig_block == []
+
+
+def test_d1_min_or_points_suprime_dia_de_chop() -> None:
+    """Gate A (R-15d): dia com range do OR menor que o mínimo não opera."""
+    bars = _session_long_breakout()  # OR range = 100-90 = 10
+    # range mínimo 5 < 10 → opera normalmente.
+    assert len(generate_signals(bars, D1Params(or_minutes=30, min_or_points=5))) == 1
+    # range mínimo 50 > 10 → dia suprimido (chop).
+    assert generate_signals(bars, D1Params(or_minutes=30, min_or_points=50)) == []
+
+
 def test_metricas_brutas() -> None:
     bars = _session_long_breakout()
     sigs = generate_signals(bars, D1Params(or_minutes=30))

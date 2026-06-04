@@ -38,9 +38,12 @@ input int    InpOrMinutes        = 30;     // janela do opening range (min)
 // SL/TP ESTATICOS em pontos, relativos a entrada (R-15b). Ativos quando ambos
 // > 0 (tem prioridade sobre o modo range/InpTargetR). Espelham stop_points/
 // target_points do Python — DEVEM ser identicos no backtest do CAM p/ paridade.
-input double InpStopPoints        = 500.0; // SL inicial (pontos da entrada)
+input double InpStopPoints        = 100.0; // SL inicial (pontos da entrada)
 input double InpTargetPoints      = 0.0;   // TP fixo (pontos); 0 = sem TP (deixa correr)
-input double InpTrailPoints        = 200.0; // STOP MOVEL (pontos atras do pico); 0 = off
+input double InpTrailPoints        = 400.0; // STOP MOVEL (pontos atras do pico); 0 = off
+// GATE DE REGIME (R-15d) — devem ser IDENTICOS ao backtest do CAM (paridade):
+input int    InpTrendFilterBars   = 400;   // so a favor da tendencia de N barras; 0 = off
+input double InpMinOrPoints        = 0.0;   // range minimo do OR p/ operar o dia; 0 = off
 input double InpTargetR          = 1.0;    // modo range (fallback): alvo = R x range
 input int    InpSessionOpenHour  = 9;      // abertura do pregao (hora)
 input int    InpSessionOpenMin   = 0;      // abertura do pregao (min)
@@ -249,12 +252,21 @@ void ProcessBar(datetime t, double o, double h, double l, double c)
    if(rng <= 0.0)
       return;
 
+   // GATE DE REGIME A (R-15d): range minimo do OR (suprime chop). Day-level.
+   if(InpMinOrPoints > 0 && rng < InpMinOrPoints)
+      return;
+
    // 5) gatilhos na quebra (decisao no fechamento da barra; consumo em t+1).
    //    So arma sinal se estiver flat (uma posicao por vez, single-symbol).
    if(g_pos_open)
       return;
 
-   if(g_long_armed && c > g_or_high)
+   // GATE DE REGIME B (R-15d): so a FAVOR da tendencia (~N barras). Espelha
+   // _trend_ok do Python: long se close > close[N atras]; short se menor.
+   bool up   = TrendOk(c, +1);
+   bool down = TrendOk(c, -1);
+
+   if(g_long_armed && c > g_or_high && up)
      {
       g_long_armed   = false;
       g_pending      = true;
@@ -262,7 +274,7 @@ void ProcessBar(datetime t, double o, double h, double l, double c)
       g_pending_stop = g_or_low;
       g_pending_tgt  = g_or_high + InpTargetR * rng;
      }
-   else if(g_short_armed && c < g_or_low)
+   else if(g_short_armed && c < g_or_low && down)
      {
       g_short_armed  = false;
       g_pending      = true;
@@ -270,6 +282,22 @@ void ProcessBar(datetime t, double o, double h, double l, double c)
       g_pending_stop = g_or_high;
       g_pending_tgt  = g_or_low - InpTargetR * rng;
      }
+  }
+
+//+------------------------------------------------------------------+
+//| Filtro de tendencia (R-15d). Espelha _trend_ok: compara o close   |
+//| da barra atual (shift 1) com o close de N barras antes (shift     |
+//| 1+N). off (InpTrendFilterBars<=0) -> sempre true.                 |
+//+------------------------------------------------------------------+
+bool TrendOk(double c_now, int side)
+  {
+   int n = InpTrendFilterBars;
+   if(n <= 0)
+      return true;
+   double ref = iClose(_Symbol, _Period, 1 + n);
+   if(ref <= 0.0)
+      return false;                  // sem historico suficiente
+   return (side > 0) ? (c_now > ref) : (c_now < ref);
   }
 
 //+------------------------------------------------------------------+

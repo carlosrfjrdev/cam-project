@@ -35,9 +35,10 @@ export function AssetsRunTestsPage() {
   const [symbol, setSymbol] = useState("WIN$");
   const [timeframe, setTimeframe] = useState("M1");
   const [orMinutes, setOrMinutes] = useState(30);
-  const [stopPoints, setStopPoints] = useState(500);
+  const [stopPoints, setStopPoints] = useState(100);
   const [targetPoints, setTargetPoints] = useState(0);
-  const [trailPoints, setTrailPoints] = useState(200);
+  const [trailPoints, setTrailPoints] = useState(400);
+  const [trendFilterBars, setTrendFilterBars] = useState(400);
   const [runId, setRunId] = useState<number | null>(null);
 
   const strategies = useQuery({
@@ -58,6 +59,7 @@ export function AssetsRunTestsPage() {
           stop_points: stopPoints,
           target_points: targetPoints,
           trail_points: trailPoints,
+          trend_filter_bars: trendFilterBars,
         },
       }),
     onSuccess: (r) => {
@@ -96,6 +98,7 @@ export function AssetsRunTestsPage() {
           stop_points: stopPoints,
           target_points: targetPoints,
           trail_points: trailPoints,
+          trend_filter_bars: trendFilterBars,
         },
       }),
   });
@@ -166,6 +169,12 @@ export function AssetsRunTestsPage() {
           <TextField
             size="small" type="number" label="Trail (pontos)" value={trailPoints}
             onChange={(e) => setTrailPoints(Number(e.target.value))} sx={{ width: 120 }}
+          />
+        </Tooltip>
+        <Tooltip title="Gate de regime: só entra a favor da tendência das últimas N barras (~400 = 1 dia). Reduz drawdown e falsos rompimentos. 0 = desligado.">
+          <TextField
+            size="small" type="number" label="Tendência (barras)" value={trendFilterBars}
+            onChange={(e) => setTrendFilterBars(Number(e.target.value))} sx={{ width: 140 }}
           />
         </Tooltip>
         <Button
