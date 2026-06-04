@@ -15,7 +15,8 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from cam.features.research.leadlag import analysis, validation
+from cam._shared.research_kernel import validation
+from cam.features.research.leadlag import analysis
 from cam.features.research.leadlag import repository as repo
 
 

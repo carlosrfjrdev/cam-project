@@ -1,7 +1,7 @@
 """Testes das barras canônicas determinísticas (R-10/R-11/R-12) — puros."""
 from datetime import datetime
 
-from cam.features.research.leadlag.bars import (
+from cam._shared.research_kernel.bars import (
     Bar,
     aggressor_from_flags,
     derive,

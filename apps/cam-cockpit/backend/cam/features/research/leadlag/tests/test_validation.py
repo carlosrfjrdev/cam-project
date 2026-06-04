@@ -1,7 +1,7 @@
 """Testes do núcleo de validação estatística (R-30/R-32, §5.1) — puros."""
 import math
 
-from cam.features.research.leadlag.validation import (
+from cam._shared.research_kernel.validation import (
     TickObs,
     benjamini_hochberg,
     corr_pvalue,

@@ -16,8 +16,8 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from cam._shared.research_kernel.bars import Bar, aggressor_from_flags, derive
 from cam.features.research.leadlag import repository as repo
-from cam.features.research.leadlag.bars import Bar, aggressor_from_flags, derive
 from cam.features.research.leadlag.snapshot import batch_hash, composite_hash
 
 # A fonte injeta estes callables. Retorno espelha o contrato do bridge MT5.
