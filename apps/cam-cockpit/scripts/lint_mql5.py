@@ -5,13 +5,17 @@ lint_mql5.py — TASK-010 (BL-A SPEC v0.4).
 Lint determinístico que falha CI se chamadas de envio de ordem aparecerem
 em qualquer arquivo .mq5/.mqh fora da allowlist.
 
-Funções proibidas fora de `cam_risk_mirror.mq5`:
+Funções proibidas fora da allowlist:
     OrderSend, OrderClose, PositionOpen, PositionClose, OrderModify
 
 Em BL-A, `cam_risk_mirror.mq5` ainda não existe — então o lint funciona como
 **zero-tolerance** (nenhum .mq5/.mqh pode usar essas funções).
 
-Em BL-E (T025) o allowlist será habilitado para `cam_risk_mirror.mq5`.
+Em BL-E (T025) o allowlist foi habilitado para `cam_risk_mirror.mq5`.
+
+StrategyLab Onda 1 (ADR-SL-04) adiciona `cam_d1_orb30_exec.mq5` à allowlist —
+o EA EXECUTOR da estratégia D1 (opera de verdade, DEMO-only). O EA gravador de
+paridade `cam_d1_orb30.mq5` continua FORA da allowlist (não envia ordem).
 
 CLI:
     python scripts/lint_mql5.py [--mql5-dir PATH] [--json]
@@ -38,8 +42,10 @@ _FORBIDDEN_FUNCS = (
     "OrderModify",
 )
 
-# Arquivo permitido a usar OrderSend etc. (criado em BL-E T025).
-_ALLOWED_FILES = {"cam_risk_mirror.mq5"}
+# Arquivos permitidos a usar OrderSend etc.:
+#   - cam_risk_mirror.mq5   (BL-E T025) — executor com Risk Engine espelho.
+#   - cam_d1_orb30_exec.mq5 (ADR-SL-04) — executor D1 puro (DEMO-only, sem risco).
+_ALLOWED_FILES = {"cam_risk_mirror.mq5", "cam_d1_orb30_exec.mq5"}
 
 
 def _strip_comments_and_strings(line: str) -> str:

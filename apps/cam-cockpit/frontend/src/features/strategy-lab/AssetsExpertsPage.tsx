@@ -21,14 +21,22 @@ import {
   parseEaLedgerCsv, postParity, type ParityReport,
 } from "./api";
 
-// Onda 1: o "robô" é o gravador de paridade cam_d1_orb30 (sem ordem).
+// Onda 1: dois EAs para a D1 (ADR-SL-04).
 const ROBOTS = [
   {
-    id: "cam_d1_orb30",
-    name: "D1 ORB-30",
+    id: "cam_d1_orb30_exec",
+    name: "D1 ORB-30 · Executor",
     symbol: "WIN$",
     unit: "ativo único",
-    state: "gravador (sem ordem)",
+    state: "executa a estratégia (a mercado, SL/TP)",
+    demo: true,
+  },
+  {
+    id: "cam_d1_orb30",
+    name: "D1 ORB-30 · Gravador",
+    symbol: "WIN$",
+    unit: "ativo único",
+    state: "gravador de paridade (sem ordem)",
     demo: true,
   },
 ];
@@ -80,8 +88,10 @@ export function AssetsExpertsPage() {
       </Stack>
 
       <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
-        O EA cam_d1_orb30 não envia ordem — grava o ledger canônico no Strategy
-        Tester para a paridade. Execução real em DEMO é etapa posterior.
+        Dois EAs para a D1 (ADR-SL-04): o <strong>Executor</strong> opera a
+        estratégia a mercado (ordens visíveis no Strategy Tester, DEMO-only, sem
+        Risk Engine ainda); o <strong>Gravador</strong> exporta o ledger canônico
+        para a paridade matemática contra o backtest do CAM.
       </Typography>
 
       <ParityPanel />
