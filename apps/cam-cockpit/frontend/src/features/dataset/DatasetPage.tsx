@@ -29,6 +29,7 @@ export function DatasetPage() {
   const [count, setCount] = useState(40000);
   const [withTicks, setWithTicks] = useState(false);
   const [tickCount, setTickCount] = useState(500000);
+  const [fullExtract, setFullExtract] = useState(true);
   const [lastIngest, setLastIngest] = useState<IngestResult | null>(null);
   const [confirmAll, setConfirmAll] = useState(false);
 
@@ -50,9 +51,9 @@ export function DatasetPage() {
     mutationFn: () =>
       postIngest({
         sources: universe.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean),
-        count,
+        count: fullExtract ? 0 : count,
         with_ticks: withTicks,
-        tick_count: tickCount,
+        tick_count: fullExtract ? 0 : tickCount,
       }),
     onSuccess: (res) => {
       setLastIngest(res);
@@ -85,11 +86,12 @@ export function DatasetPage() {
           <TextField
             size="small" type="number" label="Barras (M1)" value={count}
             onChange={(e) => setCount(Number(e.target.value))} sx={{ width: 130 }}
+            disabled={fullExtract}
           />
           <TextField
             size="small" type="number" label="Ticks (máx)" value={tickCount}
             onChange={(e) => setTickCount(Number(e.target.value))}
-            sx={{ width: 130 }} disabled={!withTicks}
+            sx={{ width: 130 }} disabled={!withTicks || fullExtract}
           />
           <Button
             variant="contained" onClick={() => ingest.mutate()} disabled={ingest.isPending}
@@ -97,14 +99,22 @@ export function DatasetPage() {
             {ingest.isPending ? "Ingerindo…" : "Ingerir"}
           </Button>
         </Stack>
-        <FormControlLabel
-          control={
-            <Checkbox size="small" checked={withTicks}
-              onChange={(e) => setWithTicks(e.target.checked)} />
-          }
-          label="Incluir ticks (bulk via GET_TICKS — pesado; só p/ análises de fluxo/Lead-Lag)"
-          sx={{ mt: 0.5 }}
-        />
+        <Stack direction="row" sx={{ flexWrap: "wrap" }}>
+          <FormControlLabel
+            control={
+              <Checkbox size="small" checked={fullExtract}
+                onChange={(e) => setFullExtract(e.target.checked)} />
+            }
+            label="Extrair tudo (loop em chunks até esgotar o histórico)"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox size="small" checked={withTicks}
+                onChange={(e) => setWithTicks(e.target.checked)} />
+            }
+            label="Incluir ticks (bulk via GET_TICKS — pesado)"
+          />
+        </Stack>
         {ingest.isError && (
           <Alert severity="warning" sx={{ mt: 1 }}>
             Falha na ingestão. Verifique se o MT5 está aberto e o EA cam_bridge atachado.

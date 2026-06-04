@@ -202,14 +202,23 @@ class LeadLagIngestionService:
         tick_count: int,
     ) -> int:
         """
-        Ingere ticks REAIS em BULK, paginando por from_msc (GET_TICKS). Persiste em
-        lotes até atingir `tick_count` ou esgotar o histórico. Cada tick: preço
-        (last; fallback bid/ask), volume, agressor (das flags), flags cruas.
+        Ingere ticks REAIS em BULK, paginando por from_msc (GET_TICKS). Loop até
+        esgotar o histórico (bloco curto) ou atingir `tick_count`. `tick_count<=0`
+        ⇒ TODOS os ticks. Cada tick: preço (last; fallback bid/ask), volume,
+        agressor (das flags), flags cruas.
         """
+        all_mode = tick_count <= 0
         total = 0
         from_msc = 0
-        while total < tick_count:
-            want = min(self._TICK_CHUNK, tick_count - total)
+        iters = 0
+        while True:
+            iters += 1
+            if iters > 200_000:
+                break  # guarda contra loop infinito
+            remaining = tick_count - total
+            want = self._TICK_CHUNK if all_mode else min(self._TICK_CHUNK, remaining)
+            if want <= 0:
+                break
             resp = await tick_fetcher(symbol, from_msc, want)
             if resp.get("status") != "ok":
                 break

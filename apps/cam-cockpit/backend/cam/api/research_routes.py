@@ -38,36 +38,46 @@ class IngestRequest(BaseModel):
     timeframes: list[str] = Field(
         default_factory=lambda: ["M5", "M15", "M30", "H1", "H4", "D1"]
     )
-    # "máximo que o MT5 entregar" — paginado em blocos de 5000 (cam_bridge 0.4.1).
-    count: int = Field(default=5000, ge=1, le=200000)
+    # blocos de 5000 (cam_bridge). 0 = EXTRAIR TUDO (loop até esgotar o histórico).
+    count: int = Field(default=5000, ge=0, le=10_000_000)
     with_ticks: bool = True
-    # ticks reais em bulk (GET_TICKS paginado). "todos os ticks" -> valor alto.
-    tick_count: int = Field(default=2000, ge=1, le=50_000_000)
+    # ticks reais em bulk (GET_TICKS paginado). 0 = TODOS os ticks (loop até esgotar).
+    tick_count: int = Field(default=2000, ge=0, le=200_000_000)
 
 
 # Casa com InpMaxCandles do cam_bridge (cap por requisição p/ proteger heartbeat).
 _CANDLE_CHUNK = 5000
+# Guarda contra loop infinito no pooling (5000 blocos = 25M candles).
+_MAX_ITERS = 5000
 
 
 async def _candle_fetcher(symbol: str, timeframe: str, count: int) -> dict[str, Any]:
     """
     Borda: chama o bridge MT5. O serviço de research recebe isto injetado.
 
-    PAGINAÇÃO (cam_bridge 0.4.1): o EA limita cada GET_CANDLES a InpMaxCandles
-    (5000) para não travar o heartbeat single-thread. Para ingerir histórico longo
-    (meses de M1), pedimos blocos sucessivos com `start_pos` crescente e
-    concatenamos. Cada bloco vem ascendente; blocos mais ANTIGOS (pos maior) vêm
-    ANTES. Retry só importa no 1º bloco (CopyRates sincroniza o histórico).
+    POOLING DE EXTRAÇÃO (cam_bridge 0.4.1+): o EA limita cada GET_CANDLES a
+    InpMaxCandles (5000) p/ não travar o heartbeat. Pedimos blocos sucessivos com
+    `start_pos` crescente e concatenamos, **em LOOP até esgotar o histórico**
+    (bloco curto = fim). `count <= 0` ⇒ EXTRAIR TUDO (sem teto). Retry só importa
+    no 1º bloco (CopyRates sincroniza o histórico). Cada bloco vem ascendente;
+    blocos mais ANTIGOS (pos maior) vêm ANTES.
     """
     try:
         await _mt5_service.subscribe_symbol(symbol)
     except Exception:
         pass
+    all_mode = count <= 0
     collected: list[Any] = []
     last: dict[str, Any] = {"status": "error", "error": "NO_DATA"}
     pos = 0
-    while len(collected) < count:
-        want = min(_CANDLE_CHUNK, count - len(collected))
+    iters = 0
+    while True:
+        iters += 1
+        if iters > _MAX_ITERS:
+            break  # guarda contra loop infinito
+        want = _CANDLE_CHUNK if all_mode else min(_CANDLE_CHUNK, count - len(collected))
+        if want <= 0:
+            break
         chunk: list[Any] | None = None
         for _ in range(4):
             resp = await _mt5_service.get_candles(
@@ -83,7 +93,7 @@ async def _candle_fetcher(symbol: str, timeframe: str, count: int) -> dict[str, 
         collected = chunk + collected
         pos += len(chunk)
         if len(chunk) < want:
-            break  # fim do histórico disponível
+            break  # fim do histórico disponível (bloco curto)
     if not collected:
         return last
     return {
