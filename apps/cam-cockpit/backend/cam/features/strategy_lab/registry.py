@@ -58,14 +58,16 @@ _D1 = StrategyDef(
     # Default = melhor risco-ajustado provado no WINM26 (6 meses): SL 100, sem TP,
     # trailing 400, GATE de tendência de ~1 dia (400 barras M1). Reduz drawdown e
     # eleva consistência walk-forward. Ajuste conforme o ativo/risco.
+    # Default = config validada pelo Founder no MT5 (tick): SL 700, sem TP,
+    # trailing 800, tendência ~10 dias (4000 barras). ~9% de drawdown.
     default_params={
-        "or_minutes": 30, "stop_points": 100.0, "target_points": 0.0,
-        "trail_points": 400.0, "trend_filter_bars": 400, "min_or_points": 0.0,
+        "or_minutes": 30, "stop_points": 700.0, "target_points": 0.0,
+        "trail_points": 800.0, "trend_filter_bars": 4000, "min_or_points": 0.0,
     },
     param_space={
-        "stop_points": [100.0, 200.0, 300.0],
-        "trail_points": [100.0, 200.0, 400.0],   # 0 = sem stop móvel
-        "trend_filter_bars": [0, 400, 800],       # 0 = sem gate de tendência
+        "stop_points": [300.0, 500.0, 700.0],
+        "trail_points": [400.0, 800.0, 1000.0],   # 0 = sem stop móvel
+        "trend_filter_bars": [400, 1800, 4000],   # 0 = sem gate; >1800 melhores
     },
     runnable=True,
 )
