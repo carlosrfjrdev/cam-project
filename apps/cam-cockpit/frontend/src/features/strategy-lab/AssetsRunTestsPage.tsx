@@ -18,8 +18,8 @@ import { StatStrip, type StatItem } from "../../_shared/components/StatStrip";
 import { DetailDisclosure } from "../../_shared/components/DetailDisclosure";
 import { EquityChart } from "./EquityChart";
 import {
-  fetchEquity, fetchRun, fetchStrategies, postBacktest,
-  type BacktestResult,
+  fetchEquity, fetchRun, fetchStrategies, postBacktest, postWalkForward,
+  type BacktestResult, type WalkForwardResult,
 } from "./api";
 
 function GrossChip() {
@@ -72,6 +72,19 @@ export function AssetsRunTestsPage() {
     queryFn: () => fetchRun(runId!),
     enabled: runId !== null,
     retry: false,
+  });
+
+  const walkForward = useMutation({
+    mutationFn: (): Promise<WalkForwardResult> =>
+      postWalkForward(strategyId, {
+        symbol,
+        timeframe,
+        params: {
+          or_minutes: orMinutes,
+          stop_points: stopPoints,
+          target_points: targetPoints,
+        },
+      }),
   });
 
   const m = backtest.data?.metrics;
@@ -199,6 +212,71 @@ export function AssetsRunTestsPage() {
               <Typography variant="body2" color="text.secondary">
                 Nenhum trade neste período.
               </Typography>
+            )}
+          </DetailDisclosure>
+
+          {/* Walk-forward OOS: consistência temporal (accordion fechado) */}
+          <DetailDisclosure title="Walk-forward (OOS)">
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              Roda o backtest em janelas rolantes para ver se o resultado se
+              mantém ao longo do tempo — ou se veio de um só período.
+            </Typography>
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => walkForward.mutate()}
+              disabled={walkForward.isPending}
+            >
+              {walkForward.isPending ? "Rodando…" : "Rodar walk-forward"}
+            </Button>
+
+            {walkForward.data && !walkForward.data.error && (
+              <Box sx={{ mt: 2 }}>
+                <StatStrip
+                  items={[
+                    { label: "Janelas", value: walkForward.data.aggregate.n_windows },
+                    {
+                      label: "Positivas",
+                      value: walkForward.data.aggregate.positive_windows,
+                    },
+                    {
+                      label: "Consistência",
+                      value: `${(walkForward.data.aggregate.consistency * 100).toFixed(0)}%`,
+                      tone:
+                        walkForward.data.aggregate.consistency >= 0.5
+                          ? "success"
+                          : "warning",
+                    },
+                  ]}
+                />
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Janela</TableCell>
+                      <TableCell>Início</TableCell>
+                      <TableCell>Fim</TableCell>
+                      <TableCell align="right">Trades</TableCell>
+                      <TableCell align="right">Bruto</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {walkForward.data.windows.map((w) => (
+                      <TableRow key={w.window}>
+                        <TableCell>{w.window}</TableCell>
+                        <TableCell>{w.ts_start.slice(0, 10)}</TableCell>
+                        <TableCell>{w.ts_end.slice(0, 10)}</TableCell>
+                        <TableCell align="right">{w.n_trades}</TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{ color: w.pnl_bruto >= 0 ? "success.main" : "error.main" }}
+                        >
+                          {w.pnl_bruto.toFixed(2)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Box>
             )}
           </DetailDisclosure>
         </>

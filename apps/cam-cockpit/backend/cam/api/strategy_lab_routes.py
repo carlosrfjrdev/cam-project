@@ -106,6 +106,44 @@ async def run_backtest(strategy_id: str, body: BacktestRequest):
 
 
 # --------------------------------------------------------------------------- #
+# Assets RunTests — walk-forward OOS (consistência temporal — R-18)
+# --------------------------------------------------------------------------- #
+class WalkForwardRequest(BaseModel):
+    symbol: str
+    timeframe: str = "M1"
+    params: dict[str, Any] = Field(default_factory=dict)
+    test: int = Field(default=1000, ge=50)   # tamanho da janela OOS (barras)
+    step: int = Field(default=1000, ge=50)   # passo entre janelas (barras)
+    train: int = Field(default=0, ge=0)      # treino (MVP: params fixos → 0)
+    point_value: float = Field(default=0.20, gt=0.0)
+    qty: int = Field(default=1, ge=1)
+
+
+@router.post("/strategies/{strategy_id}/walk-forward")
+async def run_walk_forward(strategy_id: str, body: WalkForwardRequest):
+    """
+    Roda o backtest em janelas rolantes out-of-sample. Com params fixos, mede a
+    **consistência temporal** do resultado bruto (R-18). Não persiste run.
+    """
+    result = await _service.run_walk_forward(
+        strategy_id=strategy_id,
+        symbol=body.symbol,
+        timeframe=body.timeframe,
+        params=body.params,
+        test=body.test,
+        step=body.step,
+        train=body.train,
+        point_value=body.point_value,
+        qty=body.qty,
+    )
+    if result.get("error") == "NO_DATA":
+        return JSONResponse(status_code=422, content=result)
+    if result.get("error") == "STRATEGY_NOT_RUNNABLE":
+        return JSONResponse(status_code=400, content=result)
+    return result
+
+
+# --------------------------------------------------------------------------- #
 # Assets Strategy — otimizador on-demand
 # --------------------------------------------------------------------------- #
 class OptimizeRequest(BaseModel):

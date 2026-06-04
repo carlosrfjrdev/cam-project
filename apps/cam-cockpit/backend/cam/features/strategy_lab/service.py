@@ -17,6 +17,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from cam._shared.research_kernel.validation import walk_forward_splits
 from cam.features.strategy_lab import registry
 from cam.features.strategy_lab import repository as repo
 from cam.features.strategy_lab.domain import LegTrade, aggregate_by_pair
@@ -269,6 +270,78 @@ class StrategyLabService:
             "no_cliff": result.no_cliff,
             "suggested_param_set_id": suggestion_id,
             "note": "Sugestão — NÃO aplicada automaticamente (R-08).",
+        }
+
+    # ---- walk-forward OOS (Assets RunTests — R-18/T-023) ----
+    async def run_walk_forward(
+        self,
+        strategy_id: str,
+        symbol: str,
+        timeframe: str,
+        params: dict[str, Any],
+        test: int = 1000,
+        step: int = 1000,
+        train: int = 0,
+        point_value: float = 0.20,
+        qty: int = 1,
+        window_start: datetime | None = None,
+        window_end: datetime | None = None,
+    ) -> dict[str, Any]:
+        """
+        Roda o backtest em JANELAS rolantes out-of-sample (R-18). Com parâmetros
+        FIXOS (MVP), é um teste de **consistência temporal**: o resultado bruto se
+        mantém ao longo de janelas distintas, ou só veio de um período? Reusa
+        `walk_forward_splits` do research_kernel. Resultado BRUTO.
+        """
+        sd = registry.get(strategy_id)
+        if sd is None or not sd.runnable:
+            return {"error": "STRATEGY_NOT_RUNNABLE", "strategy_id": strategy_id}
+
+        async with self._factory() as session:
+            n_bars = await repo.symbol_has_data(session, symbol, timeframe)
+            if n_bars == 0:
+                return {"error": "NO_DATA", "symbol": symbol.upper()}
+            bars = await repo.load_bars(
+                session, symbol, timeframe, window_start, window_end
+            )
+
+        splits = walk_forward_splits(len(bars), train, test, step)
+        windows: list[dict[str, Any]] = []
+        pnl_total = 0.0
+        positive = 0
+        for i, sp in enumerate(splits):
+            seg = bars[sp.test_start : sp.test_end]
+            if not seg:
+                continue
+            legs = registry.run(strategy_id, seg, params, point_value, qty)
+            m = compute_metrics(legs)
+            pnl_total += m.pnl_bruto_total
+            if m.pnl_bruto_total > 0:
+                positive += 1
+            windows.append(
+                {
+                    "window": i,
+                    "ts_start": seg[0].ts_open.isoformat(),
+                    "ts_end": seg[-1].ts_open.isoformat(),
+                    "n_trades": m.n_trades,
+                    "win_rate": round(m.win_rate, 4),
+                    "pnl_bruto": round(m.pnl_bruto_total, 2),
+                    "max_drawdown": round(m.max_drawdown, 2),
+                }
+            )
+
+        n_win = len(windows)
+        return {
+            "strategy_id": strategy_id.upper(),
+            "symbol": symbol.upper(),
+            "label": GROSS_LABEL,
+            "windows": windows,
+            "aggregate": {
+                "n_windows": n_win,
+                "positive_windows": positive,
+                "consistency": round(positive / n_win, 4) if n_win else 0.0,
+                "pnl_bruto_total": round(pnl_total, 2),
+            },
         }
 
     # ---- leitura de resultado (Assets RunTests) ----

@@ -142,6 +142,47 @@ export const fetchRuns = (strategyId?: string) =>
   );
 
 // --------------------------------------------------------------------------- //
+// Assets RunTests — walk-forward OOS (consistência temporal — R-18)
+// --------------------------------------------------------------------------- //
+export interface WalkForwardWindow {
+  window: number;
+  ts_start: string;
+  ts_end: string;
+  n_trades: number;
+  win_rate: number;
+  pnl_bruto: number;
+  max_drawdown: number;
+}
+
+export interface WalkForwardResult {
+  strategy_id: string;
+  symbol: string;
+  label: string;
+  windows: WalkForwardWindow[];
+  aggregate: {
+    n_windows: number;
+    positive_windows: number;
+    consistency: number;
+    pnl_bruto_total: number;
+  };
+  error?: string;
+}
+
+export interface WalkForwardRequest {
+  symbol: string;
+  timeframe?: string;
+  params?: Record<string, unknown>;
+  test?: number;
+  step?: number;
+}
+
+export const postWalkForward = (strategyId: string, body: WalkForwardRequest) =>
+  api.post<WalkForwardResult>(
+    `/strategy-lab/strategies/${strategyId}/walk-forward`,
+    body,
+  );
+
+// --------------------------------------------------------------------------- //
 // Assets Strategy — otimizador on-demand (SUGERE, não aplica)
 // --------------------------------------------------------------------------- //
 export interface OptimizeRequest {
