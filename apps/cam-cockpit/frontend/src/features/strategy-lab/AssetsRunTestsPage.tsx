@@ -5,7 +5,7 @@
  * de chips (StatStrip). Trades em accordion FECHADO. Chip `bruto`+tooltip
  * carrega a honestidade do MVP — nunca parágrafo.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Box, Button, Chip, MenuItem, Stack, Table, TableBody, TableCell,
@@ -34,11 +34,8 @@ export function AssetsRunTestsPage() {
   const [strategyId, setStrategyId] = useState("D1");
   const [symbol, setSymbol] = useState("WIN$");
   const [timeframe, setTimeframe] = useState("M1");
-  const [orMinutes, setOrMinutes] = useState(30);
-  const [stopPoints, setStopPoints] = useState(100);
-  const [targetPoints, setTargetPoints] = useState(0);
-  const [trailPoints, setTrailPoints] = useState(400);
-  const [trendFilterBars, setTrendFilterBars] = useState(400);
+  // Parâmetros DINÂMICOS: vêm dos default_params da estratégia selecionada.
+  const [params, setParams] = useState<Record<string, number>>({});
   const [runId, setRunId] = useState<number | null>(null);
 
   const strategies = useQuery({
@@ -47,21 +44,25 @@ export function AssetsRunTestsPage() {
     retry: false,
   });
   const runnable = strategies.data?.strategies.filter((s) => s.runnable) ?? [];
+  const selectedDef = strategies.data?.strategies.find((s) => s.id === strategyId);
+
+  // ao trocar de estratégia, carrega os parâmetros padrão dela.
+  useEffect(() => {
+    if (selectedDef) {
+      const init: Record<string, number> = {};
+      for (const [k, v] of Object.entries(selectedDef.default_params)) {
+        init[k] = Number(v);
+      }
+      setParams(init);
+      setTimeframe(selectedDef.timeframe || "M1");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [strategyId, strategies.data]);
 
   const qc = useQueryClient();
   const backtest = useMutation({
     mutationFn: (): Promise<BacktestResult> =>
-      postBacktest(strategyId, {
-        symbol,
-        timeframe,
-        params: {
-          or_minutes: orMinutes,
-          stop_points: stopPoints,
-          target_points: targetPoints,
-          trail_points: trailPoints,
-          trend_filter_bars: trendFilterBars,
-        },
-      }),
+      postBacktest(strategyId, { symbol, timeframe, params }),
     onSuccess: (r) => {
       setRunId(r.error ? null : r.run_id);
       qc.invalidateQueries({ queryKey: ["strategy-lab", "runs"] });
@@ -90,17 +91,7 @@ export function AssetsRunTestsPage() {
 
   const walkForward = useMutation({
     mutationFn: (): Promise<WalkForwardResult> =>
-      postWalkForward(strategyId, {
-        symbol,
-        timeframe,
-        params: {
-          or_minutes: orMinutes,
-          stop_points: stopPoints,
-          target_points: targetPoints,
-          trail_points: trailPoints,
-          trend_filter_bars: trendFilterBars,
-        },
-      }),
+      postWalkForward(strategyId, { symbol, timeframe, params }),
   });
 
   // métrica vem da mutation fresca OU do run salvo (clique no histórico).
@@ -151,32 +142,20 @@ export function AssetsRunTestsPage() {
           size="small" label="TF" value={timeframe}
           onChange={(e) => setTimeframe(e.target.value.toUpperCase())} sx={{ width: 80 }}
         />
-        <TextField
-          size="small" type="number" label="OR (min)" value={orMinutes}
-          onChange={(e) => setOrMinutes(Number(e.target.value))} sx={{ width: 100 }}
-        />
-        <TextField
-          size="small" type="number" label="SL (pontos)" value={stopPoints}
-          onChange={(e) => setStopPoints(Number(e.target.value))} sx={{ width: 110 }}
-        />
-        <Tooltip title="TP fixo em pontos. 0 = sem TP (deixa correr no stop móvel).">
+        {/* Parâmetros dinâmicos da estratégia selecionada (D1, D2, …). */}
+        {Object.keys(params).map((k) => (
           <TextField
-            size="small" type="number" label="TP (pontos)" value={targetPoints}
-            onChange={(e) => setTargetPoints(Number(e.target.value))} sx={{ width: 110 }}
+            key={k}
+            size="small"
+            type="number"
+            label={k}
+            value={params[k]}
+            onChange={(e) =>
+              setParams((p) => ({ ...p, [k]: Number(e.target.value) }))
+            }
+            sx={{ width: 130 }}
           />
-        </Tooltip>
-        <Tooltip title="Stop móvel: pontos atrás do pico. O stop só anda a favor. 0 = desligado.">
-          <TextField
-            size="small" type="number" label="Trail (pontos)" value={trailPoints}
-            onChange={(e) => setTrailPoints(Number(e.target.value))} sx={{ width: 120 }}
-          />
-        </Tooltip>
-        <Tooltip title="Gate de regime: só entra a favor da tendência das últimas N barras (~400 = 1 dia). Reduz drawdown e falsos rompimentos. 0 = desligado.">
-          <TextField
-            size="small" type="number" label="Tendência (barras)" value={trendFilterBars}
-            onChange={(e) => setTrendFilterBars(Number(e.target.value))} sx={{ width: 140 }}
-          />
-        </Tooltip>
+        ))}
         <Button
           variant="contained"
           onClick={() => backtest.mutate()}

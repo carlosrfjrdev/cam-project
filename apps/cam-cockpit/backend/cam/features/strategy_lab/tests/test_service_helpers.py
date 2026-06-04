@@ -63,9 +63,10 @@ def test_registry_d1_runnable_e_tem_param_space() -> None:
 def test_registry_lista_catalogo_com_nao_runnable() -> None:
     ids = {s.id for s in registry.list_strategies()}
     assert {"D1", "D2", "D3", "V1", "V2", "S1", "S2", "LS1", "LS2", "LS3"} <= ids
-    # só D1 é runnable na Onda 1
+    # D1 e D2 (derivativos single-symbol) são runnable; pares/multi = Onda 2.
     runnable = {s.id for s in registry.list_strategies() if s.runnable}
-    assert runnable == {"D1"}
+    assert runnable == {"D1", "D2"}
+    assert registry.get("D3").runnable is False
 
 
 def test_registry_run_d1_produz_ledger() -> None:

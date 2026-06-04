@@ -15,6 +15,10 @@ from cam._shared.research_kernel.bars import Bar
 from cam.features.strategy_lab.backtest_engine import run_d1_backtest
 from cam.features.strategy_lab.domain import LegTrade, Unit
 from cam.features.strategy_lab.strategies.d1_orb30 import D1Params, generate_signals
+from cam.features.strategy_lab.strategies.d2_vwap import D2Params
+from cam.features.strategy_lab.strategies.d2_vwap import (
+    generate_signals as generate_signals_d2,
+)
 
 
 @dataclass(frozen=True)
@@ -66,14 +70,31 @@ _D1 = StrategyDef(
     runnable=True,
 )
 
+_D2 = StrategyDef(
+    id="D2",
+    name="VWAP Mean-Reversion fade (WDO)",
+    unit=Unit.SINGLE,
+    timeframe="M1",
+    description=(
+        "Fade da esticada: opera CONTRA quando o preço estica ±k·σ do VWAP da "
+        "sessão; alvo no VWAP; stop além de k_stop·σ; sem runner. Múltiplos/dia."
+    ),
+    default_params={"k_entry": 2.0, "k_stop": 3.0, "warmup_bars": 30},
+    param_space={
+        "k_entry": [1.5, 2.0, 2.5],
+        "k_stop": [3.0, 4.0],
+        "warmup_bars": [20, 30, 45],
+    },
+    runnable=True,
+)
+
 _CATALOG: dict[str, StrategyDef] = {
     _D1.id: _D1,
+    _D2.id: _D2,
     # Ondas 2-5 (ainda sem par MQL5 + paridade) — listadas, não-runnable:
-    "D2": StrategyDef("D2", "Pullback de tendência (intraday)", Unit.SINGLE,
-                      "M1", "Reentrada a favor da tendência após pullback.",
-                      {}, {}, runnable=False),
-    "D3": StrategyDef("D3", "Long-short de par (spread intraday)", Unit.PAIR,
-                      "M1", "Spread WIN×WDO; par como unidade.",
+    "D3": StrategyDef("D3", "Spread/lead-lag WIN×WDO (par)", Unit.PAIR,
+                      "M1", "Spread market-neutral WIN×WDO; par como unidade "
+                      "(multi-símbolo — Onda 2).",
                       {}, {}, runnable=False),
     "V1": StrategyDef("V1", "Reversão à média (banda)", Unit.SINGLE,
                       "M1", "Compra/venda no extremo da banda.",
@@ -126,6 +147,19 @@ def _d1_params(params: dict) -> D1Params:
     )
 
 
+def _d2_params(params: dict) -> D2Params:
+    params = {**_D2.default_params, **params}
+    base = D2Params()
+    return D2Params(
+        k_entry=float(params.get("k_entry", base.k_entry)),
+        k_stop=float(params.get("k_stop", base.k_stop)),
+        warmup_bars=int(params.get("warmup_bars", base.warmup_bars)),
+        session_open=base.session_open,
+        session_close=base.session_close,
+        entry_until=base.entry_until,
+    )
+
+
 def run(
     strategy_id: str,
     bars: list[Bar],
@@ -134,14 +168,19 @@ def run(
     qty: int,
 ) -> list[LegTrade]:
     """
-    Despacha o backtest da estratégia sobre as barras (já carregadas). Onda 1:
-    só D1. Determinístico; a MESMA rotina serve o otimizador (in-memory).
+    Despacha o backtest da estratégia sobre as barras (já carregadas). Single-
+    symbol: D1 (ORB) e D2 (VWAP fade) reusam o MESMO motor (run_d1_backtest é
+    agnóstico — consome sinais). Determinístico; a MESMA rotina serve o otimizador.
     """
     sid = strategy_id.upper()
     if sid == "D1":
         p = _d1_params(params)
         signals = generate_signals(bars, p)
         return run_d1_backtest(bars, signals, p, point_value=point_value, qty=qty)
+    if sid == "D2":
+        p2 = _d2_params(params)
+        signals = generate_signals_d2(bars, p2)
+        return run_d1_backtest(bars, signals, p2, point_value=point_value, qty=qty)
     raise NotImplementedError(
-        f"Estratégia '{sid}' ainda não é runnable (Ondas 2-5 — ADR-SL-01)."
+        f"Estratégia '{sid}' ainda não é runnable (par/multi-símbolo — Onda 2)."
     )
