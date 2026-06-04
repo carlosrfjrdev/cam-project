@@ -1,7 +1,7 @@
 ---
 template: SCOPE
 phase: DISC
-status: Draft v0.7 — REANALISADO sob decisões do Founder (2026-06-03) — aguarda gate
+status: APROVADO v0.7 — Founder ratificou (2026-06-03); ARCH concluida (3 ADRs Accepted)
 produto: TCaM (cam-cockpit)
 id: SCOPE-STRATEGYLAB-TRIAD
 version: v0.7
@@ -442,35 +442,45 @@ materializar isso. **Oscar decide a forma no ADR** (extensão da gramática vs u
   — `CopyRates`/`SymbolSelect` do símbolo secundário no tester (com caveats), validação em DEMO
   ao vivo, ou pré-carga sincronizada? Há **preferência** sua por validar multi-símbolo **em DEMO
   ao vivo** (mais fiel) vs **no Strategy Tester** (mais reproduzível)?
+  R: O oscar pode definir.
 - [ ] **Q2 — Ordem de implementação incremental:** confirma que o **escopo são as 10**, mas a
   **construção é incremental** começando pela mais simples single-symbol (**D1**) para provar a
   arquitetura fim-a-fim, depois multi-símbolo (D3/LS), depois à vista (V/S)? (A ordem fina é do
   PLAN; aqui só confirmo o princípio "1 fim-a-fim antes de paralelizar".)
+  R: ok podemos fazer d1, eu testo mo EA e backtest via CAM depois dou o ok para demais
 - [ ] **Q3 — DSL fonte única vs dupla implementação:** adota **DSL declarativa como fonte única**
   (Oscar recomenda), estendida para **par/multi-símbolo**? E no MVP: `.mq5` **à mão derivado da
   DSL** para as primeiras, **codegen automático** depois — ou já quer o gerador desde o início
   (com 10 estratégias, o codegen se justifica mais cedo)?
+  R: assim o codegen não teremos pela aplicação não quero dupla implementação Python para CAM e EA... vamos de backtests em 2 locais... redundancia para segurança
 - [ ] **Q4 — Persistência: `research_*` vs `strategy_*`:** confirma **reusar `research_bars`/
   `research_ticks`** como ingestão canônica (provenance) e criar **só** o novo de domínio
   (`strategy_param_set`, trade multi-perna), em vez de tabelas `strategy_*` paralelas?
+  R: Confirmo
 - [ ] **Q5 — Indicadores: materializados vs on-the-fly:** no MVP, computar indicadores
   **on-the-fly** das barras canônicas (Ada recomenda — mais simples, menos drift), deixando
   materialização em tabela para **Later**?
+  R: Indicadores on the fly... primeiro, se eu sentir falta materializamos em um 0.6.1
 - [ ] **Q6 — Tolerância de paridade de lógica:** com C7/C8 fora, o alvo é **100% dos sinais
   coincidentes + preço ≤ 1 tick + volume financeiro idêntico**. Confirma esse alvo apertado
   como critério PASS do MVP?
+  R:OK
 - [ ] **Q7 — Convenção de barra/fuso:** confirmar barra canônica de `bars.py` (M1→TF) + fuso
   America/Sao_Paulo como regra única Py↔EA (sem default do broker/MT5), **idêntica para todos os
   símbolos de um par** (sincronização por timestamp).
+  R: isso mesmo fuso sp é o padrão b3
 - [ ] **Q8 — Pernas short (LS) no EA DEMO:** confirma que no MVP a **perna short** é simulada
   mecanicamente (tester permite SELL) **sem modelar aluguel/disponibilidade/custo de BTC** —
   coerente com valores brutos — e que aluguel real fica Later?
+  R:OK 
 - [ ] **Q9 — Otimizador on-demand:** confirma que **grid + random + walk-forward** é suficiente
   para o MVP, que ele **sugere (não aplica)**, e que é **acionado pelo usuário** (não roda
   automático em todo backtest)?
+  R: OK
 - [ ] **Q10 — Unidade de trade no par:** para D3/LS, o resultado deve exibir e contabilizar o
   **par como unidade** (gain/loss do spread agregado) **ou** as **duas pernas separadas** (P&L
   bruto de cada perna)? (Afeta UI, schema `backtest_trade` e o relatório de paridade.)
+  R: Par como unidade se eu sentir falta peço separado.
 
 ---
 
