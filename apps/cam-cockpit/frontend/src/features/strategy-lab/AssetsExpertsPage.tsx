@@ -7,7 +7,7 @@
  * bloqueante — FAIL abre divergências para investigar.
  */
 import { useMemo, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Alert, Box, Button, Chip, Stack, Table, TableBody, TableCell, TableHead,
   TableRow, TextField, Tooltip, Typography,
@@ -17,9 +17,20 @@ import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
 import { PageContainer } from "../../_shared/components/PageContainer";
 import { PageHeader } from "../../_shared/components/PageHeader";
 import { DetailDisclosure } from "../../_shared/components/DetailDisclosure";
+import { api } from "../../api/client";
+import type { MT5BridgeStatus } from "../../api/types";
 import {
   parseEaLedgerCsv, postParity, type ParityReport,
 } from "./api";
+
+interface EaState {
+  ea_id: string;
+  asset: string;
+  version: string;
+  hash: string;
+  paused: boolean;
+  online: boolean;
+}
 
 // Onda 1: dois EAs para a D1 (ADR-SL-04).
 const ROBOTS = [
@@ -41,25 +52,92 @@ const ROBOTS = [
   },
 ];
 
+const BRIDGE_TONE: Record<string, "success" | "default" | "warning"> = {
+  ONLINE: "success",
+  OFFLINE: "default",
+  RECONNECTING: "warning",
+};
+
 export function AssetsExpertsPage() {
+  const bridge = useQuery({
+    queryKey: ["mt5", "bridge-status"],
+    queryFn: () => api.get<MT5BridgeStatus>("/mt5/bridge/status"),
+    refetchInterval: 5_000,
+    retry: false,
+  });
+  const eas = useQuery({
+    queryKey: ["mt5", "ea-status"],
+    queryFn: () => api.get<{ eas: EaState[] }>("/mt5/ea/status"),
+    refetchInterval: 5_000,
+    retry: false,
+  });
+  const state = bridge.data?.state ?? "OFFLINE";
+  const liveEas = eas.data?.eas ?? [];
+
   return (
     <PageContainer maxWidth={1000}>
       <PageHeader
         title="Robôs (Experts)"
         icon={<SmartToyIcon color="secondary" />}
         actions={
-          <Tooltip title="Os EAs da Onda 1 só rodam em conta DEMO (guard-rail duplo).">
-            <Chip
-              size="small"
-              color="warning"
-              icon={<VerifiedUserIcon />}
-              label="DEMO"
-            />
-          </Tooltip>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Tooltip title="Conexão com a bridge MT5 (cam_bridge). OFFLINE = MT5/EA fechado.">
+              <Chip size="small" color={BRIDGE_TONE[state] ?? "default"} label={`MT5 ${state}`} />
+            </Tooltip>
+            <Tooltip title="Os EAs da Onda 1 só rodam em conta DEMO (guard-rail duplo).">
+              <Chip
+                size="small"
+                color="warning"
+                icon={<VerifiedUserIcon />}
+                label="DEMO"
+              />
+            </Tooltip>
+          </Stack>
         }
       />
 
-      {/* Manchete: lista de robôs */}
+      {/* EAs ao vivo (quando a bridge está ONLINE e há EAs atachados) */}
+      {liveEas.length > 0 && (
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            Ao vivo (MT5)
+          </Typography>
+          <Stack spacing={1}>
+            {liveEas.map((ea) => (
+              <Box
+                key={ea.ea_id}
+                sx={{
+                  p: 2, borderRadius: 1, border: "1px solid", borderColor: "divider",
+                  bgcolor: "background.paper",
+                }}
+              >
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight={700}>
+                      {ea.ea_id} · {ea.asset}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      v{ea.version} · {ea.hash?.slice(0, 8)}
+                    </Typography>
+                  </Box>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Chip
+                      size="small"
+                      color={ea.online ? (ea.paused ? "warning" : "success") : "default"}
+                      label={ea.online ? (ea.paused ? "● pausado" : "● rodando") : "○ offline"}
+                    />
+                  </Stack>
+                </Stack>
+              </Box>
+            ))}
+          </Stack>
+        </Box>
+      )}
+
+      {/* EAs definidos da D1 (rodam no Strategy Tester) */}
+      <Typography variant="subtitle2" sx={{ mb: 1 }}>
+        Definidos (Strategy Tester)
+      </Typography>
       <Stack spacing={1}>
         {ROBOTS.map((r) => (
           <Box
