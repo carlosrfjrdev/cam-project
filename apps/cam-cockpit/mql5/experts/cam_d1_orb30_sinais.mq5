@@ -65,6 +65,15 @@ bool     g_short_armed = true;
 datetime g_last_bar    = 0;
 double   g_max_favor   = 0.0;
 
+// Serie diaria construida INTERNAMENTE a partir do M1 (nao depende de PERIOD_D1,
+// que falha no Strategy Tester). Pre-seed do historico no OnInit p/ live.
+#define CAM_DAILY_MAX 400
+double   g_daily[CAM_DAILY_MAX];
+int      g_daily_n     = 0;
+string   g_last_daily  = "";       // data (YYYY-MM-DD) do ultimo close ja gravado
+double   g_run_close   = 0.0;      // ultimo close da sessao corrente
+bool     g_have_run    = false;
+
 //+------------------------------------------------------------------+
 int OnInit()
   {
@@ -81,9 +90,10 @@ int OnInit()
    g_trade.SetExpertMagicNumber(InpMagic);
    g_trade.SetDeviationInPoints(InpDeviationPoints);
    g_trade.SetTypeFillingBySymbol(_Symbol);
-   PrintFormat("[CamD1Sinais] %s ativo. Symbol=%s regime=%s.",
+   SeedDaily();   // pre-seed da serie diaria (best-effort; tester completa ao vivo)
+   PrintFormat("[CamD1Sinais] %s ativo. Symbol=%s regime=%s diarias_seed=%d.",
                CAM_D1_SINAIS_VERSION, _Symbol,
-               (InpUseRegimeFilter ? "ON" : "OFF"));
+               (InpUseRegimeFilter ? "ON" : "OFF"), g_daily_n);
    return(INIT_SUCCEEDED);
   }
 
@@ -112,9 +122,12 @@ void ProcessBar(datetime t, double h, double l, double c)
    string session = SessionDate(t);
    if(session != g_session)
      {
+      // grava o close final da sessao que terminou na serie diaria interna.
+      if(g_have_run && g_session != "") PushDaily(g_session, g_run_close);
       g_session = session;
       g_or_ready = false; g_long_armed = true; g_short_armed = true;
      }
+   g_run_close = c; g_have_run = true;   // ultimo close da sessao corrente
 
    // stop movel a cada barra com posicao aberta.
    if(InpTrailPoints > 0 && HasPosition())
@@ -218,26 +231,55 @@ bool TrendOk(double c_now, int side)
 
 //+------------------------------------------------------------------+
 //| Regime: ER diario >= min => tendencia (opera). Espelha o Python.  |
+//| ER calculado da serie diaria INTERNA (g_daily) — robusto no tester|
+//| (nao depende de PERIOD_D1).                                       |
 //+------------------------------------------------------------------+
 bool RegimeOk() { double er = RegimeER(); return (er < 0.0) ? false : (er >= InpRegimeErMin); }
 
 double RegimeER()
   {
    int n = InpRegimeErDays;
-   if(n < 2) return -1.0;
-   if(Bars(_Symbol, PERIOD_D1) < n + 2) return -1.0;
-   double c0 = iClose(_Symbol, PERIOD_D1, 1);
-   double cn = iClose(_Symbol, PERIOD_D1, 1 + n);
-   if(c0 <= 0.0 || cn <= 0.0) return -1.0;
+   if(n < 2 || g_daily_n < n + 1) return -1.0;
+   double c0 = g_daily[g_daily_n - 1];        // close diario mais recente
+   double cn = g_daily[g_daily_n - 1 - n];    // n dias antes
    double denom = 0.0;
-   for(int k = 1; k <= n; k++)
-     {
-      double a = iClose(_Symbol, PERIOD_D1, k);
-      double b = iClose(_Symbol, PERIOD_D1, k + 1);
-      if(a > 0.0 && b > 0.0) denom += MathAbs(a - b);
-     }
+   for(int i = g_daily_n - n; i <= g_daily_n - 1; i++)
+      denom += MathAbs(g_daily[i] - g_daily[i - 1]);
    if(denom <= 0.0) return -1.0;
    return MathAbs(c0 - cn) / denom;
+  }
+
+//+------------------------------------------------------------------+
+//| Append do close diario na serie interna (monotonico por data).   |
+//+------------------------------------------------------------------+
+void PushDaily(string d, double cl)
+  {
+   if(d <= g_last_daily) return;              // dedup / so avanca
+   if(g_daily_n < CAM_DAILY_MAX)
+      g_daily[g_daily_n++] = cl;
+   else
+     {
+      for(int i = 1; i < CAM_DAILY_MAX; i++) g_daily[i - 1] = g_daily[i];
+      g_daily[CAM_DAILY_MAX - 1] = cl;
+     }
+   g_last_daily = d;
+  }
+
+//+------------------------------------------------------------------+
+//| Pre-seed da serie diaria com o historico (best-effort). No tester |
+//| pode vir vazio/curto -> a serie completa-se com o fluxo M1.       |
+//+------------------------------------------------------------------+
+void SeedDaily()
+  {
+   double cl[]; datetime tm[];
+   int got  = CopyClose(_Symbol, PERIOD_D1, 1, 120, cl);
+   int gott = CopyTime(_Symbol, PERIOD_D1, 1, 120, tm);
+   if(got <= 0 || gott != got) return;
+   for(int i = 0; i < got; i++)            // 0=mais antigo .. got-1=mais recente
+     {
+      MqlDateTime s; TimeToStruct(tm[i], s);
+      PushDaily(StringFormat("%04d-%02d-%02d", s.year, s.mon, s.day), cl[i]);
+     }
   }
 
 //+------------------------------------------------------------------+
