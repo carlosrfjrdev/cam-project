@@ -82,6 +82,14 @@ class TestLintMQL5:
         assert code == 1
         assert any(v["function"] == "OrderSend" for v in data["violations"])
 
+    def test_allows_orders_in_cam_d1_orb30_sinais(self, tmp_path: Path):
+        # ADR-SL-04 — executor D1 + regime embutido (DEMO-only) pode enviar ordem.
+        ok = tmp_path / "cam_d1_orb30_sinais.mq5"
+        ok.write_text("void f() { g_trade.PositionClose(_Symbol); }\n")
+        code, data = _run(tmp_path)
+        assert code == 0
+        assert data["violations"] == []
+
     def test_allows_orders_in_cam_d2_vwap_exec(self, tmp_path: Path):
         # ADR-SL-04 — executor D2 tambem pode enviar ordem (DEMO-only).
         ok = tmp_path / "cam_d2_vwap_exec.mq5"

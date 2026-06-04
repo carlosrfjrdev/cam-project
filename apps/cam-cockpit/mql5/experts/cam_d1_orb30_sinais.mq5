@@ -1,50 +1,61 @@
 //+------------------------------------------------------------------+
 //| cam_d1_orb30_sinais.mq5                                          |
-//| StrategyLab — D1 (ORB-30) — EA de SINAIS / ALERTAS (nao opera).  |
+//| StrategyLab — D1 (ORB-30) — EXECUTOR com SINAIS embutidos.       |
 //|                                                                   |
-//| Mostra ao vivo onde a D1 dispararia: desenha o opening range,    |
-//| marca uma seta na quebra valida (quebra + filtro de tendencia) e |
-//| dispara Alert. Exibe o REGIME (Efficiency Ratio diario) — sinal  |
-//| de macro/volatilidade validado: ER alto = tendencia (operar),    |
-//| ER baixo = lateral (evitar). NAO envia ordem, NAO grava ledger   |
-//| (fora da allowlist do lint_mql5).                                |
+//| ADR-SL-04: executor "one shot one kill" — robo autossuficiente.  |
+//| E o cam_d1_orb30_exec + o GATE DE REGIME (Efficiency Ratio diario)|
+//| embutido e LIGADO por padrao: so opera quando o mercado esta em   |
+//| TENDENCIA (ER alto); fica de fora em mercado LATERAL (ER baixo).  |
+//| O cam_d1_orb30_exec (sem regime) permanece intacto.               |
 //|                                                                   |
-//| Logica de entrada (espelha d1_orb30.py):                          |
-//|   OR = [high,low] dos primeiros InpOrMinutes; quebra long se     |
-//|   close>OR_high, short se <OR_low; filtro de tendencia (so a      |
-//|   favor de N barras); 1 disparo por direcao/dia.                  |
+//| Opera a estrategia PURA a mercado (CTrade), DEMO-only. Na         |
+//| allowlist do lint_mql5 (envia ordem).                             |
 //|                                                                   |
-//| Regime: ER(N dias) = |close[0]-close[N]| / soma|variacoes diarias||
-//|   Lido das barras D1 (PERIOD_D1). >= InpRegimeErMin => TENDENCIA. |
-//|   InpUseRegimeFilter=false: mostra TODOS os sinais, anotando o    |
-//|   regime; true: suprime os sinais em regime lateral.              |
+//| Logica:                                                           |
+//|   OR-30; quebra long se close>OR_high / short se <OR_low; FILTRO  |
+//|   DE TENDENCIA (so a favor de N barras); FILTRO DE REGIME (ER     |
+//|   diario >= min); entra A MERCADO; SL inicial + STOP MOVEL; TP    |
+//|   fixo opcional; 1 disparo/direcao/dia; flat no fim da sessao.    |
+//|                                                                   |
+//| Regime: ER(N dias)=|close[1]-close[1+N]|/soma|variacao diaria|    |
+//|   (PERIOD_D1). >= InpRegimeErMin => TENDENCIA (opera).            |
+//|                                                                   |
+//| SEC: guard-rail duplo DEMO (input + ACCOUNT_TRADE_MODE).          |
 //+------------------------------------------------------------------+
 #property copyright "CaM — Cockpit de gestao de ativos"
 #property version   "0.1"
 #property strict
-#property description "StrategyLab D1 ORB-30 — sinais/alertas + regime (nao opera)"
+#property description "StrategyLab D1 ORB-30 — executor + regime ER embutido (DEMO-only)"
+
+#include <Trade/Trade.mqh>
 
 #define CAM_D1_SINAIS_VERSION "0.1.0"
 
 //--- Estrategia (espelha D1Params) ----------------------------------
-input int    InpOrMinutes        = 30;     // janela do opening range (min)
-input int    InpTrendFilterBars  = 5000;   // so a favor da tendencia de N barras; 0=off
+input int    InpOrMinutes        = 30;
+input double InpStopPoints        = 700.0;  // SL inicial (pontos da entrada)
+input double InpTargetPoints      = 0.0;    // TP fixo (pontos); 0 = sem TP
+input double InpTrailPoints        = 800.0;  // stop movel (pontos atras do pico); 0=off
+input int    InpTrendFilterBars   = 5000;   // so a favor da tendencia de N barras; 0=off
+input double InpMinOrPoints        = 0.0;    // range minimo do OR; 0=off
 input int    InpSessionOpenHour  = 9;
 input int    InpSessionOpenMin   = 0;
 input int    InpEntryUntilHour   = 17;
 input int    InpEntryUntilMin    = 0;
-//--- Referencia de exits (so para exibir no alerta) -----------------
-input double InpStopPoints        = 700.0; // SL inicial (exibicao)
-input double InpTrailPoints        = 800.0; // stop movel (exibicao)
-//--- Gate de REGIME (Efficiency Ratio diario) -----------------------
-input bool   InpUseRegimeFilter   = false; // true = suprime sinais em lateral
-input int    InpRegimeErDays       = 10;    // janela do ER (dias)
-input double InpRegimeErMin         = 0.35;  // ER >= isto => tendencia
-//--- Visual ---------------------------------------------------------
-input bool   InpDrawOrLines       = true;   // desenha linhas do OR
-input bool   InpSendAlerts        = true;   // dispara Alert no sinal
+input int    InpSessionCloseHour = 17;
+input int    InpSessionCloseMin  = 55;
+//--- GATE DE REGIME (Efficiency Ratio diario) — ligado por padrao ---
+input bool   InpUseRegimeFilter   = true;   // so opera em tendencia
+input int    InpRegimeErDays       = 10;     // janela do ER (dias)
+input double InpRegimeErMin         = 0.35;   // ER >= isto => tendencia
+//--- Execucao -------------------------------------------------------
+input double InpLots             = 1.0;
+input long   InpMagic            = 20260605;
+input ulong  InpDeviationPoints  = 10;
+input bool   InpShowPanel        = true;
+input bool   InpRequireDemoAccount = true;
 
-//--- Estado ---------------------------------------------------------
+CTrade   g_trade;
 string   g_session     = "";
 double   g_or_high     = 0.0;
 double   g_or_low      = 0.0;
@@ -52,22 +63,31 @@ bool     g_or_ready    = false;
 bool     g_long_armed  = true;
 bool     g_short_armed = true;
 datetime g_last_bar    = 0;
-int      g_sig_count   = 0;
+double   g_max_favor   = 0.0;
 
 //+------------------------------------------------------------------+
 int OnInit()
   {
-   PrintFormat("[CamD1Sinais] %s ativo. Symbol=%s TF=%s (nao opera).",
+   if(InpRequireDemoAccount)
+     {
+      ENUM_ACCOUNT_TRADE_MODE mode =
+         (ENUM_ACCOUNT_TRADE_MODE)AccountInfoInteger(ACCOUNT_TRADE_MODE);
+      if(mode != ACCOUNT_TRADE_MODE_DEMO)
+        {
+         PrintFormat("[CamD1Sinais] ABORTANDO: conta nao e DEMO (mode=%d).", mode);
+         return(INIT_FAILED);
+        }
+     }
+   g_trade.SetExpertMagicNumber(InpMagic);
+   g_trade.SetDeviationInPoints(InpDeviationPoints);
+   g_trade.SetTypeFillingBySymbol(_Symbol);
+   PrintFormat("[CamD1Sinais] %s ativo. Symbol=%s regime=%s.",
                CAM_D1_SINAIS_VERSION, _Symbol,
-               EnumToString((ENUM_TIMEFRAMES)_Period));
+               (InpUseRegimeFilter ? "ON" : "OFF"));
    return(INIT_SUCCEEDED);
   }
 
-void OnDeinit(const int reason)
-  {
-   ObjectsDeleteAll(0, "camd1_");
-   Comment("");
-  }
+void OnDeinit(const int reason) { if(InpShowPanel) Comment(""); }
 
 //+------------------------------------------------------------------+
 void OnTick()
@@ -75,16 +95,15 @@ void OnTick()
    datetime cur = iTime(_Symbol, _Period, 0);
    if(cur == g_last_bar)
      {
-      UpdatePanel();   // atualiza painel/regime mesmo sem nova barra
+      if(InpShowPanel) UpdatePanel();
       return;
      }
    g_last_bar = cur;
-
    datetime t = iTime(_Symbol, _Period, 1);
    if(t == 0) return;
    ProcessBar(t, iHigh(_Symbol,_Period,1), iLow(_Symbol,_Period,1),
               iClose(_Symbol,_Period,1));
-   UpdatePanel();
+   if(InpShowPanel) UpdatePanel();
   }
 
 //+------------------------------------------------------------------+
@@ -94,78 +113,99 @@ void ProcessBar(datetime t, double h, double l, double c)
    if(session != g_session)
      {
       g_session = session;
-      g_or_ready = false;
-      g_long_armed = true;
-      g_short_armed = true;
+      g_or_ready = false; g_long_armed = true; g_short_armed = true;
      }
 
-   int tod    = MinutesOfDay(t);
-   int or_beg = InpSessionOpenHour*60 + InpSessionOpenMin;
-   int or_end = or_beg + InpOrMinutes;
-   int cut    = InpEntryUntilHour*60 + InpEntryUntilMin;
+   // stop movel a cada barra com posicao aberta.
+   if(InpTrailPoints > 0 && HasPosition())
+      ManageTrailing(h, l);
 
-   // construcao do opening range
+   int tod     = MinutesOfDay(t);
+   int or_beg  = InpSessionOpenHour*60 + InpSessionOpenMin;
+   int or_end  = or_beg + InpOrMinutes;
+   int cut     = InpEntryUntilHour*60 + InpEntryUntilMin;
+   int s_close = InpSessionCloseHour*60 + InpSessionCloseMin;
+
+   // flat compulsorio no fim da sessao.
+   if(tod >= s_close)
+     {
+      if(HasPosition()) g_trade.PositionClose(_Symbol);
+      return;
+     }
+
+   // opening range.
    if(tod >= or_beg && tod < or_end)
      {
       if(!g_or_ready) { g_or_high=h; g_or_low=l; g_or_ready=true; }
       else { g_or_high=MathMax(g_or_high,h); g_or_low=MathMin(g_or_low,l); }
-      if(InpDrawOrLines) DrawOrLines(t);
       return;
      }
    if(!g_or_ready) return;
    if(tod >= cut) return;
-   if(g_or_high - g_or_low <= 0.0) return;
+
+   double rng = g_or_high - g_or_low;
+   if(rng <= 0.0) return;
+   if(InpMinOrPoints > 0 && rng < InpMinOrPoints) return;
+   if(HasPosition()) return;
 
    bool up   = TrendOk(c, +1);
    bool down = TrendOk(c, -1);
-   double er = RegimeER();
-   bool regime_ok = (er < 0.0) ? true : (er >= InpRegimeErMin);
+   bool regime_ok = (!InpUseRegimeFilter) || RegimeOk();
 
-   if(g_long_armed && c > g_or_high && up)
+   bool static_exits = (InpStopPoints > 0);
+   if(g_long_armed && c > g_or_high && up && regime_ok)
      {
       g_long_armed = false;
-      EmitSignal(t, +1, c, er, regime_ok);
+      double ref = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+      double sl  = static_exits ? ref - InpStopPoints : g_or_low;
+      double tp  = static_exits
+                   ? (InpTargetPoints > 0 ? ref + InpTargetPoints : 0.0)
+                   : g_or_high;
+      if(g_trade.Buy(InpLots, _Symbol, 0.0, NormTick(sl), NormTick(tp), "cam_d1_sinais"))
+         g_max_favor = ref;
+      else
+         PrintFormat("[CamD1Sinais] Buy falhou ret=%d", g_trade.ResultRetcode());
      }
-   else if(g_short_armed && c < g_or_low && down)
+   else if(g_short_armed && c < g_or_low && down && regime_ok)
      {
       g_short_armed = false;
-      EmitSignal(t, -1, c, er, regime_ok);
+      double ref = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+      double sl  = static_exits ? ref + InpStopPoints : g_or_high;
+      double tp  = static_exits
+                   ? (InpTargetPoints > 0 ? ref - InpTargetPoints : 0.0)
+                   : g_or_low;
+      if(g_trade.Sell(InpLots, _Symbol, 0.0, NormTick(sl), NormTick(tp), "cam_d1_sinais"))
+         g_max_favor = ref;
+      else
+         PrintFormat("[CamD1Sinais] Sell falhou ret=%d", g_trade.ResultRetcode());
      }
   }
 
 //+------------------------------------------------------------------+
-//| Emite o sinal: seta + alerta. Em regime lateral, marca diferente  |
-//| (e suprime se InpUseRegimeFilter).                                |
-//+------------------------------------------------------------------+
-void EmitSignal(datetime t, int side, double price, double er, bool regime_ok)
+void ManageTrailing(double h, double l)
   {
-   if(InpUseRegimeFilter && !regime_ok)
+   if(!PositionSelect(_Symbol)) return;
+   if(PositionGetInteger(POSITION_MAGIC) != InpMagic) return;
+   long type = PositionGetInteger(POSITION_TYPE);
+   double cur_sl = PositionGetDouble(POSITION_SL);
+   double cur_tp = PositionGetDouble(POSITION_TP);
+   double new_sl = cur_sl;
+   if(type == POSITION_TYPE_BUY)
      {
-      PrintFormat("[CamD1Sinais] sinal %s FILTRADO (lateral, ER=%.2f)",
-                  (side>0?"COMPRA":"VENDA"), er);
-      return;
+      g_max_favor = MathMax(g_max_favor, h);
+      double cand = NormTick(g_max_favor - InpTrailPoints);
+      if(cand > cur_sl) new_sl = cand;
      }
-   g_sig_count++;
-   string name = StringFormat("camd1_sig_%d", g_sig_count);
-   double y = (side>0) ? iLow(_Symbol,_Period,1) : iHigh(_Symbol,_Period,1);
-   color clr = regime_ok ? (side>0 ? clrLime : clrRed) : clrGray;
-   ObjectCreate(0, name, OBJ_ARROW, 0, t, y);
-   ObjectSetInteger(0, name, OBJPROP_ARROWCODE, side>0 ? 233 : 234);
-   ObjectSetInteger(0, name, OBJPROP_COLOR, clr);
-   ObjectSetInteger(0, name, OBJPROP_WIDTH, 2);
-
-   string regime = (er<0.0) ? "?" : (regime_ok ? "TENDENCIA" : "LATERAL");
-   string msg = StringFormat(
-      "CaM D1 ORB-30 %s %s @ %s | regime=%s ER=%.2f | SL~%.0fpts trail~%.0f",
-      _Symbol, (side>0?"COMPRA":"VENDA"),
-      DoubleToString(price,_Digits), regime, er,
-      InpStopPoints, InpTrailPoints);
-   PrintFormat("[CamD1Sinais] %s", msg);
-   if(InpSendAlerts) Alert(msg);
+   else
+     {
+      if(g_max_favor <= 0.0) g_max_favor = l;
+      g_max_favor = MathMin(g_max_favor, l);
+      double cand = NormTick(g_max_favor + InpTrailPoints);
+      if(cur_sl <= 0.0 || cand < cur_sl) new_sl = cand;
+     }
+   if(new_sl != cur_sl) g_trade.PositionModify(_Symbol, new_sl, cur_tp);
   }
 
-//+------------------------------------------------------------------+
-//| Filtro de tendencia (espelha _trend_ok do Python).               |
 //+------------------------------------------------------------------+
 bool TrendOk(double c_now, int side)
   {
@@ -177,15 +217,16 @@ bool TrendOk(double c_now, int side)
   }
 
 //+------------------------------------------------------------------+
-//| Efficiency Ratio diario sobre InpRegimeErDays. -1 se sem dados.   |
-//| ER = |close[1]-close[1+N]| / soma|variacao diaria| (N dias).      |
+//| Regime: ER diario >= min => tendencia (opera). Espelha o Python.  |
 //+------------------------------------------------------------------+
+bool RegimeOk() { double er = RegimeER(); return (er < 0.0) ? false : (er >= InpRegimeErMin); }
+
 double RegimeER()
   {
    int n = InpRegimeErDays;
    if(n < 2) return -1.0;
    if(Bars(_Symbol, PERIOD_D1) < n + 2) return -1.0;
-   double c0 = iClose(_Symbol, PERIOD_D1, 1);     // ultima diaria fechada
+   double c0 = iClose(_Symbol, PERIOD_D1, 1);
    double cn = iClose(_Symbol, PERIOD_D1, 1 + n);
    if(c0 <= 0.0 || cn <= 0.0) return -1.0;
    double denom = 0.0;
@@ -200,39 +241,36 @@ double RegimeER()
   }
 
 //+------------------------------------------------------------------+
-void DrawOrLines(datetime t)
+bool HasPosition()
   {
-   DrawHLine("camd1_orh_" + g_session, g_or_high, clrDodgerBlue);
-   DrawHLine("camd1_orl_" + g_session, g_or_low,  clrDodgerBlue);
+   if(!PositionSelect(_Symbol)) return false;
+   return (PositionGetInteger(POSITION_MAGIC) == InpMagic);
   }
 
-void DrawHLine(string name, double price, color clr)
+double NormTick(double price)
   {
-   if(ObjectFind(0, name) < 0)
-      ObjectCreate(0, name, OBJ_HLINE, 0, 0, price);
-   ObjectSetDouble(0, name, OBJPROP_PRICE, price);
-   ObjectSetInteger(0, name, OBJPROP_COLOR, clr);
-   ObjectSetInteger(0, name, OBJPROP_STYLE, STYLE_DOT);
+   double ts = SymbolInfoDouble(_Symbol, SYMBOL_TRADE_TICK_SIZE);
+   if(ts <= 0.0) ts = _Point;
+   return NormalizeDouble(MathRound(price/ts)*ts, _Digits);
   }
 
-//+------------------------------------------------------------------+
 void UpdatePanel()
   {
    double er = RegimeER();
    string regime = (er<0.0) ? "sem dados" :
-                   (er >= InpRegimeErMin ? "TENDENCIA (operar)" : "LATERAL (evitar)");
-   string filt = InpUseRegimeFilter ? "ON" : "OFF (mostra todos)";
+                   (er >= InpRegimeErMin ? "TENDENCIA (opera)" : "LATERAL (de fora)");
    Comment(StringFormat(
-      "CaM D1 ORB-30 — SINAIS (nao opera)\n"
-      "Sessao: %s   OR: %s / %s   %s\n"
-      "Tendencia(%d barras) | Regime ER%d=%.2f  ->  %s\n"
-      "Filtro de regime: %s (min %.2f)   Sinais hoje: %d",
+      "CaM D1 ORB-30 — EXECUTOR + regime (DEMO)\n"
+      "Sessao: %s   OR: %s / %s\n"
+      "Tendencia(%d) | Regime ER%d=%.2f -> %s | Filtro: %s\n"
+      "SL %.0f  trail %.0f  posicao: %s",
       g_session,
       g_or_ready ? DoubleToString(g_or_high,_Digits) : "-",
       g_or_ready ? DoubleToString(g_or_low,_Digits) : "-",
-      g_or_ready ? "" : "(coletando)",
       InpTrendFilterBars, InpRegimeErDays, er, regime,
-      filt, InpRegimeErMin, g_sig_count));
+      (InpUseRegimeFilter ? "ON" : "OFF"),
+      InpStopPoints, InpTrailPoints,
+      (HasPosition() ? "ABERTA" : "flat")));
   }
 
 //+------------------------------------------------------------------+

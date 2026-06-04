@@ -45,10 +45,12 @@ _FORBIDDEN_FUNCS = (
 # Arquivos permitidos a usar OrderSend etc.:
 #   - cam_risk_mirror.mq5    (BL-E T025) — executor com Risk Engine espelho.
 #   - cam_d1_orb30_exec.mq5  (ADR-SL-04) — executor D1 puro (DEMO-only, sem risco).
+#   - cam_d1_orb30_sinais.mq5(ADR-SL-04) — executor D1 + regime ER embutido (DEMO).
 #   - cam_d2_vwap_exec.mq5   (ADR-SL-04) — executor D2 VWAP fade (DEMO-only).
 _ALLOWED_FILES = {
     "cam_risk_mirror.mq5",
     "cam_d1_orb30_exec.mq5",
+    "cam_d1_orb30_sinais.mq5",
     "cam_d2_vwap_exec.mq5",
 }
 
