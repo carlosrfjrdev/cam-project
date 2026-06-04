@@ -116,6 +116,33 @@ class StrategyLabService:
         sd = registry.get(strategy_id)
         return sd.to_dict() if sd else None
 
+    # ---- conjuntos de parâmetros (Assets Strategy — R-04/R-08) ----
+    async def list_param_sets(self, strategy_id: str) -> list[dict[str, Any]]:
+        async with self._factory() as session:
+            return await repo.list_param_sets(session, strategy_id)
+
+    async def create_param_set(
+        self, strategy_id: str, params: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """Salva um conjunto de parâmetros MANUAL (o Founder escolheu — R-04)."""
+        sd = registry.get(strategy_id)
+        if sd is None:
+            return None
+        async with self._factory() as session:
+            ps_id = await repo.create_param_set(
+                session,
+                strategy_id=strategy_id,
+                params_json=json.dumps(params),
+                origin="manual",
+            )
+            await session.commit()
+        return {
+            "id": ps_id,
+            "strategy_id": strategy_id.upper(),
+            "params": params,
+            "origin": "manual",
+        }
+
     # ---- backtest (Assets RunTests) ----
     async def run_backtest(
         self,

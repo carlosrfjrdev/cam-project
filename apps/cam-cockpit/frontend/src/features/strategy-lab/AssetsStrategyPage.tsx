@@ -5,8 +5,8 @@
  * status. Clicar abre DRAWER com parâmetros e o otimizador on-demand (sugere,
  * não aplica). Nada de tabela na superfície.
  */
-import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Box, Button, Chip, CircularProgress, Divider, Drawer, Stack,
   TextField, Tooltip, Typography,
@@ -16,7 +16,8 @@ import { PageContainer } from "../../_shared/components/PageContainer";
 import { PageHeader } from "../../_shared/components/PageHeader";
 import { DetailDisclosure } from "../../_shared/components/DetailDisclosure";
 import {
-  fetchStrategies, postOptimize, type OptimizeResult, type StrategyDef,
+  fetchParamSets, fetchStrategies, postOptimize, postParamSet,
+  type OptimizeResult, type StrategyDef,
 } from "./api";
 
 const UNIT_LABEL: Record<string, string> = {
@@ -113,8 +114,37 @@ function StrategyDrawer({
   strategy: StrategyDef | null;
   onClose: () => void;
 }) {
+  const qc = useQueryClient();
   const [symbol, setSymbol] = useState("WIN$");
   const [result, setResult] = useState<OptimizeResult | null>(null);
+  const [paramValues, setParamValues] = useState<Record<string, number>>({});
+
+  // inicializa os campos editáveis a partir dos parâmetros padrão ao abrir.
+  useEffect(() => {
+    if (strategy) {
+      const init: Record<string, number> = {};
+      for (const [k, v] of Object.entries(strategy.default_params)) {
+        init[k] = Number(v);
+      }
+      setParamValues(init);
+      setResult(null);
+    }
+  }, [strategy]);
+
+  const paramSets = useQuery({
+    queryKey: ["strategy-lab", "param-sets", strategy?.id],
+    queryFn: () => fetchParamSets(strategy!.id),
+    enabled: !!strategy?.runnable,
+    retry: false,
+  });
+
+  const save = useMutation({
+    mutationFn: () => postParamSet(strategy!.id, paramValues),
+    onSuccess: () =>
+      qc.invalidateQueries({
+        queryKey: ["strategy-lab", "param-sets", strategy?.id],
+      }),
+  });
 
   const optimize = useMutation({
     mutationFn: () =>
@@ -144,16 +174,70 @@ function StrategyDrawer({
             {strategy.runnable && (
               <>
                 <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                  Parâmetros (padrão)
+                  Parâmetros
                 </Typography>
-                <Stack spacing={0.5} sx={{ mb: 2 }}>
-                  {Object.entries(strategy.default_params).map(([k, v]) => (
-                    <Stack key={k} direction="row" justifyContent="space-between">
-                      <Typography variant="body2" color="text.secondary">{k}</Typography>
-                      <Typography variant="body2">{String(v)}</Typography>
-                    </Stack>
+                <Stack spacing={1} sx={{ mb: 1 }}>
+                  {Object.keys(paramValues).map((k) => (
+                    <TextField
+                      key={k}
+                      size="small"
+                      type="number"
+                      label={k}
+                      value={paramValues[k]}
+                      onChange={(e) =>
+                        setParamValues((p) => ({ ...p, [k]: Number(e.target.value) }))
+                      }
+                    />
                   ))}
                 </Stack>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={() => save.mutate()}
+                  disabled={save.isPending}
+                >
+                  {save.isPending ? "Salvando…" : "Salvar conjunto"}
+                </Button>
+                {save.isSuccess && (
+                  <Typography variant="caption" color="success.main" sx={{ ml: 1 }}>
+                    Salvo.
+                  </Typography>
+                )}
+
+                <DetailDisclosure
+                  title="Conjuntos salvos"
+                  count={paramSets.data?.param_sets.length}
+                >
+                  {paramSets.data && paramSets.data.param_sets.length > 0 ? (
+                    <Stack spacing={1}>
+                      {paramSets.data.param_sets.map((ps) => (
+                        <Stack
+                          key={ps.id}
+                          direction="row"
+                          alignItems="center"
+                          justifyContent="space-between"
+                          sx={{ gap: 1 }}
+                        >
+                          <Typography variant="body2" sx={{ flex: 1 }}>
+                            {Object.entries(ps.params)
+                              .map(([k, v]) => `${k} ${v}`)
+                              .join(" · ")}
+                          </Typography>
+                          <Chip
+                            size="small"
+                            variant="outlined"
+                            color={ps.origin === "suggested" ? "secondary" : "default"}
+                            label={ps.origin === "suggested" ? "sugerido" : "manual"}
+                          />
+                        </Stack>
+                      ))}
+                    </Stack>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      Nenhum conjunto salvo ainda.
+                    </Typography>
+                  )}
+                </DetailDisclosure>
 
                 <Divider sx={{ my: 2 }} />
 

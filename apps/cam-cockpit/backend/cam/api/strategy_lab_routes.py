@@ -46,6 +46,28 @@ async def get_strategy(strategy_id: str):
 
 
 # --------------------------------------------------------------------------- #
+# Assets Strategy — conjuntos de parâmetros (gestão — R-04)
+# --------------------------------------------------------------------------- #
+class ParamSetRequest(BaseModel):
+    params: dict[str, Any]
+
+
+@router.get("/strategies/{strategy_id}/param-sets")
+async def list_param_sets(strategy_id: str):
+    """Lista os conjuntos salvos (manual + sugerido pelo otimizador)."""
+    return {"param_sets": await _service.list_param_sets(strategy_id)}
+
+
+@router.post("/strategies/{strategy_id}/param-sets")
+async def create_param_set(strategy_id: str, body: ParamSetRequest):
+    """Salva um conjunto de parâmetros manual (o Founder escolheu — R-04)."""
+    res = await _service.create_param_set(strategy_id, body.params)
+    if res is None:
+        return JSONResponse(status_code=404, content={"error": "STRATEGY_NOT_FOUND"})
+    return res
+
+
+# --------------------------------------------------------------------------- #
 # Assets RunTests — backtest
 # --------------------------------------------------------------------------- #
 class BacktestRequest(BaseModel):

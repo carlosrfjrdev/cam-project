@@ -27,6 +27,31 @@ export const fetchStrategies = () =>
   api.get<StrategyList>("/strategy-lab/strategies");
 
 // --------------------------------------------------------------------------- //
+// Assets Strategy — conjuntos de parâmetros (gestão — R-04)
+// --------------------------------------------------------------------------- //
+export interface ParamSet {
+  id: number;
+  strategy_id: string;
+  params: Record<string, number | string>;
+  origin: string; // manual | suggested
+  optimization_id?: number | null;
+  created_at?: string;
+}
+
+export const fetchParamSets = (strategyId: string) =>
+  api.get<{ param_sets: ParamSet[] }>(
+    `/strategy-lab/strategies/${strategyId}/param-sets`,
+  );
+
+export const postParamSet = (
+  strategyId: string,
+  params: Record<string, number | string>,
+) =>
+  api.post<ParamSet>(`/strategy-lab/strategies/${strategyId}/param-sets`, {
+    params,
+  });
+
+// --------------------------------------------------------------------------- //
 // Assets RunTests — backtest + resultado
 // --------------------------------------------------------------------------- //
 export interface GrossMetrics {
