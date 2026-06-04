@@ -21,6 +21,7 @@ import BarChartIcon from "@mui/icons-material/BarChart";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import SettingsIcon from "@mui/icons-material/Settings";
 import TravelExploreIcon from "@mui/icons-material/TravelExplore";
+import TuneIcon from "@mui/icons-material/Tune";
 
 export interface NavItem {
   label: string;
@@ -38,6 +39,10 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { label: "Inspetor de Ativo", path: "/inspetor", icon: <TravelExploreIcon />, group: "Pesquisa", visibleInMvp: true },
   { label: "Quant Lab", path: "/lab", icon: <ScienceIcon />, group: "Pesquisa", visibleInMvp: true },
+
+  { label: "Estratégias", path: "/strategy-lab/strategies", icon: <HubIcon />, group: "StrategyLab", visibleInMvp: true },
+  { label: "Backtest (RunTests)", path: "/strategy-lab/runtests", icon: <TuneIcon />, group: "StrategyLab", visibleInMvp: true },
+  { label: "Robôs (Experts)", path: "/strategy-lab/experts", icon: <SmartToyIcon />, group: "StrategyLab", visibleInMvp: true },
 
   { label: "Cockpit Live", path: "/", icon: <DashboardIcon />, group: "Operação", visibleInMvp: true },
   { label: "Order Gateway", path: "/order-gateway", icon: <GavelIcon />, group: "Operação" },

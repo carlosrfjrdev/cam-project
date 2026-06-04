@@ -20,6 +20,9 @@ import { RobotOrchestratorPage } from "../features/robot-orchestrator/RobotOrche
 import { ScalingPage } from "../features/scaling/ScalingPage";
 import { InspetorPage } from "../features/inspetor/InspetorPage";
 import { QuantLabPage } from "../features/quant-lab/QuantLabPage";
+import { AssetsStrategyPage } from "../features/strategy-lab/AssetsStrategyPage";
+import { AssetsRunTestsPage } from "../features/strategy-lab/AssetsRunTestsPage";
+import { AssetsExpertsPage } from "../features/strategy-lab/AssetsExpertsPage";
 
 // U023 — Research carrega Recharts: rota lazy (bundle isolado).
 const ResearchPage = lazy(() =>
@@ -40,6 +43,9 @@ export function AppRouter() {
           <Route path="/" element={<CockpitPage />} />
           <Route path="/inspetor" element={<InspetorPage />} />
           <Route path="/lab" element={<QuantLabPage />} />
+          <Route path="/strategy-lab/strategies" element={<AssetsStrategyPage />} />
+          <Route path="/strategy-lab/runtests" element={<AssetsRunTestsPage />} />
+          <Route path="/strategy-lab/experts" element={<AssetsExpertsPage />} />
           <Route path="/order-gateway" element={<OrderGatewayPage />} />
           <Route path="/risk" element={<RiskConsolePage />} />
           <Route path="/ea-control" element={<EaControlPage />} />

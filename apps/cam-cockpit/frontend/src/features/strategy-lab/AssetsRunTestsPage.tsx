@@ -1,0 +1,213 @@
+/**
+ * Assets RunTests — "rodei, e aí?" (Design Review §3.2, Andy).
+ *
+ * Manchete: a CURVA DE EQUITY (domina a dobra). Apoio: 4-5 métricas como tira
+ * de chips (StatStrip). Trades em accordion FECHADO. Chip `bruto`+tooltip
+ * carrega a honestidade do MVP — nunca parágrafo.
+ */
+import { useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import {
+  Box, Button, Chip, MenuItem, Stack, Table, TableBody, TableCell,
+  TableHead, TableRow, TextField, Tooltip, Typography,
+} from "@mui/material";
+import BarChartIcon from "@mui/icons-material/BarChart";
+import { PageContainer } from "../../_shared/components/PageContainer";
+import { PageHeader } from "../../_shared/components/PageHeader";
+import { StatStrip, type StatItem } from "../../_shared/components/StatStrip";
+import { DetailDisclosure } from "../../_shared/components/DetailDisclosure";
+import { EquityChart } from "./EquityChart";
+import {
+  fetchEquity, fetchRun, fetchStrategies, postBacktest,
+  type BacktestResult,
+} from "./api";
+
+function GrossChip() {
+  return (
+    <Tooltip title="Valores brutos: sem custo, sem IR — não confirma edge líquido.">
+      <Chip size="small" variant="outlined" label="bruto" />
+    </Tooltip>
+  );
+}
+
+export function AssetsRunTestsPage() {
+  const [strategyId, setStrategyId] = useState("D1");
+  const [symbol, setSymbol] = useState("WIN$");
+  const [timeframe, setTimeframe] = useState("M1");
+  const [orMinutes, setOrMinutes] = useState(30);
+  const [targetR, setTargetR] = useState(1.0);
+  const [runId, setRunId] = useState<number | null>(null);
+
+  const strategies = useQuery({
+    queryKey: ["strategy-lab", "strategies"],
+    queryFn: fetchStrategies,
+    retry: false,
+  });
+  const runnable = strategies.data?.strategies.filter((s) => s.runnable) ?? [];
+
+  const backtest = useMutation({
+    mutationFn: (): Promise<BacktestResult> =>
+      postBacktest(strategyId, {
+        symbol,
+        timeframe,
+        params: { or_minutes: orMinutes, target_r: targetR },
+      }),
+    onSuccess: (r) => setRunId(r.error ? null : r.run_id),
+  });
+
+  const equity = useQuery({
+    queryKey: ["strategy-lab", "equity", runId],
+    queryFn: () => fetchEquity(runId!),
+    enabled: runId !== null,
+    retry: false,
+  });
+
+  const run = useQuery({
+    queryKey: ["strategy-lab", "run", runId],
+    queryFn: () => fetchRun(runId!),
+    enabled: runId !== null,
+    retry: false,
+  });
+
+  const m = backtest.data?.metrics;
+  const stats: StatItem[] = m
+    ? [
+        { label: "Trades", value: m.n_trades },
+        { label: "Acerto", value: `${(m.win_rate * 100).toFixed(0)}%` },
+        {
+          label: "Profit Factor",
+          value: m.profit_factor === null ? "∞" : m.profit_factor.toFixed(2),
+        },
+        {
+          label: "Resultado bruto",
+          value: m.pnl_bruto_total.toFixed(2),
+          tone: m.pnl_bruto_total >= 0 ? "success" : "danger",
+        },
+        { label: "Drawdown", value: m.max_drawdown.toFixed(2), tone: "warning" },
+      ]
+    : [];
+
+  return (
+    <PageContainer maxWidth={1100}>
+      <PageHeader
+        title="Backtest"
+        icon={<BarChartIcon color="secondary" />}
+        actions={<GrossChip />}
+      />
+
+      {/* Config compacta em 1 linha (Design Review §3.2) */}
+      <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", gap: 1, mb: 2 }}>
+        <TextField
+          select size="small" label="Estratégia" value={strategyId}
+          onChange={(e) => setStrategyId(e.target.value)} sx={{ minWidth: 140 }}
+        >
+          {runnable.map((s) => (
+            <MenuItem key={s.id} value={s.id}>{s.id} · {s.name}</MenuItem>
+          ))}
+          {runnable.length === 0 && <MenuItem value="D1">D1</MenuItem>}
+        </TextField>
+        <TextField
+          size="small" label="Símbolo" value={symbol}
+          onChange={(e) => setSymbol(e.target.value.toUpperCase())} sx={{ width: 110 }}
+        />
+        <TextField
+          size="small" label="TF" value={timeframe}
+          onChange={(e) => setTimeframe(e.target.value.toUpperCase())} sx={{ width: 80 }}
+        />
+        <TextField
+          size="small" type="number" label="OR (min)" value={orMinutes}
+          onChange={(e) => setOrMinutes(Number(e.target.value))} sx={{ width: 100 }}
+        />
+        <TextField
+          size="small" type="number" label="Alvo (R)" value={targetR}
+          onChange={(e) => setTargetR(Number(e.target.value))} sx={{ width: 100 }}
+          inputProps={{ step: 0.5 }}
+        />
+        <Button
+          variant="contained"
+          onClick={() => backtest.mutate()}
+          disabled={backtest.isPending}
+        >
+          {backtest.isPending ? "Rodando…" : "Rodar"}
+        </Button>
+      </Stack>
+
+      {backtest.data?.error === "NO_DATA" && (
+        <Typography color="text.secondary" sx={{ mb: 2 }}>
+          {backtest.data.message ?? "Sem dado para este símbolo."} Ingerir no Quant Lab antes.
+        </Typography>
+      )}
+      {backtest.isError && (
+        <Typography color="error" sx={{ mb: 2 }}>
+          Falha ao rodar o backtest.
+        </Typography>
+      )}
+
+      {/* Manchete: curva de equity */}
+      {runId !== null && (
+        <>
+          <EquityChart data={equity.data?.equity_curve ?? []} />
+
+          {/* Apoio: 4-5 métricas como tira de chips */}
+          <StatStrip items={stats} />
+
+          {/* Detalhe escondido: tabela de trades (par como unidade) */}
+          <DetailDisclosure title="Trades" count={run.data?.trades.length}>
+            {run.data && run.data.trades.length > 0 ? (
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>#</TableCell>
+                    <TableCell>Lado</TableCell>
+                    <TableCell>Entrada</TableCell>
+                    <TableCell align="right">Preço</TableCell>
+                    <TableCell>Saída</TableCell>
+                    <TableCell align="right">Preço</TableCell>
+                    <TableCell>Motivo</TableCell>
+                    <TableCell align="right">Bruto</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {run.data.trades.map((t, i) => (
+                    <TableRow key={`${t.pair_id}-${t.symbol}-${i}`}>
+                      <TableCell>{t.pair_id}</TableCell>
+                      <TableCell>{t.leg}</TableCell>
+                      <TableCell>{t.ts_entry?.slice(0, 16)}</TableCell>
+                      <TableCell align="right">{Number(t.price_entry).toFixed(1)}</TableCell>
+                      <TableCell>{t.ts_exit?.slice(0, 16)}</TableCell>
+                      <TableCell align="right">{Number(t.price_exit).toFixed(1)}</TableCell>
+                      <TableCell>{t.exit_reason}</TableCell>
+                      <TableCell
+                        align="right"
+                        sx={{ color: Number(t.pnl_bruto) >= 0 ? "success.main" : "error.main" }}
+                      >
+                        {Number(t.pnl_bruto).toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                Nenhum trade neste período.
+              </Typography>
+            )}
+          </DetailDisclosure>
+        </>
+      )}
+
+      {runId === null && !backtest.isPending && (
+        <Box
+          sx={{
+            mt: 4, p: 6, textAlign: "center", border: "1px dashed",
+            borderColor: "divider", borderRadius: 1,
+          }}
+        >
+          <Typography color="text.secondary">
+            Configure acima e clique <strong>Rodar</strong> para ver a curva de equity.
+          </Typography>
+        </Box>
+      )}
+    </PageContainer>
+  );
+}
