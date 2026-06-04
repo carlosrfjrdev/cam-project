@@ -42,7 +42,7 @@
 
 #include <cam_zmq.mqh>
 
-#define CAM_BRIDGE_VERSION "0.4.0-inspetor"
+#define CAM_BRIDGE_VERSION "0.4.1-paginacao"
 
 input int    InpPubPort = 5556;
 input int    InpReqPort = 5557;
@@ -404,16 +404,21 @@ void HandleGetCandles(const string cmd)
    string sym = JsonGetString(cmd, "symbol");
    string tfs = JsonGetString(cmd, "timeframe");
    int    cnt = JsonGetInt(cmd, "count", 200);
+   // start_pos: deslocamento a partir da barra mais recente (0 = mais recente).
+   // Permite PAGINACAO: o backend pede blocos de <= InpMaxCandles com start_pos
+   // crescente p/ ingerir historico longo sem estourar o heartbeat (single-thread).
+   int    start_pos = JsonGetInt(cmd, "start_pos", 0);
    if(StringLen(sym) == 0) { CamZMQSend("{\"error\":\"MISSING_SYMBOL\"}"); return; }
    if(cnt < 1)   cnt = 1;
    if(cnt > InpMaxCandles) cnt = InpMaxCandles;  // protege heartbeat (ADR-014)
+   if(start_pos < 0) start_pos = 0;
 
    SymbolSelect(sym, true);
    ENUM_TIMEFRAMES tf = TimeframeFromString(tfs);
 
    MqlRates rates[];
    ArraySetAsSeries(rates, true);
-   int got = CopyRates(sym, tf, 0, cnt, rates);
+   int got = CopyRates(sym, tf, start_pos, cnt, rates);
    if(got <= 0)
      {
       CamZMQSend(StringFormat(

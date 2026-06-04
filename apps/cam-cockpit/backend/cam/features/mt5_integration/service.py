@@ -77,7 +77,8 @@ class MT5IntegrationService:
     # ---------------- Inspetor: market data read-only ----------------
 
     async def get_candles(
-        self, symbol: str, timeframe: str, count: int, timeout_ms: int | None = None
+        self, symbol: str, timeframe: str, count: int,
+        timeout_ms: int | None = None, start_pos: int = 0,
     ) -> dict:
         """
         REP GET_CANDLES → OHLCV. ADR-014 R-04 (read-only).
@@ -85,12 +86,15 @@ class MT5IntegrationService:
         `timeout_ms` opcional: ingestão de research pede milhares de candles M1
         (payload grande + CopyRates sincroniza histórico na 1ª chamada) e precisa
         de timeout maior que o default de 1.5s.
+        `start_pos`: deslocamento a partir da barra mais recente (paginação de
+        histórico longo — o EA cap por requisição é InpMaxCandles).
         """
         return await self._bridge.request(
             "GET_CANDLES",
             symbol=symbol,
             timeframe=timeframe,
             count=count,
+            start_pos=start_pos,
             timeout_ms=timeout_ms,
         )
 

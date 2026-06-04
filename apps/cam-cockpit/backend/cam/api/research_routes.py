@@ -38,34 +38,57 @@ class IngestRequest(BaseModel):
     timeframes: list[str] = Field(
         default_factory=lambda: ["M5", "M15", "M30", "H1", "H4", "D1"]
     )
-    count: int = Field(default=5000, ge=1, le=50000)  # "máximo que o MT5 entregar"
+    # "máximo que o MT5 entregar" — paginado em blocos de 5000 (cam_bridge 0.4.1).
+    count: int = Field(default=5000, ge=1, le=200000)
     with_ticks: bool = True
     tick_count: int = Field(default=2000, ge=1, le=5000)
+
+
+# Casa com InpMaxCandles do cam_bridge (cap por requisição p/ proteger heartbeat).
+_CANDLE_CHUNK = 5000
 
 
 async def _candle_fetcher(symbol: str, timeframe: str, count: int) -> dict[str, Any]:
     """
     Borda: chama o bridge MT5. O serviço de research recebe isto injetado.
 
-    Ingestão pede milhares de M1 → timeout grande (10s). O EA, na 1ª chamada de
-    um símbolo, dispara o download assíncrono do histórico (CopyRates) e pode
-    voltar vazio/curto: por isso seleciona o símbolo (SUBSCRIBE) e faz alguns
-    retries até o histórico sincronizar.
+    PAGINAÇÃO (cam_bridge 0.4.1): o EA limita cada GET_CANDLES a InpMaxCandles
+    (5000) para não travar o heartbeat single-thread. Para ingerir histórico longo
+    (meses de M1), pedimos blocos sucessivos com `start_pos` crescente e
+    concatenamos. Cada bloco vem ascendente; blocos mais ANTIGOS (pos maior) vêm
+    ANTES. Retry só importa no 1º bloco (CopyRates sincroniza o histórico).
     """
     try:
         await _mt5_service.subscribe_symbol(symbol)
     except Exception:
         pass
+    collected: list[Any] = []
     last: dict[str, Any] = {"status": "error", "error": "NO_DATA"}
-    for _ in range(4):
-        resp = await _mt5_service.get_candles(
-            symbol, timeframe, count, timeout_ms=10000
-        )
-        if resp.get("status") == "ok" and resp.get("data", {}).get("candles"):
-            return resp
-        last = resp
-        await asyncio.sleep(1.0)  # dá tempo do CopyRates sincronizar
-    return last
+    pos = 0
+    while len(collected) < count:
+        want = min(_CANDLE_CHUNK, count - len(collected))
+        chunk: list[Any] | None = None
+        for _ in range(4):
+            resp = await _mt5_service.get_candles(
+                symbol, timeframe, want, timeout_ms=15000, start_pos=pos
+            )
+            last = resp
+            if resp.get("status") == "ok" and resp.get("data", {}).get("candles"):
+                chunk = resp["data"]["candles"]
+                break
+            await asyncio.sleep(1.0)  # dá tempo do CopyRates sincronizar
+        if not chunk:
+            break  # sem mais histórico (ou bridge offline)
+        collected = chunk + collected
+        pos += len(chunk)
+        if len(chunk) < want:
+            break  # fim do histórico disponível
+    if not collected:
+        return last
+    return {
+        "status": "ok",
+        "data": {"symbol": symbol, "timeframe": timeframe, "candles": collected},
+    }
 
 
 async def _tick_fetcher(symbol: str, count: int) -> dict[str, Any]:
