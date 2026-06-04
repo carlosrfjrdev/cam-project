@@ -106,6 +106,24 @@ class MT5IntegrationService:
         """REP SUBSCRIBE → EA passa a observar o símbolo (tick + book ao vivo)."""
         return await self._bridge.request("SUBSCRIBE", symbol=symbol)
 
+    async def get_ticks(
+        self, symbol: str, from_msc: int = 0, count: int = 10000
+    ) -> dict:
+        """
+        REP GET_TICKS → ticks em BULK (paginado por from_msc). Diferente do
+        PROBE_TICKS (diagnostico), retorna os ticks reais p/ ingestao do dataset.
+        `from_msc`: tempo inicial em ms (0 = inicio do historico). O caller pagina
+        avancando from_msc = ultimo_tick_msc + 1. Timeout grande (CopyTicks pode
+        sincronizar o historico de ticks na 1a chamada).
+        """
+        return await self._bridge.request(
+            "GET_TICKS",
+            symbol=symbol,
+            from_msc=from_msc,
+            count=count,
+            timeout_ms=20000,
+        )
+
     async def probe_ticks(self, symbol: str, count: int = 500) -> dict:
         """
         REP PROBE_TICKS → diagnóstico: o feed entrega flag de agressor?

@@ -41,7 +41,8 @@ class IngestRequest(BaseModel):
     # "máximo que o MT5 entregar" — paginado em blocos de 5000 (cam_bridge 0.4.1).
     count: int = Field(default=5000, ge=1, le=200000)
     with_ticks: bool = True
-    tick_count: int = Field(default=2000, ge=1, le=5000)
+    # ticks reais em bulk (GET_TICKS paginado). "todos os ticks" -> valor alto.
+    tick_count: int = Field(default=2000, ge=1, le=50_000_000)
 
 
 # Casa com InpMaxCandles do cam_bridge (cap por requisição p/ proteger heartbeat).
@@ -91,9 +92,9 @@ async def _candle_fetcher(symbol: str, timeframe: str, count: int) -> dict[str, 
     }
 
 
-async def _tick_fetcher(symbol: str, count: int) -> dict[str, Any]:
-    """Borda: PROBE_TICKS traz ticks com flags (agressor)."""
-    return await _mt5_service.probe_ticks(symbol, count)
+async def _tick_fetcher(symbol: str, from_msc: int, count: int) -> dict[str, Any]:
+    """Borda: GET_TICKS traz ticks reais em bulk (paginado por from_msc)."""
+    return await _mt5_service.get_ticks(symbol, from_msc=from_msc, count=count)
 
 
 @router.post("/ingest")

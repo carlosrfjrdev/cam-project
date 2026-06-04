@@ -24,8 +24,9 @@ from cam.features.research.leadlag.snapshot import batch_hash, composite_hash
 # candle_fetcher(symbol, tf, count)
 #   -> {"status","data":{"candles":[{ts,o,h,l,c,v}]}}
 CandleFetcher = Callable[[str, str, int], Awaitable[dict[str, Any]]]
-# tick_fetcher(symbol, count) -> {"status","data":{"sample":[...]}}  (probe-style)
-TickFetcher = Callable[[str, int], Awaitable[dict[str, Any]]]
+# tick_fetcher(symbol, from_msc, count) -> {"status","data":{"ticks":[...],
+#   "last_msc":..,"count":..}}  (GET_TICKS bulk paginado)
+TickFetcher = Callable[[str, int, int], Awaitable[dict[str, Any]]]
 
 _DERIVED_TFS = ["M5", "M15", "M30", "H1", "H4", "D1"]
 _CALENDAR_VERSION = "b3-2026.1"
@@ -189,6 +190,9 @@ class LeadLagIngestionService:
             "provenance_id": src_id,
         }
 
+    # chunk por requisição GET_TICKS (casa com o cap do cam_bridge).
+    _TICK_CHUNK = 10000
+
     async def _persist_ticks(
         self,
         session: Any,
@@ -197,28 +201,45 @@ class LeadLagIngestionService:
         tick_fetcher: TickFetcher,
         tick_count: int,
     ) -> int:
-        resp = await tick_fetcher(symbol, tick_count)
-        if resp.get("status") != "ok":
-            return 0
-        sample = resp["data"].get("sample", [])
-        rows: list[dict[str, Any]] = []
-        for t in sample:
-            t_msc = int(t.get("t_msc") or 0)
-            if not t_msc:
-                continue
-            rows.append(
-                {
-                    "symbol": symbol,
-                    "t_msc": t_msc,
-                    "ts_s": t_msc / 1000.0,
-                    "price": float(t.get("last") or 0),
-                    "volume": int(t.get("vol") or 0),
-                    "aggressor": aggressor_from_flags(int(t.get("flags") or 0)),
-                    "flags_raw": int(t.get("flags") or 0),
-                    "provenance_id": src_id,
-                }
-            )
-        return await repo.insert_ticks(session, rows)
+        """
+        Ingere ticks REAIS em BULK, paginando por from_msc (GET_TICKS). Persiste em
+        lotes até atingir `tick_count` ou esgotar o histórico. Cada tick: preço
+        (last; fallback bid/ask), volume, agressor (das flags), flags cruas.
+        """
+        total = 0
+        from_msc = 0
+        while total < tick_count:
+            want = min(self._TICK_CHUNK, tick_count - total)
+            resp = await tick_fetcher(symbol, from_msc, want)
+            if resp.get("status") != "ok":
+                break
+            ticks = resp.get("data", {}).get("ticks", [])
+            if not ticks:
+                break
+            rows: list[dict[str, Any]] = []
+            for t in ticks:
+                t_msc = int(t.get("t") or 0)
+                if not t_msc:
+                    continue
+                price = float(t.get("last") or 0) or float(t.get("bid") or 0)
+                rows.append(
+                    {
+                        "symbol": symbol,
+                        "t_msc": t_msc,
+                        "ts_s": t_msc / 1000.0,
+                        "price": price,
+                        "volume": int(t.get("v") or 0),
+                        "aggressor": aggressor_from_flags(int(t.get("f") or 0)),
+                        "flags_raw": int(t.get("f") or 0),
+                        "provenance_id": src_id,
+                    }
+                )
+            total += await repo.insert_ticks(session, rows)
+            last_msc = int(resp["data"].get("last_msc") or 0)
+            if len(ticks) < want or last_msc <= from_msc:
+                break  # fim do histórico (ou sem avanço)
+            from_msc = last_msc + 1
+        return total
 
     async def _quality_checks(
         self, session: Any, snapshot_id: int, per_symbol: dict[str, Any]

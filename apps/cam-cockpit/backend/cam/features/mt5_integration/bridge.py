@@ -152,6 +152,7 @@ class MT5BridgeClient:
             "SUBSCRIBE",
             "UNSUBSCRIBE",
             "PROBE_TICKS",
+            "GET_TICKS",
         }
     )
 

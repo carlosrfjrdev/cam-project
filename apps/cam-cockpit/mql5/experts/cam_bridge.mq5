@@ -42,7 +42,7 @@
 
 #include <cam_zmq.mqh>
 
-#define CAM_BRIDGE_VERSION "0.4.1-paginacao"
+#define CAM_BRIDGE_VERSION "0.4.2-ticks-bulk"
 
 input int    InpPubPort = 5556;
 input int    InpReqPort = 5557;
@@ -219,6 +219,30 @@ int JsonGetInt(const string json, const string key, const int fallback)
    return((int)StringToInteger(num));
   }
 
+//+------------------------------------------------------------------+
+//| JsonGetLong — igual ao JsonGetInt mas retorna long (time_msc      |
+//| estoura int32). Usado por GET_TICKS (from_msc).                   |
+//+------------------------------------------------------------------+
+long JsonGetLong(const string json, const string key, const long fallback)
+  {
+   string needle = "\"" + key + "\"";
+   int k = StringFind(json, needle);
+   if(k < 0) return(fallback);
+   int colon = StringFind(json, ":", k);
+   if(colon < 0) return(fallback);
+   int i = colon + 1;
+   string num = "";
+   while(i < StringLen(json))
+     {
+      ushort c = StringGetCharacter(json, i);
+      if((c >= '0' && c <= '9') || c == '-') num += ShortToString(c);
+      else if(StringLen(num) > 0) break;
+      i++;
+     }
+   if(StringLen(num) == 0) return(fallback);
+   return(StringToInteger(num));
+  }
+
 ENUM_TIMEFRAMES TimeframeFromString(const string tf)
   {
    if(tf == "M1")  return(PERIOD_M1);
@@ -351,6 +375,14 @@ void HandleCommand(const string cmd)
    if(StringFind(c, "PROBE_TICKS") >= 0)
      {
       HandleProbeTicks(c);
+      return;
+     }
+
+   // Dataset — GET_TICKS: ticks em BULK paginado (CopyTicks a partir de from_msc).
+   // Retorna os ticks reais p/ ingestao (read-only). Vem ANTES do GET por nome.
+   if(StringFind(c, "GET_TICKS") >= 0)
+     {
+      HandleGetTicks(c);
       return;
      }
 
@@ -519,6 +551,47 @@ void HandleProbeTicks(const string cmd)
       sym, got, (aggressor ? "true" : "false"),
       n_buy, n_sell, n_last, n_volume, n_flagged,
       (last_ms - first_ms), sample);
+   CamZMQSend(resp);
+  }
+
+//+------------------------------------------------------------------+
+//| GET_TICKS — ticks em BULK (paginado por from_msc). Retorna os     |
+//| ticks reais (t_msc/bid/ask/last/v/flags) p/ ingestao do dataset.  |
+//| req: {"cmd":"GET_TICKS","symbol":"WINM26","from_msc":0,"count":N} |
+//| O caller pagina: proximo from_msc = last_msc + 1.                  |
+//+------------------------------------------------------------------+
+void HandleGetTicks(const string cmd)
+  {
+   string sym = JsonGetString(cmd, "symbol");
+   long   from_msc = JsonGetLong(cmd, "from_msc", 0);
+   int    cnt = JsonGetInt(cmd, "count", 10000);
+   if(StringLen(sym) == 0) { CamZMQSend("{\"error\":\"MISSING_SYMBOL\"}"); return; }
+   if(cnt < 1) cnt = 1;
+   if(cnt > 20000) cnt = 20000;     // cap por requisicao (protege heartbeat)
+   if(from_msc < 0) from_msc = 0;
+
+   SymbolSelect(sym, true);
+   int dg = (int)SymbolInfoInteger(sym, SYMBOL_DIGITS);
+   MqlTick ticks[];
+   int got = CopyTicks(sym, ticks, COPY_TICKS_ALL, from_msc, cnt);
+   if(got < 0) got = 0;
+
+   string arr = "";
+   long last_ms = from_msc;
+   for(int i = 0; i < got; i++)
+     {
+      if(StringLen(arr) > 0) arr += ",";
+      last_ms = (long)ticks[i].time_msc;
+      long vol = (ticks[i].volume_real > 0) ? (long)ticks[i].volume_real
+                                            : (long)ticks[i].volume;
+      arr += StringFormat(
+         "{\"t\":%I64d,\"bid\":%.*f,\"ask\":%.*f,\"last\":%.*f,\"v\":%I64d,\"f\":%u}",
+         last_ms, dg, ticks[i].bid, dg, ticks[i].ask, dg, ticks[i].last,
+         vol, ticks[i].flags);
+     }
+   string resp = StringFormat(
+      "{\"status\":\"ok\",\"data\":{\"symbol\":\"%s\",\"ticks\":[%s],"
+      "\"last_msc\":%I64d,\"count\":%d}}", sym, arr, last_ms, got);
    CamZMQSend(resp);
   }
 //+------------------------------------------------------------------+
