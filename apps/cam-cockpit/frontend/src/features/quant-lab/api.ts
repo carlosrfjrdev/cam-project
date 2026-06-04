@@ -45,6 +45,11 @@ export interface IngestRequest {
 
 export const fetchDataHealth = () => api.get<DataHealth>("/research/data-health");
 
+export const purgeDataset = (symbol?: string) =>
+  api.del<{ purged: { bars: number; ticks: number }; symbol: string }>(
+    `/research/dataset${symbol ? `?symbol=${encodeURIComponent(symbol)}` : ""}`,
+  );
+
 export const postIngest = (body: IngestRequest) =>
   api.post<IngestResult>("/research/ingest", body);
 

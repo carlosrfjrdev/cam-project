@@ -7,13 +7,19 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Alert, Button, Checkbox, Divider, FormControlLabel, Paper, Stack,
-  Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography,
+  Alert, Button, Checkbox, Dialog, DialogActions, DialogContent,
+  DialogContentText, DialogTitle, Divider, FormControlLabel, IconButton,
+  Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField,
+  Tooltip, Typography,
 } from "@mui/material";
 import StorageIcon from "@mui/icons-material/Storage";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import DeleteForeverIcon from "@mui/icons-material/DeleteForever";
 import { PageContainer } from "../../_shared/components/PageContainer";
 import { PageHeader } from "../../_shared/components/PageHeader";
-import { fetchDataHealth, postIngest, type IngestResult } from "../quant-lab/api";
+import {
+  fetchDataHealth, postIngest, purgeDataset, type IngestResult,
+} from "../quant-lab/api";
 
 const DEFAULT_UNIVERSE = "WINM26";
 
@@ -24,11 +30,20 @@ export function DatasetPage() {
   const [withTicks, setWithTicks] = useState(false);
   const [tickCount, setTickCount] = useState(500000);
   const [lastIngest, setLastIngest] = useState<IngestResult | null>(null);
+  const [confirmAll, setConfirmAll] = useState(false);
 
   const health = useQuery({
     queryKey: ["dataset", "data-health"],
     queryFn: fetchDataHealth,
     retry: false,
+  });
+
+  const purge = useMutation({
+    mutationFn: (symbol?: string) => purgeDataset(symbol),
+    onSuccess: () => {
+      setConfirmAll(false);
+      qc.invalidateQueries({ queryKey: ["dataset", "data-health"] });
+    },
   });
 
   const ingest = useMutation({
@@ -105,9 +120,20 @@ export function DatasetPage() {
 
       {/* Data Health */}
       <Paper sx={{ p: 2 }}>
-        <Typography variant="h6" sx={{ mb: 1 }}>
-          Data Health
-        </Typography>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+          <Typography variant="h6">Data Health</Typography>
+          <Button
+            size="small" color="error" variant="outlined"
+            startIcon={<DeleteForeverIcon />}
+            onClick={() => setConfirmAll(true)}
+            disabled={purge.isPending || !health.data || health.data.bars.length === 0}
+          >
+            Limpar tudo
+          </Button>
+        </Stack>
+        {purge.isError && (
+          <Alert severity="warning" sx={{ mb: 1 }}>Falha ao limpar o dataset.</Alert>
+        )}
         {health.isError && (
           <Typography variant="body2" color="text.secondary">
             Sem dados ainda — rode a ingestão acima.
@@ -125,6 +151,7 @@ export function DatasetPage() {
                     <TableCell>Símbolo</TableCell><TableCell>TF</TableCell>
                     <TableCell align="right">Barras</TableCell>
                     <TableCell>Primeira</TableCell><TableCell>Última</TableCell>
+                    <TableCell />
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -134,6 +161,19 @@ export function DatasetPage() {
                       <TableCell align="right">{b.n}</TableCell>
                       <TableCell>{b.first_ts?.slice(0, 16) ?? "—"}</TableCell>
                       <TableCell>{b.last_ts?.slice(0, 16) ?? "—"}</TableCell>
+                      <TableCell align="right" sx={{ py: 0 }}>
+                        <Tooltip title={`Limpar ${b.symbol} (todos os TFs + ticks)`}>
+                          <span>
+                            <IconButton
+                              size="small" color="error"
+                              onClick={() => purge.mutate(b.symbol)}
+                              disabled={purge.isPending}
+                            >
+                              <DeleteOutlineIcon fontSize="small" />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -169,6 +209,27 @@ export function DatasetPage() {
           </>
         )}
       </Paper>
+
+      <Dialog open={confirmAll} onClose={() => setConfirmAll(false)}>
+        <DialogTitle>Limpar TODO o dataset?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Remove todas as barras e ticks de todos os papéis (research_bars +
+            research_ticks). As análises/runs do Quant Lab são mantidas. Ação
+            irreversível.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmAll(false)}>Cancelar</Button>
+          <Button
+            color="error" variant="contained"
+            onClick={() => purge.mutate(undefined)}
+            disabled={purge.isPending}
+          >
+            {purge.isPending ? "Limpando…" : "Limpar tudo"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </PageContainer>
   );
 }

@@ -217,6 +217,27 @@ async def total_trials(session: AsyncSession) -> int:
     return int(res.scalar_one())
 
 
+async def purge_dataset(
+    session: AsyncSession, symbol: str | None = None
+) -> dict[str, int]:
+    """
+    Limpa o dataset (research_bars + research_ticks). Por símbolo se `symbol`
+    dado; senão TODO o dataset. Mantém runs/análises (research_runs).
+    """
+    if symbol:
+        s = symbol.upper()
+        tk = await session.execute(
+            text("DELETE FROM research_ticks WHERE symbol = :s"), {"s": s}
+        )
+        br = await session.execute(
+            text("DELETE FROM research_bars WHERE symbol = :s"), {"s": s}
+        )
+    else:
+        tk = await session.execute(text("DELETE FROM research_ticks"))
+        br = await session.execute(text("DELETE FROM research_bars"))
+    return {"bars": int(br.rowcount or 0), "ticks": int(tk.rowcount or 0)}
+
+
 async def data_health(session: AsyncSession) -> dict[str, Any]:
     """Cobertura por símbolo/TF + liquidez de tick (R-08 / Data Health)."""
     bars = await session.execute(

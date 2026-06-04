@@ -267,3 +267,9 @@ class LeadLagIngestionService:
     async def data_health(self) -> dict[str, Any]:
         async with self._factory() as session:
             return await repo.data_health(session)
+
+    async def purge_dataset(self, symbol: str | None = None) -> dict[str, int]:
+        async with self._factory() as session:
+            res = await repo.purge_dataset(session, symbol)
+            await session.commit()
+            return res

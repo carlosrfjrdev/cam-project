@@ -127,6 +127,16 @@ async def data_health():
     return {"seed_universe": SEED_UNIVERSE, **health}
 
 
+@router.delete("/dataset")
+async def purge_dataset(symbol: str | None = None):
+    """
+    Limpa o dataset (research_bars + research_ticks). `?symbol=WINM26` limpa só
+    aquele papel; sem symbol limpa TUDO. Mantém runs/análises.
+    """
+    res = await _ingestion.purge_dataset(symbol)
+    return {"purged": res, "symbol": (symbol.upper() if symbol else "ALL")}
+
+
 # --------------------------------------------------------------------------- #
 # 0.5.2 — análise de lead-lag (correlação defasada bar-time)
 # --------------------------------------------------------------------------- #
