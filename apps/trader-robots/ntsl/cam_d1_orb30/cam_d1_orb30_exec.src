@@ -66,33 +66,39 @@ begin
   end;
 
   // ============== GESTAO DE POSICAO (TODA barra) ==============
-  if (Position > 0) then
+  // Saida por STOP PENDENTE no preco (SellToCoverStop/BuyToCoverStop) -> preenche
+  // NO PRECO DO STOP, igual ao MT5. Re-emitido todo bar (atualiza/trail). Flat no
+  // fim do pregao a mercado. (Sair a mercado no toque do stop preenche na abertura
+  // da proxima barra, abaixo do stop -> infla a perda; por isso usamos stop.)
+  if (IsBought) then
   begin
-    // --- COMPRA aberta: atualiza trailing e checa saida ---
     if (High > maxFavor) then maxFavor := High;
     if (StopMovelPts > 0) and (maxFavor - StopMovelPts > stopPrice) then
       stopPrice := maxFavor - StopMovelPts;
 
     if (Time >= FechamentoHHMM) then
-      SellToCoverAtMarket(Contratos)                  // flat no fim do pregao
-    else if (Low <= stopPrice) then
-      SellToCoverAtMarket(Contratos)                  // furou o stop -> sai
-    else if (AlvoFixoPts > 0) and (High >= alvoPrice) then
-      SellToCoverAtMarket(Contratos);                 // bateu o alvo -> sai
+      SellToCoverAtMarket                             // flat no fim do pregao
+    else
+    begin
+      SellToCoverStop(stopPrice);                     // stop no preco (long)
+      if (AlvoFixoPts > 0) then
+        SellToCoverLimit(alvoPrice);                  // alvo (opcional)
+    end;
   end
-  else if (Position < 0) then
+  else if (IsSold) then
   begin
-    // --- VENDA aberta: atualiza trailing e checa saida ---
     if (Low < maxFavor) then maxFavor := Low;
     if (StopMovelPts > 0) and (maxFavor + StopMovelPts < stopPrice) then
       stopPrice := maxFavor + StopMovelPts;
 
     if (Time >= FechamentoHHMM) then
-      BuyToCoverAtMarket(Contratos)
-    else if (High >= stopPrice) then
-      BuyToCoverAtMarket(Contratos)
-    else if (AlvoFixoPts > 0) and (Low <= alvoPrice) then
-      BuyToCoverAtMarket(Contratos);
+      BuyToCoverAtMarket                              // flat no fim do pregao
+    else
+    begin
+      BuyToCoverStop(stopPrice);                      // stop no preco (short)
+      if (AlvoFixoPts > 0) then
+        BuyToCoverLimit(alvoPrice);
+    end;
   end
   // ============== FLAT -> range de abertura + entradas ==============
   else if (Time < FechamentoHHMM) then
