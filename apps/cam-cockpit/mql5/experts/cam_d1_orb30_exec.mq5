@@ -1,67 +1,83 @@
 //+------------------------------------------------------------------+
-//| cam_d1_orb30_exec.mq5                                             |
-//| StrategyLab — D1 (ORB-30) — EA EXECUTOR (opera de verdade).      |
+//|  cam_d1_orb30_exec.mq5                                            |
+//|  CaM StrategyLab — Estrategia D1 "ORB-30" — EA EXECUTOR           |
 //|                                                                   |
-//| ADR-SL-04: modelo de DOIS EAs para a mesma estrategia D1:         |
-//|   - cam_d1_orb30.mq5      -> GRAVADOR de paridade (sem ordem).    |
-//|   - cam_d1_orb30_exec.mq5 -> EXECUTOR (este): envia ordens de     |
-//|     mercado com SL/TP, para ver a estrategia OPERANDO no Strategy |
-//|     Tester (aba Negociacoes preenchida).                          |
+//|  ========================  O QUE E ESTE EA  ====================  |
+//|  Robo que OPERA (envia ordens) a estrategia D1 no grafico onde    |
+//|  esta atachado. E o par "executor" do modelo de dois EAs:         |
+//|    - cam_d1_orb30.mq5       -> GRAVADOR (nao opera; so registra o  |
+//|                                ledger p/ conferir paridade com o   |
+//|                                backtest do CAM).                   |
+//|    - cam_d1_orb30_exec.mq5  -> EXECUTOR (ESTE): manda ordem a      |
+//|                                mercado, com stop/alvo/stop-movel.  |
+//|    - cam_d1_orb30_sinais.mq5-> executor + filtro de regime (so     |
+//|                                opera em tendencia).                |
 //|                                                                   |
-//| ESCOPO (decisao do Founder): executa a estrategia PURA. Ainda NAO |
-//| verifica risco (sem Risk Engine / Assets RiskManager) — isso vem  |
-//| depois. A unica trava ativa e o guard-rail DEMO.                  |
+//|  ===================  A ESTRATEGIA D1 (ORB-30)  ================  |
+//|  "Opening Range Breakout" de 30 minutos, a favor da tendencia:    |
+//|    1) ABERTURA: nos primeiros 30 min do pregao (configuravel),    |
+//|       mede a maxima e a minima da sessao = o "range de abertura". |
+//|    2) ENTRADA: quando o preco FECHA acima da maxima do range,      |
+//|       COMPRA; quando fecha abaixo da minima, VENDE. So entra a     |
+//|       favor da tendencia recente (filtro). Um trade por direcao    |
+//|       por dia, a mercado.                                          |
+//|    3) SAIDA: stop inicial em pontos + STOP MOVEL (trailing) que    |
+//|       acompanha o pico travando lucro; alvo fixo OPCIONAL. Sem     |
+//|       posicao virando a noite: zera no fim do pregao.             |
+//|  Tese: dias de tendencia esticam alem do range de abertura; o     |
+//|  trailing deixa o vencedor correr e o filtro evita o lateral.     |
 //|                                                                   |
-//| Logica D1 (mesma de d1_orb30.py):                                 |
-//|   1. Opening Range = [high,low] dos primeiros InpOrMinutes do     |
-//|      pregao.                                                       |
-//|   2. Na QUEBRA (close > OR_high -> compra; close < OR_low ->       |
-//|      vende), entra A MERCADO no inicio da barra seguinte.          |
-//|   3. SL no extremo oposto do range; TP = InpTargetR x range —      |
-//|      geridos pela corretora/tester (saida intrabar realista).      |
-//|   4. Um disparo por direcao por dia; flat no fim da sessao.        |
-//|                                                                   |
-//| SEC (Kevin): este EA ENVIA ORDEM. Guard-rail duplo DEMO —          |
-//|   InpRequireDemoAccount + checagem em runtime de                  |
-//|   ACCOUNT_TRADE_MODE. Recusa init se a conta nao for DEMO. Esta    |
-//|   na allowlist do lint_mql5 (junto de cam_risk_mirror).            |
+//|  =========================  ATENCAO  ===========================  |
+//|  - VALORES BRUTOS: nao desconta corretagem/emolumentos/IR.        |
+//|  - SEM Risk Engine nesta versao (estrategia pura). Unica trava:   |
+//|    guard-rail DEMO (recusa iniciar fora de conta de demonstracao).|
+//|  - Os parametros de estrategia devem ser IDENTICOS aos do         |
+//|    backtest do CAM para a paridade fechar.                        |
 //+------------------------------------------------------------------+
 #property copyright "CaM — Cockpit de gestao de ativos"
-#property version   "0.1"
+#property version   "0.2"
 #property strict
-#property description "StrategyLab D1 ORB-30 — EXECUTOR (opera a estrategia; DEMO-only)"
+#property description "CaM D1 ORB-30 — robo executor (breakout de 30min + trailing). DEMO-only."
 
 #include <Trade/Trade.mqh>
 
-#define CAM_D1_EXEC_VERSION "0.1.0-onda1"
+#define CAM_D1_EXEC_VERSION "0.2.0"
 
-//--- Parametros da estrategia (espelham D1Params do Python) ---------
-input int    InpOrMinutes        = 30;     // janela do opening range (min)
-// SL/TP ESTATICOS em pontos, relativos ao preco de entrada (R-15b). Ativos
-// quando ambos > 0 (prioridade sobre o modo range/InpTargetR).
-input double InpStopPoints        = 100.0; // SL inicial (pontos da entrada)
-input double InpTargetPoints      = 0.0;   // TP fixo (pontos); 0 = sem TP (deixa correr)
-input double InpTrailPoints        = 400.0; // STOP MOVEL (pontos atras do pico); 0 = off
-// GATE DE REGIME (R-15d) — devem ser IDENTICOS ao backtest do CAM (paridade):
-input int    InpTrendFilterBars   = 400;   // so a favor da tendencia de N barras; 0 = off
-input double InpMinOrPoints        = 0.0;   // range minimo do OR p/ operar o dia; 0 = off
-input double InpTargetR          = 1.0;    // modo range (fallback): TP = R x range
-input int    InpSessionOpenHour  = 9;      // abertura do pregao (hora)
-input int    InpSessionOpenMin   = 0;
-input int    InpEntryUntilHour   = 17;     // nao abre nova posicao apos esta hora
-input int    InpEntryUntilMin    = 0;
-input int    InpSessionCloseHour = 17;     // flat compulsorio (hora)
-input int    InpSessionCloseMin  = 55;
-//--- Execucao -------------------------------------------------------
-input double InpLots             = 1.0;    // volume por ordem
-input long   InpMagic            = 20260603;
-input ulong  InpDeviationPoints  = 10;     // desvio maximo no preenchimento
-//--- Seguranca (guard-rail duplo DEMO) ------------------------------
-input bool   InpRequireDemoAccount = true;
+//================== ESTRATEGIA — ENTRADA (range de abertura) ========
+input group "Estrategia — Entrada"
+input int    InpOR_Minutos          = 30;     // Janela do range de abertura (minutos do pregao)
+input int    InpFiltroTendencia_Barras = 400; // So opera a FAVOR da tendencia das ultimas N barras (0 = sem filtro)
+input double InpRangeMinimoOR_Pts   = 0.0;    // Range minimo do dia p/ operar, em pontos (0 = sem minimo)
+
+//================== ESTRATEGIA — SAIDA (stop / alvo / trailing) =====
+input group "Estrategia — Saida"
+input double InpStopInicial_Pts     = 100.0;  // Stop inicial: distancia da entrada, em pontos
+input double InpAlvoFixo_Pts        = 0.0;    // Alvo fixo (take profit) em pontos (0 = sem alvo, deixa correr)
+input double InpStopMovel_Pts       = 400.0;  // Stop movel (trailing): pontos atras do pico (0 = desligado)
+input double InpAlvoRange_Mult      = 1.0;    // [avancado] modo range: alvo = N x tamanho do range (so se StopInicial=0)
+
+//================== SESSAO (horario do pregao, fuso do grafico) =====
+input group "Sessao (horario do grafico)"
+input int    InpAbertura_Hora       = 9;      // Abertura do pregao — hora
+input int    InpAbertura_Min        = 0;      // Abertura do pregao — minuto
+input int    InpEntradaAte_Hora     = 17;     // Nao abre nova posicao apos esta hora
+input int    InpEntradaAte_Min      = 0;      // Nao abre nova posicao apos este minuto
+input int    InpFechamento_Hora     = 17;     // Zera posicao (flat) a partir desta hora
+input int    InpFechamento_Min      = 55;     // Zera posicao (flat) a partir deste minuto
+
+//================== EXECUCAO (ordem / volume) =======================
+input group "Execucao"
+input double InpContratos           = 1.0;    // QUANTIDADE DE CONTRATOS por ordem (WIN/WDO: 1 unidade = 1 contrato; ex.: 1, 2, 5)
+input long   InpMagicNumber         = 20260603;// Identificador do robo (para isolar suas ordens)
+input ulong  InpDesvioMax_Pts       = 10;     // Desvio maximo aceito no preenchimento (pontos)
+
+//================== SEGURANCA =======================================
+input group "Seguranca"
+input bool   InpExigirContaDemo     = true;   // So inicia em conta DEMO (recusa conta real)
 
 CTrade   g_trade;
 
-//--- Estado da maquina (espelha generate_signals) -------------------
+//--- Estado interno da estrategia (espelha o generate_signals do Python).
 string   g_session     = "";
 double   g_or_high     = 0.0;
 double   g_or_low      = 0.0;
@@ -69,13 +85,13 @@ bool     g_or_ready    = false;
 bool     g_long_armed  = true;
 bool     g_short_armed = true;
 datetime g_last_bar    = 0;
-double   g_max_favor   = 0.0;    // pico a favor desde a entrada (p/ stop movel)
+double   g_max_favor   = 0.0;    // melhor preco a favor desde a entrada (p/ o stop movel)
 
 //+------------------------------------------------------------------+
 int OnInit()
   {
    // SEC — guard-rail DEMO (este EA envia ordem; recusa fora de DEMO).
-   if(InpRequireDemoAccount)
+   if(InpExigirContaDemo)
      {
       ENUM_ACCOUNT_TRADE_MODE mode =
          (ENUM_ACCOUNT_TRADE_MODE)AccountInfoInteger(ACCOUNT_TRADE_MODE);
@@ -87,13 +103,13 @@ int OnInit()
         }
      }
 
-   g_trade.SetExpertMagicNumber(InpMagic);
-   g_trade.SetDeviationInPoints(InpDeviationPoints);
+   g_trade.SetExpertMagicNumber(InpMagicNumber);
+   g_trade.SetDeviationInPoints(InpDesvioMax_Pts);
    g_trade.SetTypeFillingBySymbol(_Symbol);
 
-   PrintFormat("[CamD1Exec] %s ativo. Symbol=%s TF=%s Lots=%.2f Magic=%d.",
+   PrintFormat("[CamD1Exec] %s ativo. Symbol=%s TF=%s Contratos=%.2f Magic=%d.",
                CAM_D1_EXEC_VERSION, _Symbol,
-               EnumToString((ENUM_TIMEFRAMES)_Period), InpLots, InpMagic);
+               EnumToString((ENUM_TIMEFRAMES)_Period), InpContratos, InpMagicNumber);
    return(INIT_SUCCEEDED);
   }
 
@@ -136,14 +152,14 @@ void ProcessBar(datetime t, double h, double l, double c)
      }
 
    // stop movel: ratcheta o SL a cada barra enquanto ha posicao (R-15c).
-   if(InpTrailPoints > 0 && HasPosition())
+   if(InpStopMovel_Pts > 0 && HasPosition())
       ManageTrailing(h, l);
 
    int tod     = MinutesOfDay(t);
-   int or_beg  = InpSessionOpenHour * 60 + InpSessionOpenMin;
-   int or_end  = or_beg + InpOrMinutes;
-   int cut     = InpEntryUntilHour * 60 + InpEntryUntilMin;
-   int s_close = InpSessionCloseHour * 60 + InpSessionCloseMin;
+   int or_beg  = InpAbertura_Hora * 60 + InpAbertura_Min;
+   int or_end  = or_beg + InpOR_Minutos;
+   int cut     = InpEntradaAte_Hora * 60 + InpEntradaAte_Min;
+   int s_close = InpFechamento_Hora * 60 + InpFechamento_Min;
 
    // flat compulsorio no fim da sessao (sem overnight) — antes de tudo.
    if(tod >= s_close)
@@ -153,7 +169,7 @@ void ProcessBar(datetime t, double h, double l, double c)
       return;
      }
 
-   // 1) construcao do opening range (primeiros InpOrMinutes do pregao).
+   // 1) construcao do range de abertura (primeiros InpOR_Minutos do pregao).
    if(tod >= or_beg && tod < or_end)
      {
       if(!g_or_ready)
@@ -180,7 +196,7 @@ void ProcessBar(datetime t, double h, double l, double c)
       return;
 
    // GATE DE REGIME A (R-15d): range minimo do OR (suprime chop). Day-level.
-   if(InpMinOrPoints > 0 && rng < InpMinOrPoints)
+   if(InpRangeMinimoOR_Pts > 0 && rng < InpRangeMinimoOR_Pts)
       return;
 
    // 3) uma posicao por vez (single-symbol).
@@ -191,47 +207,47 @@ void ProcessBar(datetime t, double h, double l, double c)
    bool up   = TrendOk(c, +1);
    bool down = TrendOk(c, -1);
 
-   // 4) gatilhos na quebra — entra A MERCADO. Modo estatico quando StopPoints>0:
-   //    SL inicial em pontos, TP fixo OPCIONAL (0 = sem TP), stop movel via
-   //    ManageTrailing. Fallback range quando StopPoints=0.
-   bool   static_exits = (InpStopPoints > 0);
+   // 4) gatilhos na quebra — entra A MERCADO. Modo estatico quando StopInicial>0:
+   //    SL inicial em pontos, alvo fixo OPCIONAL (0 = sem alvo), stop movel via
+   //    ManageTrailing. Fallback modo range quando StopInicial=0.
+   bool   static_exits = (InpStopInicial_Pts > 0);
    if(g_long_armed && c > g_or_high && up)
      {
       g_long_armed = false;
       double ref = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
-      double sl  = static_exits ? ref - InpStopPoints : g_or_low;
+      double sl  = static_exits ? ref - InpStopInicial_Pts : g_or_low;
       double tp  = static_exits
-                   ? (InpTargetPoints > 0 ? ref + InpTargetPoints : 0.0)
-                   : g_or_high + InpTargetR * rng;
-      if(g_trade.Buy(InpLots, _Symbol, 0.0, NormTick(sl), NormTick(tp), "cam_d1_exec"))
+                   ? (InpAlvoFixo_Pts > 0 ? ref + InpAlvoFixo_Pts : 0.0)
+                   : g_or_high + InpAlvoRange_Mult * rng;
+      if(g_trade.Buy(InpContratos, _Symbol, 0.0, NormTick(sl), NormTick(tp), "cam_d1_exec"))
          g_max_favor = ref;   // reseta o pico p/ o stop movel
       else
-         PrintFormat("[CamD1Exec] Buy falhou ret=%d", g_trade.ResultRetcode());
+         PrintFormat("[CamD1Exec] Compra falhou ret=%d", g_trade.ResultRetcode());
      }
    else if(g_short_armed && c < g_or_low && down)
      {
       g_short_armed = false;
       double ref = SymbolInfoDouble(_Symbol, SYMBOL_BID);
-      double sl  = static_exits ? ref + InpStopPoints : g_or_high;
+      double sl  = static_exits ? ref + InpStopInicial_Pts : g_or_high;
       double tp  = static_exits
-                   ? (InpTargetPoints > 0 ? ref - InpTargetPoints : 0.0)
-                   : g_or_low - InpTargetR * rng;
-      if(g_trade.Sell(InpLots, _Symbol, 0.0, NormTick(sl), NormTick(tp), "cam_d1_exec"))
+                   ? (InpAlvoFixo_Pts > 0 ? ref - InpAlvoFixo_Pts : 0.0)
+                   : g_or_low - InpAlvoRange_Mult * rng;
+      if(g_trade.Sell(InpContratos, _Symbol, 0.0, NormTick(sl), NormTick(tp), "cam_d1_exec"))
          g_max_favor = ref;
       else
-         PrintFormat("[CamD1Exec] Sell falhou ret=%d", g_trade.ResultRetcode());
+         PrintFormat("[CamD1Exec] Venda falhou ret=%d", g_trade.ResultRetcode());
      }
   }
 
 //+------------------------------------------------------------------+
-//| Stop movel (R-15c): segue o pico a InpTrailPoints; o SL so anda a |
-//| favor (sobe na compra, desce na venda) via PositionModify.        |
+//| Stop movel (R-15c): segue o pico a InpStopMovel_Pts; o SL so anda |
+//| a favor (sobe na compra, desce na venda) via PositionModify.      |
 //+------------------------------------------------------------------+
 void ManageTrailing(double h, double l)
   {
    if(!PositionSelect(_Symbol))
       return;
-   if(PositionGetInteger(POSITION_MAGIC) != InpMagic)
+   if(PositionGetInteger(POSITION_MAGIC) != InpMagicNumber)
       return;
    long   type   = PositionGetInteger(POSITION_TYPE);
    double cur_sl = PositionGetDouble(POSITION_SL);
@@ -241,7 +257,7 @@ void ManageTrailing(double h, double l)
    if(type == POSITION_TYPE_BUY)
      {
       g_max_favor = MathMax(g_max_favor, h);
-      double cand = NormTick(g_max_favor - InpTrailPoints);
+      double cand = NormTick(g_max_favor - InpStopMovel_Pts);
       if(cand > cur_sl)
          new_sl = cand;
      }
@@ -250,7 +266,7 @@ void ManageTrailing(double h, double l)
       if(g_max_favor <= 0.0)
          g_max_favor = l;
       g_max_favor = MathMin(g_max_favor, l);
-      double cand = NormTick(g_max_favor + InpTrailPoints);
+      double cand = NormTick(g_max_favor + InpStopMovel_Pts);
       if(cur_sl <= 0.0 || cand < cur_sl)
          new_sl = cand;
      }
@@ -264,7 +280,7 @@ void ManageTrailing(double h, double l)
 //+------------------------------------------------------------------+
 bool TrendOk(double c_now, int side)
   {
-   int n = InpTrendFilterBars;
+   int n = InpFiltroTendencia_Barras;
    if(n <= 0)
       return true;
    double ref = iClose(_Symbol, _Period, 1 + n);
@@ -291,7 +307,7 @@ bool HasPosition()
   {
    if(!PositionSelect(_Symbol))
       return false;
-   return (PositionGetInteger(POSITION_MAGIC) == InpMagic);
+   return (PositionGetInteger(POSITION_MAGIC) == InpMagicNumber);
   }
 
 //+------------------------------------------------------------------+
