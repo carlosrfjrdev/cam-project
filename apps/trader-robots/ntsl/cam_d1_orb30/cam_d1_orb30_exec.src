@@ -43,12 +43,12 @@ var
   maxFavor  : Float;
   stopPrice : Float;
   rng       : Float;
-  refTrend  : Float;
   curDate   : Float;
   orReady   : Boolean;
   longArmed : Boolean;
   shortArmed: Boolean;
-  tendOk    : Boolean;
+  tendUp    : Boolean;
+  tendDown  : Boolean;
 
 begin
   // --- novo pregao -> reseta estado ---
@@ -108,15 +108,19 @@ begin
       // ------------------------- ENTRADAS -----------------------------
       else if (rng > 0) then
       begin
-        // filtro de tendencia (precisa de historico suficiente)
-        if (FiltroTendBarras <= 0) or (CurrentBar <= FiltroTendBarras) then
-          refTrend := Close
-        else
-          refTrend := Close[FiltroTendBarras];
+        // Filtro de tendencia: so aplica quando ha historico suficiente
+        // (CurrentBar > N). Sem historico -> LIBERA (fail-open), para nao
+        // travar o teste numa janela curta. Com FiltroTendBarras=0 -> off.
+        tendUp   := True;
+        tendDown := True;
+        if (FiltroTendBarras > 0) and (CurrentBar > FiltroTendBarras) then
+        begin
+          tendUp   := Close > Close[FiltroTendBarras];
+          tendDown := Close < Close[FiltroTendBarras];
+        end;
 
-        // COMPRA na quebra do topo, a favor da tendencia (alta)
-        tendOk := (FiltroTendBarras <= 0) or (Close > refTrend);
-        if (longArmed) and (Close > orHigh) and (tendOk) then
+        // COMPRA na quebra do topo, a favor da tendencia
+        if (longArmed) and (Close > orHigh) and (tendUp) then
         begin
           longArmed := False;
           BuyAtMarket(Contratos);
@@ -126,20 +130,16 @@ begin
           if (AlvoFixoPts > 0) then
             SellToCoverLimit(Close + AlvoFixoPts);
         end
-        else
+        // VENDA na quebra do fundo, a favor da tendencia
+        else if (shortArmed) and (Close < orLow) and (tendDown) then
         begin
-          // VENDA na quebra do fundo, a favor da tendencia (baixa)
-          tendOk := (FiltroTendBarras <= 0) or (Close < refTrend);
-          if (shortArmed) and (Close < orLow) and (tendOk) then
-          begin
-            shortArmed := False;
-            SellShortAtMarket(Contratos);
-            maxFavor  := Close;
-            stopPrice := Close + StopInicialPts;
-            BuyToCoverStop(stopPrice);
-            if (AlvoFixoPts > 0) then
-              BuyToCoverLimit(Close - AlvoFixoPts);
-          end;
+          shortArmed := False;
+          SellShortAtMarket(Contratos);
+          maxFavor  := Close;
+          stopPrice := Close + StopInicialPts;
+          BuyToCoverStop(stopPrice);
+          if (AlvoFixoPts > 0) then
+            BuyToCoverLimit(Close - AlvoFixoPts);
         end;
       end;
     end;
