@@ -9,8 +9,8 @@
 //  (ver project/trader-robots/POLITICA-ROBOS.md).                    //
 //                                                                    //
 //  ====================  A ESTRATEGIA (ORB-30)  ==================   //
-//  1) Mede o range de abertura (max/min dos primeiros OrMinutos do   //
-//     pregao).                                                       //
+//  1) Mede o range de abertura (max/min entre AberturaHHMM e         //
+//     FimORHHMM — ex.: 09:00 ate 09:30).                             //
 //  2) Entra A MERCADO na quebra A FAVOR DA TENDENCIA: compra se      //
 //     Close rompe o topo do range; vende se rompe o fundo. So a      //
 //     favor da tendencia das ultimas FiltroTendBarras barras.        //
@@ -18,24 +18,24 @@
 //     fixo opcional; 1 trade por direcao/dia; zera no fim do pregao. //
 //                                                                    //
 //  =========================  ATENCAO  =========================     //
-//  >> NTSL nao foi compilado aqui. Verifique/ajuste a sintaxe no     //
-//     editor de estrategias do Profit (nomes de funcoes de ordem,    //
-//     formato de Time, etc. podem variar por versao). A LOGICA e a   //
-//     referencia; a sintaxe fina e finalizada no Profit. <<          //
+//  >> Time e comparado em HHMM (ex.: 930 = 09:30, 1755 = 17:55). Se  //
+//     a sua versao do Profit usar outro formato de hora, ajuste os   //
+//     parametros *HHMM. NTSL nao foi compilado aqui — verifique no   //
+//     editor do Profit (nomes de funcoes de ordem podem variar). <<  //
 //  Use os MESMOS parametros do MT5/CAM para a paridade (ex.: stop    //
 //  700, trail 800, tendencia 5000). Conta DEMO ate status TESTE.     //
 //------------------------------------------------------------------//
 
 input
   Contratos(1);            // quantidade de contratos por ordem
-  OrMinutos(30);           // janela do range de abertura (minutos)
+  AberturaHHMM(900);       // inicio do pregao / do range (HHMM, ex.: 900 = 09:00)
+  FimORHHMM(930);          // fim do range de abertura (HHMM, ex.: 930 = 09:30)
+  EntradaAteHHMM(1700);    // nao abre nova posicao apos (HHMM)
+  FechamentoHHMM(1755);    // flat compulsorio a partir de (HHMM)
   StopInicialPts(700);     // stop inicial, em pontos
   AlvoFixoPts(0);          // alvo fixo (take), em pontos; 0 = sem alvo
   StopMovelPts(800);       // stop movel (trailing), em pontos; 0 = off
   FiltroTendBarras(5000);  // so a favor da tendencia de N barras; 0 = off
-  AberturaHHMM(900);       // abertura do pregao (HHMM)
-  EntradaAteHHMM(1700);    // nao abre nova posicao apos (HHMM)
-  FechamentoHHMM(1755);    // flat compulsorio a partir de (HHMM)
 
 var
   orHigh    : Float;
@@ -48,21 +48,9 @@ var
   orReady   : Boolean;
   longArmed : Boolean;
   shortArmed: Boolean;
-  minNow    : Integer;
-  minOpen   : Integer;
-  minOrEnd  : Integer;
-  minCut    : Integer;
-  minClose  : Integer;
   tendOk    : Boolean;
 
 begin
-  // --- minutos do dia (converte HHMM -> minutos; robusto a virada de hora) ---
-  minNow   := Trunc(Time/100)*60 + (Time          - Trunc(Time/100)*100);
-  minOpen  := Trunc(AberturaHHMM/100)*60   + (AberturaHHMM   - Trunc(AberturaHHMM/100)*100);
-  minOrEnd := minOpen + OrMinutos;
-  minCut   := Trunc(EntradaAteHHMM/100)*60 + (EntradaAteHHMM - Trunc(EntradaAteHHMM/100)*100);
-  minClose := Trunc(FechamentoHHMM/100)*60 + (FechamentoHHMM - Trunc(FechamentoHHMM/100)*100);
-
   // --- novo pregao -> reseta estado ---
   if (Date <> curDate) then
   begin
@@ -73,7 +61,7 @@ begin
   end;
 
   // --- flat compulsorio no fim da sessao (sem overnight) ---
-  if (minNow >= minClose) then
+  if (Time >= FechamentoHHMM) then
   begin
     if (Position <> 0) then
       ClosePosition;
@@ -81,7 +69,7 @@ begin
   else
   begin
     // --- construcao do range de abertura ---
-    if (minNow >= minOpen) and (minNow < minOrEnd) then
+    if (Time >= AberturaHHMM) and (Time < FimORHHMM) then
     begin
       if (not orReady) then
       begin
@@ -96,7 +84,7 @@ begin
       end;
     end
     // --- janela de entrada (apos o range, antes do corte) ---
-    else if (orReady) and (minNow < minCut) then
+    else if (orReady) and (Time < EntradaAteHHMM) then
     begin
       rng := orHigh - orLow;
 
