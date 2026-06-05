@@ -2,34 +2,38 @@
 //  cam_d1_orb30_exec.src  —  Profit (NTSL / Nelogica)               //
 //  Estrategia D1 "ORB-30" — EXECUTOR (replica do EA MQL5)           //
 //                                                                    //
-//  =====================  O QUE E ESTE ROBO  =====================   //
-//  Replica em NTSL (Profit) do cam_d1_orb30_exec.mq5 (MetaTrader) e  //
-//  do d1_orb30.py (CAM). Faz parte da VALIDACAO TRIPLA: o mesmo robo //
-//  roda em Profit x MetaTrader x CAM e os resultados devem convergir //
-//  (ver project/trader-robots/POLITICA-ROBOS.md).                    //
+//  Replica em NTSL do cam_d1_orb30_exec.mq5 (MetaTrader) e do        //
+//  d1_orb30.py (CAM) — VALIDACAO TRIPLA (ver POLITICA-ROBOS.md).     //
 //                                                                    //
 //  ====================  A ESTRATEGIA (ORB-30)  ==================   //
-//  1) Mede o range de abertura (max/min entre AberturaHHMM e         //
-//     FimORHHMM — ex.: 09:00 ate 09:30).                             //
-//  2) Entra A MERCADO na quebra A FAVOR DA TENDENCIA: compra se      //
-//     Close rompe o topo do range; vende se rompe o fundo. So a      //
-//     favor da tendencia das ultimas FiltroTendBarras barras.        //
-//  3) Stop inicial + STOP MOVEL (trailing) que segue o pico; alvo    //
-//     fixo opcional; 1 trade por direcao/dia; zera no fim do pregao. //
+//  1) Range de abertura = max/min entre AberturaHHMM e FimORHHMM     //
+//     (ex.: 09:00 a 09:30).                                          //
+//  2) Entra A MERCADO na quebra A FAVOR DA TENDENCIA (compra acima   //
+//     do topo / vende abaixo do fundo do range). 1 trade/direcao/dia.//
+//  3) Stop inicial + STOP MOVEL (trailing) + alvo fixo opcional;     //
+//     flat no fim do pregao.                                         //
 //                                                                    //
-//  =========================  ATENCAO  =========================     //
-//  >> Time e comparado em HHMM (ex.: 930 = 09:30, 1755 = 17:55). Se  //
-//     a sua versao do Profit usar outro formato de hora, ajuste os   //
-//     parametros *HHMM. NTSL nao foi compilado aqui — verifique no   //
-//     editor do Profit (nomes de funcoes de ordem podem variar). <<  //
-//  Use os MESMOS parametros do MT5/CAM para a paridade (ex.: stop    //
-//  700, trail 800, tendencia 5000). Conta DEMO ate status TESTE.     //
+//  ====================  GESTAO DE SAIDA (NTSL)  =================   //
+//  A gestao de posicao roda em TODA barra (nao so na janela de       //
+//  entrada). A saida e DETERMINISTICA: quando a barra fura o stop    //
+//  (Low<=stop na compra / High>=stop na venda) OU no fim do pregao,  //
+//  zera A MERCADO. Isso garante que a posicao SEMPRE fecha (sem      //
+//  drawdown de posicao correndo solta).                             //
+//                                                                    //
+//  ===================  MAPA NTSL <-> MetaTrader  ===============   //
+//   AberturaHHMM/FimORHHMM .. InpOR_Minutos (30 min = 900..930)      //
+//   StopInicialPts ......... InpStopInicial_Pts                      //
+//   AlvoFixoPts ............ InpAlvoFixo_Pts                         //
+//   StopMovelPts ........... InpStopMovel_Pts                        //
+//   FiltroTendBarras ....... InpFiltroTendencia_Barras               //
+//   Contratos .............. InpContratos                            //
+//  Use os MESMOS valores do MT5/CAM. Conta DEMO ate status TESTE.    //
 //------------------------------------------------------------------//
 
 input
   Contratos(1);            // quantidade de contratos por ordem
-  AberturaHHMM(900);       // inicio do pregao / do range (HHMM, ex.: 900 = 09:00)
-  FimORHHMM(930);          // fim do range de abertura (HHMM, ex.: 930 = 09:30)
+  AberturaHHMM(900);       // inicio do pregao / do range (HHMM)
+  FimORHHMM(930);          // fim do range de abertura (HHMM)
   EntradaAteHHMM(1700);    // nao abre nova posicao apos (HHMM)
   FechamentoHHMM(1755);    // flat compulsorio a partir de (HHMM)
   StopInicialPts(700);     // stop inicial, em pontos
@@ -42,6 +46,7 @@ var
   orLow     : Float;
   maxFavor  : Float;
   stopPrice : Float;
+  alvoPrice : Float;
   rng       : Float;
   curDate   : Float;
   orReady   : Boolean;
@@ -51,7 +56,7 @@ var
   tendDown  : Boolean;
 
 begin
-  // --- novo pregao -> reseta estado ---
+  // ============== RESET DIARIO (novo pregao) ==============
   if (Date <> curDate) then
   begin
     curDate    := Date;
@@ -60,13 +65,37 @@ begin
     shortArmed := True;
   end;
 
-  // --- flat compulsorio no fim da sessao (sem overnight) ---
-  if (Time >= FechamentoHHMM) then
+  // ============== GESTAO DE POSICAO (TODA barra) ==============
+  if (Position > 0) then
   begin
-    if (Position <> 0) then
-      ClosePosition;
+    // --- COMPRA aberta: atualiza trailing e checa saida ---
+    if (High > maxFavor) then maxFavor := High;
+    if (StopMovelPts > 0) and (maxFavor - StopMovelPts > stopPrice) then
+      stopPrice := maxFavor - StopMovelPts;
+
+    if (Time >= FechamentoHHMM) then
+      SellToCoverAtMarket(Contratos)                  // flat no fim do pregao
+    else if (Low <= stopPrice) then
+      SellToCoverAtMarket(Contratos)                  // furou o stop -> sai
+    else if (AlvoFixoPts > 0) and (High >= alvoPrice) then
+      SellToCoverAtMarket(Contratos);                 // bateu o alvo -> sai
   end
-  else
+  else if (Position < 0) then
+  begin
+    // --- VENDA aberta: atualiza trailing e checa saida ---
+    if (Low < maxFavor) then maxFavor := Low;
+    if (StopMovelPts > 0) and (maxFavor + StopMovelPts < stopPrice) then
+      stopPrice := maxFavor + StopMovelPts;
+
+    if (Time >= FechamentoHHMM) then
+      BuyToCoverAtMarket(Contratos)
+    else if (High >= stopPrice) then
+      BuyToCoverAtMarket(Contratos)
+    else if (AlvoFixoPts > 0) and (Low <= alvoPrice) then
+      BuyToCoverAtMarket(Contratos);
+  end
+  // ============== FLAT -> range de abertura + entradas ==============
+  else if (Time < FechamentoHHMM) then
   begin
     // --- construcao do range de abertura ---
     if (Time >= AberturaHHMM) and (Time < FimORHHMM) then
@@ -84,33 +113,12 @@ begin
       end;
     end
     // --- janela de entrada (apos o range, antes do corte) ---
-    else if (orReady) and (Time < EntradaAteHHMM) then
+    else if (orReady) and (Time >= FimORHHMM) and (Time < EntradaAteHHMM) then
     begin
       rng := orHigh - orLow;
-
-      // ------------------- GESTAO DE POSICAO ABERTA -------------------
-      if (Position > 0) then
+      if (rng > 0) then
       begin
-        // stop movel da COMPRA: segue a maxima; o stop so sobe.
-        if (High > maxFavor) then maxFavor := High;
-        if (StopMovelPts > 0) and (maxFavor - StopMovelPts > stopPrice) then
-          stopPrice := maxFavor - StopMovelPts;
-        SellToCoverStop(stopPrice);                 // stop de protecao (long)
-      end
-      else if (Position < 0) then
-      begin
-        // stop movel da VENDA: segue a minima; o stop so desce.
-        if (Low < maxFavor) then maxFavor := Low;
-        if (StopMovelPts > 0) and (maxFavor + StopMovelPts < stopPrice) then
-          stopPrice := maxFavor + StopMovelPts;
-        BuyToCoverStop(stopPrice);                  // stop de protecao (short)
-      end
-      // ------------------------- ENTRADAS -----------------------------
-      else if (rng > 0) then
-      begin
-        // Filtro de tendencia: so aplica quando ha historico suficiente
-        // (CurrentBar > N). Sem historico -> LIBERA (fail-open), para nao
-        // travar o teste numa janela curta. Com FiltroTendBarras=0 -> off.
+        // filtro de tendencia: so aplica com historico suficiente (fail-open)
         tendUp   := True;
         tendDown := True;
         if (FiltroTendBarras > 0) and (CurrentBar > FiltroTendBarras) then
@@ -126,9 +134,7 @@ begin
           BuyAtMarket(Contratos);
           maxFavor  := Close;
           stopPrice := Close - StopInicialPts;
-          SellToCoverStop(stopPrice);
-          if (AlvoFixoPts > 0) then
-            SellToCoverLimit(Close + AlvoFixoPts);
+          if (AlvoFixoPts > 0) then alvoPrice := Close + AlvoFixoPts;
         end
         // VENDA na quebra do fundo, a favor da tendencia
         else if (shortArmed) and (Close < orLow) and (tendDown) then
@@ -137,9 +143,7 @@ begin
           SellShortAtMarket(Contratos);
           maxFavor  := Close;
           stopPrice := Close + StopInicialPts;
-          BuyToCoverStop(stopPrice);
-          if (AlvoFixoPts > 0) then
-            BuyToCoverLimit(Close - AlvoFixoPts);
+          if (AlvoFixoPts > 0) then alvoPrice := Close - AlvoFixoPts;
         end;
       end;
     end;
