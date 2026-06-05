@@ -62,7 +62,7 @@ _D1 = StrategyDef(
     # trailing 800, tendência ~10 dias (4000 barras). ~9% de drawdown.
     default_params={
         "or_minutes": 30, "stop_points": 700.0, "target_points": 0.0,
-        "trail_points": 800.0, "trend_filter_bars": 4000, "min_or_points": 0.0,
+        "trail_points": 800.0, "trend_filter_bars": 5000, "min_or_points": 0.0,
     },
     param_space={
         "stop_points": [300.0, 500.0, 700.0],
