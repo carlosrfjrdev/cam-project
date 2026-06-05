@@ -124,13 +124,23 @@ begin
       rng := orHigh - orLow;
       if (rng > 0) then
       begin
-        // filtro de tendencia: so aplica com historico suficiente (fail-open)
-        tendUp   := True;
-        tendDown := True;
-        if (FiltroTendBarras > 0) and (CurrentBar > FiltroTendBarras) then
+        // filtro de tendencia: FAIL-CLOSED (igual CAM/MT5). Sem 5000 barras de
+        // historico carregadas, NAO opera (em vez de operar sem filtro). Isso
+        // exige carregar bastante historico M1 no Profit antes do teste.
+        if (FiltroTendBarras <= 0) then
+        begin
+          tendUp   := True;
+          tendDown := True;
+        end
+        else if (CurrentBar > FiltroTendBarras) then
         begin
           tendUp   := Close > Close[FiltroTendBarras];
           tendDown := Close < Close[FiltroTendBarras];
+        end
+        else
+        begin
+          tendUp   := False;   // sem historico do filtro -> bloqueia (parity)
+          tendDown := False;
         end;
 
         // COMPRA na quebra do topo, a favor da tendencia
