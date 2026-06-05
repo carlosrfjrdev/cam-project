@@ -115,7 +115,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--mql5-dir",
         type=Path,
-        default=Path(__file__).resolve().parents[1] / "mql5",
+        # Robôs movidos para /apps/trader-robots/mql5 (2026-06-05).
+        default=Path(__file__).resolve().parents[2] / "trader-robots" / "mql5",
         help="Diretório raiz dos arquivos MQL5 (.mq5/.mqh)",
     )
     parser.add_argument(
