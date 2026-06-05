@@ -110,6 +110,28 @@ int OnInit()
    PrintFormat("[CamD1Exec] %s ativo. Symbol=%s TF=%s Contratos=%.2f Magic=%d.",
                CAM_D1_EXEC_VERSION, _Symbol,
                EnumToString((ENUM_TIMEFRAMES)_Period), InpContratos, InpMagicNumber);
+
+   // Diagnostico de VOLUME/MARGEM — explica por que "acima de N contratos nao
+   // opera": e limite do simbolo (volume max) ou falta de margem (conta pequena),
+   // nao bug. Acima do max afordavel, a corretora rejeita por NO_MONEY.
+   double vmin = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
+   double vmax = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
+   double vstep= SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
+   double margem = MargemPorContrato();
+   double livre  = AccountInfoDouble(ACCOUNT_MARGIN_FREE);
+   int    afordavel = (margem > 0.0) ? (int)MathFloor(livre / margem) : -1;
+   PrintFormat("[CamD1Exec] Volume do simbolo: min=%.2f max=%.2f step=%.2f.",
+               vmin, vmax, vstep);
+   PrintFormat("[CamD1Exec] Margem/contrato=%.2f | margem livre=%.2f | "
+               "MAX AFORDAVEL ~%d contratos (acima disso a corretora rejeita).",
+               margem, livre, afordavel);
+   if(vmax > 0.0 && InpContratos > vmax)
+      PrintFormat("[CamD1Exec] ATENCAO: InpContratos=%.2f > volume max do simbolo "
+                  "(%.2f); sera limitado ao max.", InpContratos, vmax);
+   if(afordavel >= 0 && InpContratos > afordavel)
+      PrintFormat("[CamD1Exec] ATENCAO: InpContratos=%.2f acima do afordavel (~%d) "
+                  "p/ a margem livre atual; ordens vao FALHAR por falta de margem.",
+                  InpContratos, afordavel);
    return(INIT_SUCCEEDED);
   }
 
@@ -211,6 +233,7 @@ void ProcessBar(datetime t, double h, double l, double c)
    //    SL inicial em pontos, alvo fixo OPCIONAL (0 = sem alvo), stop movel via
    //    ManageTrailing. Fallback modo range quando StopInicial=0.
    bool   static_exits = (InpStopInicial_Pts > 0);
+   double lote = NormalizarVolume(InpContratos);   // respeita min/max/step
    if(g_long_armed && c > g_or_high && up)
      {
       g_long_armed = false;
@@ -219,10 +242,10 @@ void ProcessBar(datetime t, double h, double l, double c)
       double tp  = static_exits
                    ? (InpAlvoFixo_Pts > 0 ? ref + InpAlvoFixo_Pts : 0.0)
                    : g_or_high + InpAlvoRange_Mult * rng;
-      if(g_trade.Buy(InpContratos, _Symbol, 0.0, NormTick(sl), NormTick(tp), "cam_d1_exec"))
+      if(g_trade.Buy(lote, _Symbol, 0.0, NormTick(sl), NormTick(tp), "cam_d1_exec"))
          g_max_favor = ref;   // reseta o pico p/ o stop movel
       else
-         PrintFormat("[CamD1Exec] Compra falhou ret=%d", g_trade.ResultRetcode());
+         LogFalha("Compra", lote);
      }
    else if(g_short_armed && c < g_or_low && down)
      {
@@ -232,11 +255,53 @@ void ProcessBar(datetime t, double h, double l, double c)
       double tp  = static_exits
                    ? (InpAlvoFixo_Pts > 0 ? ref - InpAlvoFixo_Pts : 0.0)
                    : g_or_low - InpAlvoRange_Mult * rng;
-      if(g_trade.Sell(InpContratos, _Symbol, 0.0, NormTick(sl), NormTick(tp), "cam_d1_exec"))
+      if(g_trade.Sell(lote, _Symbol, 0.0, NormTick(sl), NormTick(tp), "cam_d1_exec"))
          g_max_favor = ref;
       else
-         PrintFormat("[CamD1Exec] Venda falhou ret=%d", g_trade.ResultRetcode());
+         LogFalha("Venda", lote);
      }
+  }
+
+//+------------------------------------------------------------------+
+//| Margem exigida por 1 contrato (p/ diagnostico de "nao opera").    |
+//+------------------------------------------------------------------+
+double MargemPorContrato()
+  {
+   double m = 0.0;
+   double price = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   if(price <= 0.0) price = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   if(!OrderCalcMargin(ORDER_TYPE_BUY, _Symbol, 1.0, price, m))
+      return 0.0;
+   return m;
+  }
+
+//+------------------------------------------------------------------+
+//| Normaliza o volume aos limites do simbolo (min/max/step).         |
+//+------------------------------------------------------------------+
+double NormalizarVolume(double vol)
+  {
+   double vmin = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN);
+   double vmax = SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX);
+   double vstep= SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP);
+   if(vstep > 0.0) vol = MathRound(vol / vstep) * vstep;
+   if(vmin  > 0.0 && vol < vmin) vol = vmin;
+   if(vmax  > 0.0 && vol > vmax) vol = vmax;
+   return vol;
+  }
+
+//+------------------------------------------------------------------+
+//| Log de falha de ordem em TEXTO (retcode + motivo + margem).       |
+//+------------------------------------------------------------------+
+void LogFalha(string lado, double lote)
+  {
+   double margem_op = 0.0;
+   double price = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   OrderCalcMargin(ORDER_TYPE_BUY, _Symbol, lote, price, margem_op);
+   PrintFormat("[CamD1Exec] %s falhou ret=%d (%s). lote=%.2f margem_exigida=%.2f "
+               "margem_livre=%.2f. Se for NO_MONEY: conta pequena p/ esse nro de "
+               "contratos -> reduza InpContratos ou aumente o capital.",
+               lado, g_trade.ResultRetcode(), g_trade.ResultRetcodeDescription(),
+               lote, margem_op, AccountInfoDouble(ACCOUNT_MARGIN_FREE));
   }
 
 //+------------------------------------------------------------------+
