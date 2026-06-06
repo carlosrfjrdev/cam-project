@@ -16,8 +16,10 @@
 //|    2) Quando o preco estica ACIMA de VWAP + K*sigma -> VENDE       |
 //|       (aposta que volta); quando estica ABAIXO de VWAP - K*sigma   |
 //|       -> COMPRA. Um trade por excursao.                           |
-//|    3) ALVO no VWAP (a media para onde o preco tende a voltar);     |
-//|       STOP alem de K_stop*sigma. Sem runner. Flat no fim do dia.  |
+//|    3) SAIDA (configuravel, estilo ORB30): por padrao ALVO no VWAP  |
+//|       e STOP alem de K_stop*sigma (modo sigma). Opcionalmente, em   |
+//|       PONTOS: stop estatico, alvo fixo e STOP MOVEL (trailing) que  |
+//|       trava lucro. Flat no fim do dia (sem overnight).            |
 //|  Tese: sem choque macro, o preco intradia oscila em torno do VWAP;|
 //|  esticadas de 2-2.5 sigma sao insustentaveis e revertem. GANHA do |
 //|  momentum tardio que persegue a extensao. (Frageil a NOTICIA: o   |
@@ -29,19 +31,29 @@
 //|  guard-rail DEMO. Na allowlist do lint_mql5 (envia ordem).        |
 //+------------------------------------------------------------------+
 #property copyright "CaM — Cockpit de gestao de ativos"
-#property version   "0.2"
+#property version   "0.3"
 #property strict
 #property description "CaM D2 VWAP fade — robo executor (reversao a media). DEMO-only."
 
 #include <Trade/Trade.mqh>
 
-#define CAM_D2_EXEC_VERSION "0.2.0"
+#define CAM_D2_EXEC_VERSION "0.3.0"
 
 //================== ESTRATEGIA (fade em torno do VWAP) ==============
 input group "Estrategia — VWAP fade"
 input double InpFade_KSigma         = 2.0;    // Faz fade quando o preco estica K x sigma do VWAP (entrada)
 input double InpStop_KSigma         = 3.0;    // Stop alem de K x sigma do VWAP (alvo = proprio VWAP)
 input int    InpWarmup_Barras       = 30;     // Barras minimas na sessao antes de operar (sigma confiavel)
+
+//================== ESTRATEGIA — SAIDA (pontos, estilo ORB30) =======
+// >> Saida configuravel igual a D1 ORB-30. PADRAO = 0 em todos -> mantem o modo
+//    SIGMA original (stop em VWAP+-K_stop*sigma, alvo no VWAP) e a paridade com o
+//    CAM. Se um parametro em PONTOS for > 0, ele SUBSTITUI o equivalente sigma:
+//    stop estatico, alvo fixo e/ou stop movel (trailing) que trava lucro. <<
+input group "Estrategia — Saida (pontos; 0 = modo sigma/VWAP)"
+input double InpStopInicial_Pts     = 0.0;    // Stop inicial ESTATICO em pontos (0 = stop em VWAP +- K_stop*sigma)
+input double InpAlvoFixo_Pts        = 0.0;    // Alvo fixo (TP) em pontos (0 = alvo no proprio VWAP)
+input double InpStopMovel_Pts       = 0.0;    // Stop MOVEL (trailing) em pontos atras do pico (0 = desligado)
 
 //================== SESSAO (horario do grafico) ====================
 input group "Sessao (horario do grafico)"
@@ -68,6 +80,7 @@ double   g_sum_pv=0.0, g_sum_v=0.0, g_sum_pv2=0.0;
 int      g_n=0;
 bool     g_armed_long=true, g_armed_short=true;
 datetime g_last_bar=0;
+double   g_max_favor=0.0;   // pico favoravel desde a entrada (p/ o stop movel)
 
 //+------------------------------------------------------------------+
 int OnInit()
@@ -128,12 +141,17 @@ void ProcessBar(datetime t, double h, double l, double c, double vol)
       g_session = session;
       g_sum_pv=0.0; g_sum_v=0.0; g_sum_pv2=0.0; g_n=0;
       g_armed_long=true; g_armed_short=true;
+      g_max_favor=0.0;
      }
 
    // VWAP/sigma cumulativos da sessao (typical=(h+l+c)/3, ponderado por volume).
    double tp = (h + l + c) / 3.0;
    double v  = (vol > 0.0) ? vol : 1.0;
    g_sum_pv += tp*v; g_sum_v += v; g_sum_pv2 += tp*tp*v; g_n++;
+
+   // stop movel (estilo ORB30): ratcheta o SL a cada barra enquanto ha posicao.
+   if(InpStopMovel_Pts > 0 && HasPosition())
+      ManageTrailing(h, l);
 
    int tod = MinutesOfDay(t);
    int s_close = InpFechamento_Hora*60 + InpFechamento_Min;
@@ -164,21 +182,69 @@ void ProcessBar(datetime t, double h, double l, double c, double vol)
    if(HasPosition()) return;
 
    double lote = NormalizarVolume(InpContratos);
-   // FADE a mercado. ALVO = VWAP; STOP = VWAP +- K_stop*sigma (congelados).
+   // FADE a mercado. SAIDA: modo SIGMA por padrao (stop=VWAP+-K_stop*sigma,
+   // alvo=VWAP). Se os parametros em PONTOS forem > 0, usam-se no lugar (estilo
+   // ORB30): stop estatico, alvo fixo e stop movel (este via ManageTrailing).
+   bool   static_stop = (InpStopInicial_Pts > 0);
+   bool   fixed_tp    = (InpAlvoFixo_Pts    > 0);
    if(g_armed_short && c > ue)            // esticou pra cima -> VENDE
      {
       g_armed_short=false;
-      double sl=NormTick(vwap + InpStop_KSigma*sg), tpx=NormTick(vwap);
-      if(!g_trade.Sell(lote, _Symbol, 0.0, sl, tpx, "cam_d2_exec"))
+      double ref = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+      double sl  = static_stop ? ref + InpStopInicial_Pts : vwap + InpStop_KSigma*sg;
+      double tpx = fixed_tp    ? ref - InpAlvoFixo_Pts    : vwap;
+      if(g_trade.Sell(lote, _Symbol, 0.0, NormTick(sl), NormTick(tpx), "cam_d2_exec"))
+         g_max_favor = ref;              // reseta o pico p/ o stop movel
+      else
          LogFalha("Venda", lote);
      }
    else if(g_armed_long && c < le)        // esticou pra baixo -> COMPRA
      {
       g_armed_long=false;
-      double sl=NormTick(vwap - InpStop_KSigma*sg), tpx=NormTick(vwap);
-      if(!g_trade.Buy(lote, _Symbol, 0.0, sl, tpx, "cam_d2_exec"))
+      double ref = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+      double sl  = static_stop ? ref - InpStopInicial_Pts : vwap - InpStop_KSigma*sg;
+      double tpx = fixed_tp    ? ref + InpAlvoFixo_Pts    : vwap;
+      if(g_trade.Buy(lote, _Symbol, 0.0, NormTick(sl), NormTick(tpx), "cam_d2_exec"))
+         g_max_favor = ref;
+      else
          LogFalha("Compra", lote);
      }
+  }
+
+//+------------------------------------------------------------------+
+//| Stop movel (estilo ORB30): segue o pico a InpStopMovel_Pts; o SL  |
+//| so anda a favor (sobe na compra, desce na venda) via PositionModify|
+//| Preserva o TP atual (alvo no VWAP/fixo).                          |
+//+------------------------------------------------------------------+
+void ManageTrailing(double h, double l)
+  {
+   if(!PositionSelect(_Symbol))
+      return;
+   if(PositionGetInteger(POSITION_MAGIC) != InpMagicNumber)
+      return;
+   long   type   = PositionGetInteger(POSITION_TYPE);
+   double cur_sl = PositionGetDouble(POSITION_SL);
+   double cur_tp = PositionGetDouble(POSITION_TP);
+   double new_sl = cur_sl;
+
+   if(type == POSITION_TYPE_BUY)
+     {
+      g_max_favor = MathMax(g_max_favor, h);
+      double cand = NormTick(g_max_favor - InpStopMovel_Pts);
+      if(cand > cur_sl)
+         new_sl = cand;
+     }
+   else
+     {
+      if(g_max_favor <= 0.0)
+         g_max_favor = l;
+      g_max_favor = MathMin(g_max_favor, l);
+      double cand = NormTick(g_max_favor + InpStopMovel_Pts);
+      if(cur_sl <= 0.0 || cand < cur_sl)
+         new_sl = cand;
+     }
+   if(new_sl != cur_sl)
+      g_trade.PositionModify(_Symbol, new_sl, cur_tp);
   }
 
 //+------------------------------------------------------------------+
