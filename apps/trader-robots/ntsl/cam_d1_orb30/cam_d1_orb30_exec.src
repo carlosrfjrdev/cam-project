@@ -36,10 +36,10 @@ input
   FimORHHMM(930);          // fim do range de abertura (HHMM)
   EntradaAteHHMM(1700);    // nao abre nova posicao apos (HHMM)
   FechamentoHHMM(1755);    // flat compulsorio a partir de (HHMM)
-  StopInicialPts(700);     // stop inicial, em pontos
+  StopInicialPts(300);     // stop inicial, em pontos (campeao MT5: corta perda curta)
   AlvoFixoPts(0);          // alvo fixo (take), em pontos; 0 = sem alvo
-  StopMovelPts(800);       // stop movel (trailing), em pontos; 0 = off
-  FiltroTendBarras(5000);  // so a favor da tendencia de N barras; 0 = off
+  StopMovelPts(1000);      // stop movel (trailing), em pontos; 0 = off (deixa correr)
+  FiltroTendBarras(2500);  // so a favor da tendencia de N barras; 0 = off (~5 dias M1)
 
 var
   orHigh    : Float;

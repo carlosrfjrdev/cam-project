@@ -55,19 +55,19 @@ _D1 = StrategyDef(
         "Quebra do range dos primeiros 30 min, A FAVOR da tendência (~1 dia); "
         "SL inicial + STOP MÓVEL (trailing); TP fixo opcional; flat na sessão."
     ),
-    # Default = melhor risco-ajustado provado no WINM26 (6 meses): SL 100, sem TP,
-    # trailing 400, GATE de tendência de ~1 dia (400 barras M1). Reduz drawdown e
-    # eleva consistência walk-forward. Ajuste conforme o ativo/risco.
-    # Default = config validada pelo Founder no MT5 (tick): SL 700, sem TP,
-    # trailing 800, tendência ~10 dias (4000 barras). ~9% de drawdown.
+    # Default = CAMPEÃO otimizado pelo Founder no MT5 (volume financeiro) e
+    # confirmado no CAM (WINM26 mar-jun): SL 300 (corta perda curta), sem TP,
+    # trailing 1000 (deixa o ganho correr), gate de tendência ~5 dias (2500
+    # barras M1). Acerto ~38% mas PAYOFF 3.6:1 -> +R$3007 com maxDD só -R$463.
+    # Acerto baixo é a assinatura do arquétipo trend; não é defeito (ver D1-ORB30.md).
     default_params={
-        "or_minutes": 30, "stop_points": 700.0, "target_points": 0.0,
-        "trail_points": 800.0, "trend_filter_bars": 5000, "min_or_points": 0.0,
+        "or_minutes": 30, "stop_points": 300.0, "target_points": 0.0,
+        "trail_points": 1000.0, "trend_filter_bars": 2500, "min_or_points": 0.0,
     },
     param_space={
         "stop_points": [300.0, 500.0, 700.0],
-        "trail_points": [400.0, 800.0, 1000.0],   # 0 = sem stop móvel
-        "trend_filter_bars": [400, 1800, 4000],   # 0 = sem gate; >1800 melhores
+        "trail_points": [800.0, 1000.0, 1200.0],  # 0 = sem stop móvel
+        "trend_filter_bars": [2500, 4000, 5000],  # 0 = sem gate; >2500 melhores
     },
     runnable=True,
 )

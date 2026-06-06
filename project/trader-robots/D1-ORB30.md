@@ -55,15 +55,22 @@ Em **lateral** (chop), o rompimento é falso e a estratégia perde — por isso 
 |---|---|---|
 | `InpContratos` | 1 | Quantidade de contratos por ordem (WIN/WDO: 1 = 1 contrato) |
 | `InpOR_Minutos` | 30 | Janela do range de abertura (min) |
-| `InpD1_StopInicial_Pts` / `InpStopInicial_Pts` | 700 | Stop inicial em pontos |
+| `InpD1_StopInicial_Pts` / `InpStopInicial_Pts` | 300 | Stop inicial em pontos |
 | `InpD1_AlvoFixo_Pts` / `InpAlvoFixo_Pts` | 0 | Alvo fixo em pontos (0 = sem alvo) |
-| `InpD1_StopMovel_Pts` / `InpStopMovel_Pts` | 800 | Stop móvel (trailing) em pontos (0 = off) |
-| `InpFiltroTendencia_Barras` / `InpD1_FiltroTend_Barras` | 4000–5000 | Filtro de tendência (N barras) |
+| `InpD1_StopMovel_Pts` / `InpStopMovel_Pts` | 1000 | Stop móvel (trailing) em pontos (0 = off) |
+| `InpFiltroTendencia_Barras` / `InpD1_FiltroTend_Barras` | 2500 | Filtro de tendência (N barras ≈ 5 dias) |
 | `InpRangeMinimoOR_Pts` | 0 | Range mínimo do OR para operar (0 = off) |
 | Sessão | 09:00 / 17:00 / 17:55 | Abertura / corte de entrada / fechamento |
 
-> **Config validada pelo Founder (WINM26, MT5 tick):** stop 700 / trail 800 /
-> tendência 4000–5000, ~9% de drawdown. Mesmos valores nos três ambientes (paridade).
+> **Config CAMPEÃ (WINM26 mar-jun, otimizada pelo Founder no MT5 por volume
+> financeiro, confirmada no CAM):** stop **300** / trail **1000** / tendência
+> **2500**. Resultado: acerto ~38%, **payoff 3.6:1**, **+R$3.007** com maxDD só
+> **−R$463** (cabe em 10% com ~R$4.600/contrato). Mesmos valores nos três ambientes.
+>
+> ⚠️ **Acerto de 38% é a assinatura do arquétipo, não defeito.** A config de "89% de
+> acerto" (stop1000/tp200) lucra MENOS (+R$956) e inverte o payoff p/ 0.2:1, com cauda
+> de −1000 latente que não disparou na amostra. Mais dias contra (37) que a favor (23)
+> é esperado: perde miúdo (−R$57 méd.), ganha grande (+R$204 méd.).
 
 ---
 
@@ -83,21 +90,45 @@ Em **lateral** (chop), o rompimento é falso e a estratégia perde — por isso 
 
 | Ambiente | Status | Observação |
 |---|---|---|
-| CAM (Python) | **BACKTEST** | Backtest + walk-forward OK; edge regime-dependente comprovado |
-| MetaTrader (MQL5) | **BACKTEST** | Founder validando no Strategy Tester (config 700/800/5000) |
-| Profit (NTSL) | **INDEV** | Replicação criada (2026-06-05); ajuste de sintaxe no editor do Profit |
+| CAM (Python) | **BACKTEST** | Config campeã 300/1000/2500 → 71 trades, +R$3.007, maxDD −R$463 |
+| MetaTrader (MQL5) | **BACKTEST** | Otimizado pelo Founder → 66 trades, +R$3.124 (volume financeiro) |
+| Profit (NTSL) | **BACKTEST** | Convergiu: 56 trades, ~+R$2.000 (mesma amostra mar-jun) |
 
-**Status do robô:** **BACKTEST** (em validação tripla). Próximo gate: convergência
-dos três → **ELEGIVEL**.
+**Status do robô:** **BACKTEST → convergência CONFIRMADA** (Profit ≈ MT5 ≈ CAM,
+dentro de ±10%). A validação tripla da D1 está **fechada na config anterior**
+(700/800/5000); falta reconfirmar a convergência na config campeã (300/1000/2500)
+antes de **ELEGIVEL**.
 
 ---
 
 ## 6. Pendências de validação
 
+- [x] Convergência MQL5 ↔ NTSL ↔ CAM (mar-jun, config 700/800/5000): **±10% OK**.
+- [ ] Reconfirmar convergência tripla na config campeã (300/1000/2500).
 - [ ] Paridade CAM ↔ gravador MQL5 (PASS no painel Paridade).
-- [ ] Convergência MQL5 ↔ NTSL (mesmo período/parâmetros).
-- [ ] Resolver mismatch tick/barra do WINM26 no MT5 (re-sincronizar histórico).
 - [ ] Backtest líquido (custo + IR) antes de ELEGIVEL.
+- [ ] **Out-of-sample real:** dez-fev é warmup do filtro (2500 barras), não amostra
+      independente. Ingerir mais histórico (WINJ/WINV/2024) p/ stress da cauda.
+
+---
+
+## 6.1 Recuperação após loss — regime switch, NÃO martingale
+
+Análise empírica (WINM26 mar-jun, D1 campeã × D2 VWAP fade):
+
+| Achado | Valor |
+|---|---|
+| Nos 37 dias que a D1 perde, a D2 fez | **+R$1.952** (positiva em 21) |
+| Correlação diária D1 × D2 | **−0,35** (se complementam) |
+| D2 sozinha (params atuais, não afinada) | +R$64 |
+| Carteira D1+D2 rodando **sempre** | +R$3.071 / maxDD −R$890 (não ajuda) |
+
+**Leitura:** a recuperação certa é **trocar para a D2 no regime lateral** (onde ela
+tem edge comprovado), não rodar as duas sempre (empata e piora o DD) e **jamais**
+aumentar volume após perda (martingale = ruína). Mecanismo: (a) **limite de perda
+diária** (defensivo); (b) **regime switch** D1↔D2 via Efficiency Ratio
+(`cam_hibrido_orb30_vwap`). **Pré-requisito:** afinar + validar a D2 antes de
+confiar nela como perna de recuperação.
 
 ---
 
@@ -106,4 +137,5 @@ dos três → **ELEGIVEL**.
 - **`cam_d1_orb30_sinais`** — D1 + filtro de regime (Efficiency Ratio): só opera
   em tendência; fica de fora no lateral.
 - **`cam_hibrido_orb30_vwap`** — D1 (tendência) **+** D2 VWAP fade (lateral) no
-  mesmo robô, trocando por regime. Cobre os dois mundos.
+  mesmo robô, trocando por regime. Cobre os dois mundos. **É a base da recuperação
+  por regime** (ver §6.1): a D2 lucra nos dias que a D1 sangra (anti-correlação −0,35).

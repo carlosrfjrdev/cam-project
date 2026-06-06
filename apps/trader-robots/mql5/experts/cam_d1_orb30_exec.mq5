@@ -46,16 +46,17 @@
 //================== ESTRATEGIA — ENTRADA (range de abertura) ========
 input group "Estrategia — Entrada"
 input int    InpOR_Minutos          = 30;     // Janela do range de abertura (minutos do pregao)
-input int    InpFiltroTendencia_Barras = 5000;// So opera a FAVOR da tendencia das ultimas N barras (0 = sem filtro)
+input int    InpFiltroTendencia_Barras = 2500;// So opera a FAVOR da tendencia das ultimas N barras (0 = sem filtro)
 input double InpRangeMinimoOR_Pts   = 0.0;    // Range minimo do dia p/ operar, em pontos (0 = sem minimo)
 
 //================== ESTRATEGIA — SAIDA (stop / alvo / trailing) =====
-// >> Defaults = config validada pelo Founder (MT5 tick): stop 700 / trail 800 /
-//    tendencia 5000. IDENTICOS ao NTSL e ao CAM (validacao tripla / paridade). <<
+// >> Defaults = CAMPEAO otimizado pelo Founder no MT5 (volume financeiro) e
+//    confirmado no CAM: stop 300 / trail 1000 / tendencia 2500. Acerto ~38% mas
+//    payoff 3.6:1. IDENTICOS ao NTSL e ao CAM (validacao tripla / paridade). <<
 input group "Estrategia — Saida"
-input double InpStopInicial_Pts     = 700.0;  // Stop inicial: distancia da entrada, em pontos
+input double InpStopInicial_Pts     = 300.0;  // Stop inicial: distancia da entrada, em pontos
 input double InpAlvoFixo_Pts        = 0.0;    // Alvo fixo (take profit) em pontos (0 = sem alvo, deixa correr)
-input double InpStopMovel_Pts       = 800.0;  // Stop movel (trailing): pontos atras do pico (0 = desligado)
+input double InpStopMovel_Pts       = 1000.0; // Stop movel (trailing): pontos atras do pico (0 = desligado)
 input double InpAlvoRange_Mult      = 1.0;    // [avancado] modo range: alvo = N x tamanho do range (so se StopInicial=0)
 
 //================== SESSAO (horario do pregao, fuso do grafico) =====
