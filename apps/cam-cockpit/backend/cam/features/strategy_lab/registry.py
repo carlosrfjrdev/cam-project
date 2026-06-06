@@ -81,11 +81,20 @@ _D2 = StrategyDef(
         "Fade da esticada: opera CONTRA quando o preço estica ±k·σ do VWAP da "
         "sessão; alvo no VWAP; stop além de k_stop·σ; sem runner. Múltiplos/dia."
     ),
-    default_params={"k_entry": 2.0, "k_stop": 3.0, "warmup_bars": 30},
+    # Default = config otimizada pelo Founder no MT5 (volume financeiro, 02/03-05/06):
+    # fade a 1σ, stop sigma "largo" (k_stop=30 ≈ desligado, quem protege é o trailing),
+    # warmup 170 barras, alvo fixo 300, stop móvel 900. MT5: 78 trades, +R$1500,
+    # acerto 75,68%, DD 13,14%. Perna de RECUPERAÇÃO no regime lateral (anti-corr D1).
+    default_params={
+        "k_entry": 1.0, "k_stop": 30.0, "warmup_bars": 170,
+        "stop_points": 0.0, "target_points": 300.0, "trail_points": 900.0,
+    },
     param_space={
-        "k_entry": [1.5, 2.0, 2.5],
-        "k_stop": [3.0, 4.0],
-        "warmup_bars": [20, 30, 45],
+        "k_entry": [1.0, 1.5, 2.0],
+        "k_stop": [3.0, 30.0],                  # 30 ≈ sem stop sigma (trailing protege)
+        "warmup_bars": [30, 90, 170],
+        "target_points": [200.0, 300.0, 400.0],  # 0 = alvo no VWAP
+        "trail_points": [600.0, 900.0, 1200.0],   # 0 = sem stop móvel
     },
     runnable=True,
 )
@@ -156,6 +165,9 @@ def _d2_params(params: dict) -> D2Params:
         k_entry=float(params.get("k_entry", base.k_entry)),
         k_stop=float(params.get("k_stop", base.k_stop)),
         warmup_bars=int(params.get("warmup_bars", base.warmup_bars)),
+        stop_points=float(params.get("stop_points", base.stop_points)),
+        target_points=float(params.get("target_points", base.target_points)),
+        trail_points=float(params.get("trail_points", base.trail_points)),
         session_open=base.session_open,
         session_close=base.session_close,
         entry_until=base.entry_until,

@@ -24,8 +24,16 @@ from cam.features.strategy_lab.strategies.d1_orb30 import Signal
 @dataclass(frozen=True)
 class D2Params:
     k_entry: float = 2.0            # esticada de entrada (em σ do VWAP)
-    k_stop: float = 3.0             # stop além de k_stop·σ
+    k_stop: float = 3.0             # stop além de k_stop·σ (modo sigma)
     warmup_bars: int = 30           # nº mín. de barras na sessão p/ σ confiável
+    # SAÍDA em PONTOS (estilo ORB30, espelha o EA cam_d2_vwap_exec). 0 = usa o
+    # modo sigma/VWAP no componente correspondente. Podem-se combinar livremente:
+    #   stop_points    — SL estático em pontos (0 = stop na banda VWAP±k_stop·σ).
+    #   target_points  — TP fixo em pontos (0 = alvo no próprio VWAP).
+    #   trail_points   — stop móvel em pontos atrás do pico (0 = desligado).
+    stop_points: float = 0.0
+    target_points: float = 0.0
+    trail_points: float = 0.0
     session_open: time = time(9, 0)
     session_close: time = time(17, 55)
     entry_until: time = time(17, 0)
@@ -84,7 +92,10 @@ def generate_signals(bars: list[Bar], params: D2Params) -> list[Signal]:
             armed_long = armed_short = True
             continue
 
-        # fade: esticou pra cima → short; esticou pra baixo → long. Alvo=VWAP.
+        # fade: esticou pra cima → short; esticou pra baixo → long.
+        # Saída: banda sigma (stop_price=VWAP±k_stop·σ, alvo=VWAP) como base;
+        # os componentes em PONTOS (stop/target/trail), se > 0, substituem no
+        # motor (_resolve_levels). Espelha o EA cam_d2_vwap_exec.
         if armed_short and bar.close > upper_e:
             armed_short = False
             signals.append(
@@ -92,6 +103,9 @@ def generate_signals(bars: list[Bar], params: D2Params) -> list[Signal]:
                     bar_index=i, side="short",
                     stop_price=vwap + params.k_stop * sigma,
                     target_price=vwap,
+                    stop_points=params.stop_points,
+                    target_points=params.target_points,
+                    trail_points=params.trail_points,
                 )
             )
         elif armed_long and bar.close < lower_e:
@@ -101,6 +115,9 @@ def generate_signals(bars: list[Bar], params: D2Params) -> list[Signal]:
                     bar_index=i, side="long",
                     stop_price=vwap - params.k_stop * sigma,
                     target_price=vwap,
+                    stop_points=params.stop_points,
+                    target_points=params.target_points,
+                    trail_points=params.trail_points,
                 )
             )
 

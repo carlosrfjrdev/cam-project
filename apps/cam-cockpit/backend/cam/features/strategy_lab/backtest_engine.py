@@ -103,20 +103,38 @@ def _resolve_levels(
     sig: Signal, leg: Leg, entry: float
 ) -> tuple[float, float, bool, float]:
     """
-    Resolve (stop, alvo, has_target, trail) ABSOLUTOS no momento do fill.
-    Modo estático (stop_points>0): SL relativo à entrada; TP opcional
-    (target_points=0 ⇒ sem TP); trailing opcional. Modo range: absolutos do sinal.
+    Resolve (stop, alvo, has_target, trail) ABSOLUTOS no momento do fill,
+    combinando livremente componentes RELATIVOS (em pontos da entrada) e
+    ABSOLUTOS (preço do sinal) — espelha os EAs, que misturam os dois:
+
+      - STOP:  stop_points>0 ⇒ relativo à entrada; senão usa stop_price (absoluto:
+               range do ORB ou banda sigma do VWAP).
+      - ALVO:  target_points>0 ⇒ relativo; senão target_price>0 (absoluto, ex.: VWAP);
+               nenhum dos dois ⇒ sem TP (deixa o trailing/sessão decidir).
+      - TRAIL: trail_points (stop móvel; 0 = off).
+
+    Ex.: D2 com stop inicial=0 (sigma), alvo fixo=300 e trail=900 → stop=banda
+    sigma absoluta + TP relativo 300 + stop móvel 900.
     """
+    is_long = leg == Leg.LONG
+    sign = 1.0 if is_long else -1.0
+
     if sig.stop_points > 0:
-        has_target = sig.target_points > 0
-        if leg == Leg.LONG:
-            stop = entry - sig.stop_points
-            target = entry + sig.target_points
-        else:
-            stop = entry + sig.stop_points
-            target = entry - sig.target_points
-        return (stop, target, has_target, sig.trail_points)
-    return (sig.stop_price, sig.target_price, True, 0.0)
+        stop = entry - sign * sig.stop_points
+    else:
+        stop = sig.stop_price
+
+    if sig.target_points > 0:
+        target = entry + sign * sig.target_points
+        has_target = True
+    elif sig.target_price > 0:
+        target = sig.target_price
+        has_target = True
+    else:
+        target = 0.0
+        has_target = False
+
+    return (stop, target, has_target, sig.trail_points)
 
 
 class _Position:
