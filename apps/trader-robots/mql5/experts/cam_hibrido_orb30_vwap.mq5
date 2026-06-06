@@ -22,9 +22,9 @@
 //|  VALORES BRUTOS (sem custo/IR). SEM Risk Engine. Unica trava:     |
 //|  guard-rail DEMO. Na allowlist do lint_mql5 (envia ordem).        |
 //|                                                                   |
-//|  Defaults = configs CAMPEAS validadas (CAM<->MT5):               |
-//|    D1: stop 300 / trail 1000 / filtro 2500 / janela ate 11:00.    |
-//|    D2: fade 2sg / stop 300 / alvo 300 / trail 400 / warmup 180.   |
+//|  Defaults = config do Founder otimizada p/ o hibrido:            |
+//|    D1: OR 10min / stop 700 / alvo 1600 / trail 900 / ate 11:00.   |
+//|    D2: fade 1sg / stop 400 / alvo 1600 / trail 900 / warmup 124.  |
 //+------------------------------------------------------------------+
 #property copyright "CaM — Cockpit de gestao de ativos"
 #property version   "0.2"
@@ -37,22 +37,22 @@
 
 //================== D1 — ORB-30 (manha, ate 11:00) ================
 input group "D1 ORB-30 (manha)"
-input int    InpOR_Minutos          = 30;     // Janela do range de abertura (minutos)
+input int    InpOR_Minutos          = 10;     // Janela do range de abertura (minutos)
 input int    InpD1_EntradaAte_Hora  = 11;     // D1 nao abre nova posicao apos esta hora
 input int    InpD1_EntradaAte_Min   = 0;      // D1 nao abre nova posicao apos este minuto
-input double InpD1_StopInicial_Pts  = 300.0;  // D1: stop inicial, em pontos da entrada
-input double InpD1_AlvoFixo_Pts     = 0.0;    // D1: alvo fixo em pontos (0 = sem alvo, deixa correr)
-input double InpD1_StopMovel_Pts    = 1000.0; // D1: stop movel (trailing), pontos atras do pico (0 = off)
-input int    InpD1_FiltroTend_Barras= 2500;   // D1: so a favor da tendencia das ultimas N barras (0 = off)
+input double InpD1_StopInicial_Pts  = 700.0;  // D1: stop inicial, em pontos da entrada
+input double InpD1_AlvoFixo_Pts     = 1600.0; // D1: alvo fixo em pontos (0 = sem alvo, deixa correr)
+input double InpD1_StopMovel_Pts    = 900.0;  // D1: stop movel (trailing), pontos atras do pico (0 = off)
+input int    InpD1_FiltroTend_Barras= 0;      // D1: so a favor da tendencia das ultimas N barras (0 = off)
 
 //================== D2 — VWAP fade (recuperacao apos loss) =========
 input group "D2 VWAP fade (recuperacao)"
-input double InpD2_KEntry           = 2.0;    // D2: fade na esticada de K x sigma do VWAP
+input double InpD2_KEntry           = 1.0;    // D2: fade na esticada de K x sigma do VWAP
 input double InpD2_KStop            = 30.0;   // D2: stop na banda K_stop x sigma (inocuo se StopInicial>0)
-input int    InpD2_WarmupBarras     = 180;    // D2: barras minimas na sessao p/ sigma confiavel
-input double InpD2_StopInicial_Pts  = 300.0;  // D2: stop estatico em pontos (0 = banda sigma)
-input double InpD2_AlvoFixo_Pts     = 300.0;  // D2: alvo fixo em pontos (0 = alvo no VWAP)
-input double InpD2_StopMovel_Pts    = 400.0;  // D2: stop movel (trailing) em pontos (0 = off)
+input int    InpD2_WarmupBarras     = 124;    // D2: barras minimas na sessao p/ sigma confiavel
+input double InpD2_StopInicial_Pts  = 400.0;  // D2: stop estatico em pontos (0 = banda sigma)
+input double InpD2_AlvoFixo_Pts     = 1600.0; // D2: alvo fixo em pontos (0 = alvo no VWAP)
+input double InpD2_StopMovel_Pts    = 900.0;  // D2: stop movel (trailing) em pontos (0 = off)
 
 //================== SESSAO (horario do grafico) ====================
 input group "Sessao (horario do grafico)"
