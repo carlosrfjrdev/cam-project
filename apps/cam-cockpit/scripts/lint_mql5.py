@@ -47,13 +47,15 @@ _FORBIDDEN_FUNCS = (
 #   - cam_d1_orb30_exec.mq5  (ADR-SL-04) — executor D1 puro (DEMO-only, sem risco).
 #   - cam_d1_orb30_sinais.mq5(ADR-SL-04) — executor D1 + regime ER embutido (DEMO).
 #   - cam_d2_vwap_exec.mq5   (ADR-SL-04) — executor D2 VWAP fade (DEMO-only).
-#   - cam_hibrido_orb30_vwap.mq5 (ADR-SL-04) — executor hibrido D1+D2 por regime.
+#   - cam_hibrido_orb30_vwap.mq5 (ADR-SL-04) — executor hibrido D1+D2 (recuperacao).
+#   - cam_hibrido_orb30_vwap_fbr.mq5 — hibrido 3 pernas D1+D3(FBR)+D2 (DEMO-only).
 _ALLOWED_FILES = {
     "cam_risk_mirror.mq5",
     "cam_d1_orb30_exec.mq5",
     "cam_d1_orb30_sinais.mq5",
     "cam_d2_vwap_exec.mq5",
     "cam_hibrido_orb30_vwap.mq5",
+    "cam_hibrido_orb30_vwap_fbr.mq5",
 }
 
 
