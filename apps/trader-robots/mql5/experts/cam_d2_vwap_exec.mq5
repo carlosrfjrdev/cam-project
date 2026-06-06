@@ -42,18 +42,20 @@
 //================== ESTRATEGIA (fade em torno do VWAP) ==============
 input group "Estrategia — VWAP fade"
 input double InpFade_KSigma         = 2.0;    // Faz fade quando o preco estica K x sigma do VWAP (entrada)
-input double InpStop_KSigma         = 3.0;    // Stop alem de K x sigma do VWAP (alvo = proprio VWAP)
-input int    InpWarmup_Barras       = 30;     // Barras minimas na sessao antes de operar (sigma confiavel)
+input double InpStop_KSigma         = 30.0;   // Stop na banda K x sigma (inocuo se StopInicial_Pts>0)
+input int    InpWarmup_Barras       = 180;    // Barras minimas na sessao antes de operar (sigma confiavel)
 
 //================== ESTRATEGIA — SAIDA (pontos, estilo ORB30) =======
 // >> Saida configuravel igual a D1 ORB-30. PADRAO = 0 em todos -> mantem o modo
 //    SIGMA original (stop em VWAP+-K_stop*sigma, alvo no VWAP) e a paridade com o
 //    CAM. Se um parametro em PONTOS for > 0, ele SUBSTITUI o equivalente sigma:
 //    stop estatico, alvo fixo e/ou stop movel (trailing) que trava lucro. <<
+// >> Defaults = CAMPEAO validado (MT5 amostra grande 01/12-05/06; CAM converge):
+//    stop 300 / alvo 300 / trail 400. <<
 input group "Estrategia — Saida (pontos; 0 = modo sigma/VWAP)"
-input double InpStopInicial_Pts     = 0.0;    // Stop inicial ESTATICO em pontos (0 = stop em VWAP +- K_stop*sigma)
-input double InpAlvoFixo_Pts        = 0.0;    // Alvo fixo (TP) em pontos (0 = alvo no proprio VWAP)
-input double InpStopMovel_Pts       = 0.0;    // Stop MOVEL (trailing) em pontos atras do pico (0 = desligado)
+input double InpStopInicial_Pts     = 300.0;  // Stop inicial ESTATICO em pontos (0 = stop em VWAP +- K_stop*sigma)
+input double InpAlvoFixo_Pts        = 300.0;  // Alvo fixo (TP) em pontos (0 = alvo no proprio VWAP)
+input double InpStopMovel_Pts       = 400.0;  // Stop MOVEL (trailing) em pontos atras do pico (0 = desligado)
 
 //================== SESSAO (horario do grafico) ====================
 input group "Sessao (horario do grafico)"

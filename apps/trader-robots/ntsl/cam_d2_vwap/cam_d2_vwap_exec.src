@@ -35,10 +35,11 @@
 //   Contratos .............. InpContratos                            //
 //  Use os MESMOS valores do MT5/CAM. Conta DEMO ate status TESTE.    //
 //                                                                    //
-//  >> Config CAMPEA otimizada pelo Founder no MT5 (volume financeiro,//
-//     02/03-05/06): KEntrada 1 / KStop 30 / Warmup 170 / StopIni 0 / //
-//     Alvo 300 / StopMovel 900 -> 78 trades, +R$1500, acerto 75,68%, //
-//     drawdown 13,14%. <<                                            //
+//  >> Config CAMPEA otimizada pelo Founder no MT5 em AMOSTRA GRANDE   //
+//     (01/12/25-05/06/26): KEntrada 2 / KStop 30 / Warmup 180 /       //
+//     StopIni 300 / Alvo 300 / StopMovel 400 -> +R$920 (3614-2694),   //
+//     acerto 54%. CAM converge (+-9%). Diversificador da D1 (corr ~0).//
+//     (a config curta de 3 meses, acerto 75%, era overfit.)           //
 //------------------------------------------------------------------//
 
 input
@@ -46,12 +47,12 @@ input
   AberturaHHMM(900);       // inicio do pregao / da sessao (HHMM)
   EntradaAteHHMM(1700);    // nao abre nova posicao apos (HHMM)
   FechamentoHHMM(1755);    // flat compulsorio a partir de (HHMM)
-  KEntradaSigma(1);        // faz fade quando estica K x sigma do VWAP
-  KStopSigma(30);          // stop na banda VWAP +- K x sigma (se StopInicialPts=0)
-  WarmupBarras(170);       // barras minimas na sessao antes de operar
-  StopInicialPts(0);       // stop estatico em pontos; 0 = usa banda sigma
+  KEntradaSigma(2);        // faz fade quando estica K x sigma do VWAP
+  KStopSigma(30);          // stop na banda VWAP +- K x sigma (inocuo se StopInicialPts>0)
+  WarmupBarras(180);       // barras minimas na sessao antes de operar
+  StopInicialPts(300);     // stop estatico em pontos; 0 = usa banda sigma
   AlvoFixoPts(300);        // alvo fixo em pontos; 0 = alvo no VWAP
-  StopMovelPts(900);       // stop movel (trailing) em pontos; 0 = off
+  StopMovelPts(400);       // stop movel (trailing) em pontos; 0 = off
 
 var
   curDate    : Float;

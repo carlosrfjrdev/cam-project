@@ -81,20 +81,21 @@ _D2 = StrategyDef(
         "Fade da esticada: opera CONTRA quando o preço estica ±k·σ do VWAP da "
         "sessão; alvo no VWAP; stop além de k_stop·σ; sem runner. Múltiplos/dia."
     ),
-    # Default = config otimizada pelo Founder no MT5 (volume financeiro, 02/03-05/06):
-    # fade a 1σ, stop sigma "largo" (k_stop=30 ≈ desligado, quem protege é o trailing),
-    # warmup 170 barras, alvo fixo 300, stop móvel 900. MT5: 78 trades, +R$1500,
-    # acerto 75,68%, DD 13,14%. Perna de RECUPERAÇÃO no regime lateral (anti-corr D1).
+    # Default = config CAMPEÃ otimizada pelo Founder no MT5 em amostra GRANDE
+    # (01/12/25-05/06/26, mata o overfit dos 3 meses): fade a 2σ, stop estático 300,
+    # alvo 300, trailing 400, warmup 180. MT5: +R$920 (3614-2694), acerto 54%.
+    # CAM converge (±9% bruto). DIVERSIFICADOR da D1 (corr ~0): book D1+D2 = +R$3759
+    # com maxDD −R$397 (≤ D1 sozinha). k_stop=30 é inócuo aqui (stop estático manda).
     default_params={
-        "k_entry": 1.0, "k_stop": 30.0, "warmup_bars": 170,
-        "stop_points": 0.0, "target_points": 300.0, "trail_points": 900.0,
+        "k_entry": 2.0, "k_stop": 30.0, "warmup_bars": 180,
+        "stop_points": 300.0, "target_points": 300.0, "trail_points": 400.0,
     },
     param_space={
-        "k_entry": [1.0, 1.5, 2.0],
-        "k_stop": [3.0, 30.0],                  # 30 ≈ sem stop sigma (trailing protege)
-        "warmup_bars": [30, 90, 170],
-        "target_points": [200.0, 300.0, 400.0],  # 0 = alvo no VWAP
-        "trail_points": [600.0, 900.0, 1200.0],   # 0 = sem stop móvel
+        "k_entry": [1.5, 2.0, 2.5],
+        "warmup_bars": [90, 150, 180],
+        "stop_points": [200.0, 300.0, 400.0],     # 0 = stop na banda sigma
+        "target_points": [200.0, 300.0, 400.0],   # 0 = alvo no VWAP
+        "trail_points": [300.0, 400.0, 600.0],    # 0 = sem stop móvel
     },
     runnable=True,
 )
