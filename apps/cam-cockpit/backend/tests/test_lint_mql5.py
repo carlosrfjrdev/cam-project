@@ -114,6 +114,14 @@ class TestLintMQL5:
         assert code == 0
         assert data["violations"] == []
 
+    def test_allows_orders_in_cam_hibrido_fbr_fulltrailing(self, tmp_path: Path):
+        # hibrido 3 pernas + stop hibrido tick-a-tick pode enviar ordem (DEMO-only).
+        ok = tmp_path / "cam_hibrido_orb30_vwap_fbr_fulltrailing.mq5"
+        ok.write_text("void f() { g_trade.PositionModify(_Symbol, sl, tp); }\n")
+        code, data = _run(tmp_path)
+        assert code == 0
+        assert data["violations"] == []
+
     def test_recorder_cam_d2_vwap_stays_forbidden(self, tmp_path: Path):
         bad = tmp_path / "cam_d2_vwap.mq5"
         bad.write_text("void f() { OrderSend(req, res); }\n")

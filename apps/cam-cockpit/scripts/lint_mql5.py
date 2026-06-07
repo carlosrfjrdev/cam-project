@@ -49,6 +49,7 @@ _FORBIDDEN_FUNCS = (
 #   - cam_d2_vwap_exec.mq5   (ADR-SL-04) — executor D2 VWAP fade (DEMO-only).
 #   - cam_hibrido_orb30_vwap.mq5 (ADR-SL-04) — executor hibrido D1+D2 (recuperacao).
 #   - cam_hibrido_orb30_vwap_fbr.mq5 — hibrido 3 pernas D1+D3(FBR)+D2 (DEMO-only).
+#   - cam_hibrido_orb30_vwap_fbr_fulltrailing.mq5 — idem + stop hibrido tick-a-tick.
 _ALLOWED_FILES = {
     "cam_risk_mirror.mq5",
     "cam_d1_orb30_exec.mq5",
@@ -56,6 +57,7 @@ _ALLOWED_FILES = {
     "cam_d2_vwap_exec.mq5",
     "cam_hibrido_orb30_vwap.mq5",
     "cam_hibrido_orb30_vwap_fbr.mq5",
+    "cam_hibrido_orb30_vwap_fbr_fulltrailing.mq5",
 }
 
 
