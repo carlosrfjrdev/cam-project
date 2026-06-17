@@ -2,15 +2,18 @@
 Router do Operation Analyzer (CASCA).
 
 POST /api/v1/operation-analyzer/signal
-  multipart: ticks (file, opc) + candles (file, opc) + strategy (form) +
-             symbol (form) + point_value (form)
-  → contrato SignalResponse com dados STUB. A engine real entra depois.
+  form: strategy + symbol + point_value + date (opc, default hoje) + timeframe
+  → ticks + candles vêm AUTOMATICAMENTE do MT5 (bridge). Retorna SignalResponse
+  com dados STUB (engine de sinais entra depois).
 
 SEM bloqueios de Risk Manager (risk_manager_blocking=false) por design.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, File, Form, UploadFile
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+from fastapi import APIRouter, Form
 
 from cam.features.operation_analyzer.schemas import (
     RiskAnalysis,
@@ -19,12 +22,37 @@ from cam.features.operation_analyzer.schemas import (
 )
 
 router = APIRouter(prefix="/api/v1/operation-analyzer", tags=["operation-analyzer"])
+BR_TZ = ZoneInfo("America/Sao_Paulo")
 
 
-def _count_lines(content: bytes | None) -> int:
-    if not content:
-        return 0
-    return max(0, content.decode("utf-8", errors="replace").count("\n") - 1)
+async def _fetch_market(symbol: str, day: datetime, timeframe: str) -> dict:
+    """Puxa ticks do dia + candles do MT5. Falha segura → counts 0 + status."""
+    try:
+        from cam.features.mt5_integration.routes import _service as mt5
+    except Exception:  # noqa: BLE001
+        return {"ticks": 0, "candles": 0, "status": "integração MT5 indisponível"}
+    if not mt5.bridge.is_alive():
+        return {
+            "ticks": 0,
+            "candles": 0,
+            "status": "bridge MT5 offline — atache o EA cam_bridge",
+        }
+    start = day.replace(hour=0, minute=0, second=0, tzinfo=BR_TZ) - timedelta(hours=3)
+    end = day.replace(hour=23, minute=59, second=59, tzinfo=BR_TZ)
+    from_msc = int(start.timestamp() * 1000)
+    to_msc = int(end.timestamp() * 1000)
+    n_ticks = n_candles = 0
+    try:
+        ticks = await mt5.get_ticks_range(symbol, from_msc, to_msc)
+        n_ticks = len(ticks)
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        resp = await mt5.get_candles(symbol, timeframe, 500)
+        n_candles = len(resp.get("data", {}).get("candles", []))
+    except Exception:  # noqa: BLE001
+        pass
+    return {"ticks": n_ticks, "candles": n_candles, "status": "ok"}
 
 
 @router.post("/signal", response_model=SignalResponse)
@@ -32,11 +60,15 @@ async def signal_route(
     strategy: str = Form("(não informada)"),
     symbol: str = Form("WINM26"),
     point_value: float = Form(0.20),
-    ticks: UploadFile | None = File(None),
-    candles: UploadFile | None = File(None),
+    date: str = Form(""),
+    timeframe: str = Form("M5"),
 ):
-    ticks_bytes = await ticks.read() if ticks is not None else None
-    candles_bytes = await candles.read() if candles is not None else None
+    try:
+        day = datetime.strptime(date, "%Y-%m-%d") if date else datetime.now(BR_TZ)
+    except ValueError:
+        day = datetime.now(BR_TZ)
+
+    market = await _fetch_market(symbol, day, timeframe)
 
     # --- STUB: engine de sinais ainda não implementada (casca) ---
     suggested_size = 1
@@ -61,9 +93,11 @@ async def signal_route(
         symbol=symbol,
         strategy=strategy,
         inputs={
-            "ticks_rows": _count_lines(ticks_bytes),
-            "candles_rows": _count_lines(candles_bytes),
+            "ticks_rows": market["ticks"],
+            "candles_rows": market["candles"],
             "point_value": point_value,
+            "tick_status": market["status"],
+            "date": day.strftime("%Y-%m-%d"),
         },
         risk_analysis=RiskAnalysis(
             suggested_size=suggested_size,
@@ -74,8 +108,8 @@ async def signal_route(
         ),
         signals=stub_signals,
         notes=(
-            "CASCA: contrato estável com dados STUB. Próximo passo é plugar a engine "
-            "de sinais (estratégia + ticks/candles → sinais reais). Sem bloqueio de "
-            "Risk Manager: o risco é exibido como análise, não como trava."
+            "CASCA: ticks+candles vêm AUTO do MT5; sinais ainda são STUB. Próximo "
+            "passo é plugar a engine (estratégia + ticks/candles → sinais reais). "
+            "Sem bloqueio de Risk Manager: o risco é exibido como análise."
         ),
     )

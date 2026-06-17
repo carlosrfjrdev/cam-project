@@ -9,4 +9,13 @@ class AnalyzeResponse(BaseModel):
     model: str
     narrative: str
     metrics: dict
+    symbol: str
     tick_summary: dict | None = None
+    tick_status: str = "ok"
+
+
+class LastTickResponse(BaseModel):
+    asset: str | None = None
+    timestamp: str | None = None
+    source: str | None = None
+    bridge_online: bool = False

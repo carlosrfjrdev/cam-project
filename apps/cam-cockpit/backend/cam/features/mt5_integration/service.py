@@ -124,6 +124,45 @@ class MT5IntegrationService:
             timeout_ms=20000,
         )
 
+    async def get_ticks_range(
+        self,
+        symbol: str,
+        from_msc: int,
+        to_msc: int,
+        max_total: int = 500_000,
+    ) -> list[dict]:
+        """
+        Busca TODOS os ticks de [from_msc, to_msc] paginando GET_TICKS.
+
+        Usado pelos analyzers para puxar os ticks do dia automaticamente do MT5.
+        Retorna [] se a bridge estiver offline (falha segura — o caller decide).
+        Cada tick: {t, bid, ask, last, v, f}. `max_total` protege contra payloads
+        absurdos.
+        """
+        if not self._bridge.is_alive():
+            # tenta mesmo assim uma vez (is_alive depende de heartbeat); se a 1ª
+            # página vier vazia/erro, o loop encerra naturalmente.
+            pass
+        out: list[dict] = []
+        cursor = from_msc
+        while True:
+            resp = await self.get_ticks(symbol, from_msc=cursor, count=20000)
+            if resp.get("error"):
+                break
+            data = resp.get("data", {})
+            ticks = data.get("ticks", [])
+            got = data.get("count", len(ticks))
+            last_msc = data.get("last_msc", cursor)
+            if not ticks:
+                break
+            out.extend(t for t in ticks if t.get("t", 0) <= to_msc)
+            if last_msc >= to_msc or last_msc <= cursor or len(out) >= max_total:
+                break
+            if got < 20000:
+                break
+            cursor = last_msc + 1
+        return out[:max_total]
+
     async def probe_ticks(self, symbol: str, count: int = 500) -> dict:
         """
         REP PROBE_TICKS → diagnóstico: o feed entrega flag de agressor?

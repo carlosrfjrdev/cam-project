@@ -27,10 +27,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const { isActive } = useKillSwitch();
   const crumb = useCrumbLabel(location.pathname);
-  // Inspetor é tela read-only (sem ordens, sem Risk Engine): esconde o chrome
-  // operacional (banner de ambiente). O kill switch global segue intacto nas
-  // demais telas e no backend — apenas oculto aqui (ver Header).
-  const isReadOnlyResearch = location.pathname === "/inspetor";
+  // Telas read-only de pesquisa (sem ordens, sem Risk Engine): escondem o chrome
+  // operacional (banner de ambiente AMBIENTE:DEMO). O kill switch global segue
+  // intacto nas demais telas e no backend — apenas oculto aqui (ver Header).
+  const READ_ONLY_ROUTES = ["/inspetor", "/trade-analyzer", "/operation-analyzer"];
+  const isReadOnlyResearch = READ_ONLY_ROUTES.includes(location.pathname);
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "background.default" }}>

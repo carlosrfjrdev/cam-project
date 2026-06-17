@@ -1,7 +1,8 @@
 /**
- * Operation Analyzer (CASCA) — entra com ticks + candles + estratégia e o CAM
- * SINALIZA as operações. Em tela: risco analisado, melhor horário e mão.
- * Alvo sempre a R:R 1:3. SEM bloqueios de Risk Manager (risco é análise, não trava).
+ * Operation Analyzer (CASCA) — entra com a estratégia e o CAM SINALIZA as operações.
+ * Os TICKS e CANDLES do dia vêm AUTOMATICAMENTE do MT5 (bridge) — sem upload.
+ * Em tela: risco analisado, melhor horário e mão. Alvo sempre R:R 1:3.
+ * SEM bloqueios de Risk Manager (risco é análise, não trava).
  *
  * ⚠️ Casca: a engine de sinais ainda é STUB no backend.
  */
@@ -21,22 +22,13 @@ interface Signal {
 }
 interface SignalResponse {
   status: string; symbol: string; strategy: string;
-  inputs: Record<string, number>;
+  inputs: Record<string, string | number>;
   risk_analysis: {
     suggested_size: number; best_hour: string; risk_per_trade: number;
     max_risk_session: number; rr_policy: string; risk_manager_blocking: boolean;
   };
   signals: Signal[];
   notes: string;
-}
-
-function FilePick({ label, file, onPick }: { label: string; file: File | null; onPick: (f: File | null) => void }) {
-  return (
-    <Button variant="outlined" component="label" size="small">
-      {file ? `✓ ${file.name}` : label}
-      <input hidden type="file" accept=".csv" onChange={(e) => onPick(e.target.files?.[0] ?? null)} />
-    </Button>
-  );
 }
 
 function StatBox({ label, value }: { label: string; value: string }) {
@@ -49,10 +41,9 @@ function StatBox({ label, value }: { label: string; value: string }) {
 }
 
 export function OperationAnalyzerPage() {
-  const [ticks, setTicks] = useState<File | null>(null);
-  const [candles, setCandles] = useState<File | null>(null);
   const [strategy, setStrategy] = useState("");
   const [symbol, setSymbol] = useState("WINM26");
+  const [date, setDate] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<SignalResponse | null>(null);
@@ -61,9 +52,8 @@ export function OperationAnalyzerPage() {
     setLoading(true); setError(null); setResult(null);
     try {
       const r = await api.uploadForm<SignalResponse>(
-        "/operation-analyzer/signal",
-        { ticks, candles },
-        { strategy: strategy || "(não informada)", symbol },
+        "/operation-analyzer/signal", {},
+        { strategy: strategy || "(não informada)", symbol, date },
       );
       setResult(r);
     } catch (e) {
@@ -72,6 +62,8 @@ export function OperationAnalyzerPage() {
       setLoading(false);
     }
   }
+
+  const tickStatus = result?.inputs?.tick_status as string | undefined;
 
   return (
     <PageContainer maxWidth={1100}>
@@ -87,16 +79,20 @@ export function OperationAnalyzerPage() {
 
       <Paper sx={{ p: 2, mb: 2 }}>
         <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
-          <FilePick label="Ticks (CSV)" file={ticks} onPick={setTicks} />
-          <FilePick label="Candles (CSV)" file={candles} onPick={setCandles} />
           <TextField size="small" label="Símbolo" value={symbol}
             onChange={(e) => setSymbol(e.target.value)} sx={{ width: 130 }} />
+          <TextField size="small" type="date" label="Dia" value={date}
+            onChange={(e) => setDate(e.target.value)} InputLabelProps={{ shrink: true }}
+            sx={{ width: 160 }} helperText="vazio = hoje" />
           <TextField size="small" label="Estratégia" value={strategy}
             onChange={(e) => setStrategy(e.target.value)} sx={{ minWidth: 240 }}
             placeholder="ex.: ORB 11h, rompimento + retorno" />
           <Button variant="contained" onClick={run} disabled={loading}>
             {loading ? <CircularProgress size={20} /> : "Sinalizar"}
           </Button>
+          <Typography variant="caption" color="text.secondary">
+            Ticks e candles do dia entram automaticamente do MT5.
+          </Typography>
         </Stack>
       </Paper>
 
@@ -104,6 +100,11 @@ export function OperationAnalyzerPage() {
 
       {result && (
         <>
+          {tickStatus && tickStatus !== "ok" && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Dados do MT5 indisponíveis: {tickStatus}.
+            </Alert>
+          )}
           {result.status === "STUB" && (
             <Alert severity="info" sx={{ mb: 2 }}>{result.notes}</Alert>
           )}
@@ -113,6 +114,8 @@ export function OperationAnalyzerPage() {
             <StatBox label="Risco por operação" value={`R$ ${result.risk_analysis.risk_per_trade}`} />
             <StatBox label="Risco máx. sessão" value={`R$ ${result.risk_analysis.max_risk_session}`} />
             <StatBox label="Política R:R" value={result.risk_analysis.rr_policy} />
+            <StatBox label="Ticks MT5" value={String(result.inputs.ticks_rows ?? 0)} />
+            <StatBox label="Candles MT5" value={String(result.inputs.candles_rows ?? 0)} />
           </Stack>
 
           <Paper sx={{ p: 2 }}>
