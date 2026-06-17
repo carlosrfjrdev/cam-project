@@ -26,7 +26,16 @@ BR_TZ = ZoneInfo("America/Sao_Paulo")
 
 
 async def _fetch_market(symbol: str, day: datetime, timeframe: str) -> dict:
-    """Puxa ticks do dia + candles do MT5. Falha segura → counts 0 + status."""
+    """Ticks do dia + candles conforme provider. Falha segura → counts 0 + status."""
+    from cam.features.app_settings import store
+
+    provider = store.get_market_data_provider()
+    if provider != "mt5":
+        return {
+            "ticks": 0,
+            "candles": 0,
+            "status": f"provedor '{provider}' em casca — ative MT5 nas Configurações",
+        }
     try:
         from cam.features.mt5_integration.routes import _service as mt5
     except Exception:  # noqa: BLE001

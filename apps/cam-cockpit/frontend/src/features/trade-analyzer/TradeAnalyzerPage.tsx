@@ -7,7 +7,7 @@
  */
 import { useState } from "react";
 import {
-  Box, Paper, Stack, Typography, Button, MenuItem, TextField, Alert,
+  Paper, Stack, Typography, Button, MenuItem, TextField, Alert,
   CircularProgress, Table, TableBody, TableCell, TableHead, TableRow, Chip,
 } from "@mui/material";
 import PsychologyIcon from "@mui/icons-material/Psychology";
@@ -15,6 +15,7 @@ import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
 import { useQuery } from "@tanstack/react-query";
 import { PageContainer } from "../../_shared/components/PageContainer";
 import { PageHeader } from "../../_shared/components/PageHeader";
+import { Markdown } from "../../_shared/components/Markdown";
 import { api } from "../../api/client";
 
 interface ProviderInfo {
@@ -188,12 +189,7 @@ export function TradeAnalyzerPage() {
           <Typography variant="subtitle2" sx={{ mb: 1 }}>
             Análise da IA — {result.provider} ({result.model})
           </Typography>
-          <Box component="pre" sx={{
-            whiteSpace: "pre-wrap", wordBreak: "break-word", m: 0,
-            fontFamily: "inherit", fontSize: 14, lineHeight: 1.6,
-          }}>
-            {result.narrative}
-          </Box>
+          <Markdown>{result.narrative}</Markdown>
         </Paper>
       )}
     </PageContainer>

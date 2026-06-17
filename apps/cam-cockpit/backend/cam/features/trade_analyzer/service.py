@@ -79,7 +79,15 @@ def summarize_tick_dicts(ticks: list[dict]) -> dict | None:
 async def _fetch_ticks_from_mt5(
     symbol: str, trades: list[Trade]
 ) -> tuple[list[dict], str]:
-    """Puxa os ticks do período direto da bridge MT5. Falha segura → ([], motivo)."""
+    """Puxa ticks do período conforme o provider. Falha segura → ([], motivo)."""
+    from cam.features.app_settings import store
+
+    provider = store.get_market_data_provider()
+    if provider != "mt5":
+        return [], (
+            f"provedor '{provider}' selecionado — ainda em casca; "
+            "ative MT5 nas Configurações para incluir ticks."
+        )
     try:
         from cam.features.mt5_integration.routes import _service as mt5
     except Exception:  # noqa: BLE001

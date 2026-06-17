@@ -283,3 +283,8 @@ app.include_router(trade_analyzer_router)
 from cam.features.operation_analyzer.routes import router as operation_analyzer_router  # noqa: E402, E501
 
 app.include_router(operation_analyzer_router)
+
+# App settings — preferências de runtime (provedor de dados MT5/Profit)
+from cam.features.app_settings.routes import router as app_settings_router  # noqa: E402
+
+app.include_router(app_settings_router)
