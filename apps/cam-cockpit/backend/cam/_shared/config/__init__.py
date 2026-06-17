@@ -61,6 +61,18 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
     openai_base_url: str = "https://api.openai.com/v1"
 
+    # ---------------------------------------------------------------------
+    # Profit bridge (ProfitDLL) — ticks READ-ONLY do Profit/Nelogica.
+    # Lane de market-data, independente do mutex de execucao R21.03.
+    # Segredos vivem no .env (nunca commitados).
+    # ---------------------------------------------------------------------
+    profit_dll_enabled: bool = False
+    profit_dll_path: str = ""          # caminho do ProfitDLL.dll (Win64)
+    profit_dll_key: str = ""           # chave de ativacao (Nelogica)
+    profit_username: str = ""          # usuario da conta (email/documento)
+    profit_password: str = ""          # senha da conta
+    profit_default_exchange: str = "F"  # B3 derivativos (WIN/WDO) = F
+
     # T-TD-026 — WebSocket P&L modo real-data
     websocket_pnl_real_data: bool = False
 

@@ -1,0 +1,7 @@
+# SDK ProfitDLL (Nelogica) — vendor binário/licenciado, NÃO commitar
+# (DLLs Win32/Win64, PDFs do manual, exemplos). A integração read-only vive em
+# apps/cam-cockpit/backend/cam/features/profit_bridge/.
+/ProfitDLL/
+
+# Dados de operações exportados (contêm conta/titular) — não commitar
+/Dados Operações.csv
