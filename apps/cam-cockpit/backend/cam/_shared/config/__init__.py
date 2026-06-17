@@ -55,6 +55,12 @@ class Settings(BaseSettings):
     anthropic_model: str = "claude-haiku-4-5-20251001"
     anthropic_api_version: str = "2023-06-01"
 
+    # Trade Analyzer — OpenAI (provider selecionavel na UI). Sem default fixo:
+    # o usuario escolhe Claude ou OpenAI a cada analise. Key vive no .env.
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4o-mini"
+    openai_base_url: str = "https://api.openai.com/v1"
+
     # T-TD-026 — WebSocket P&L modo real-data
     websocket_pnl_real_data: bool = False
 

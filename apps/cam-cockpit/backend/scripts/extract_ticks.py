@@ -11,7 +11,8 @@ Pré-requisito: backend NÃO precisa estar rodando, mas o MT5 com o EA
 
 Uso:
   uv run python scripts/extract_ticks.py --symbol WINM26 --from 2026-06-08
-  uv run python scripts/extract_ticks.py --symbol WINM26 --from 2026-06-08 --to 2026-06-17 --persist
+  uv run python scripts/extract_ticks.py --symbol WINM26 --from 2026-06-08 \
+      --to 2026-06-17 --persist
 """
 from __future__ import annotations
 
@@ -31,7 +32,9 @@ from cam._shared.infra import async_session_factory
 from cam.features.mt5_integration.service import MT5IntegrationService
 
 BR_TZ = ZoneInfo("America/Sao_Paulo")
-OUT_DIR = Path(__file__).resolve().parents[4] / "project" / "tcam" / "analysis" / "ticks"
+OUT_DIR = (
+    Path(__file__).resolve().parents[4] / "project" / "tcam" / "analysis" / "ticks"
+)
 
 # MT5: TICK_FLAG_BUY=4, TICK_FLAG_SELL=8 (agressor)
 FLAG_BUY = 4
@@ -62,7 +65,9 @@ def _price(t: dict) -> float:
     return round(float(last or 0), 2)
 
 
-async def extract(symbol: str, from_dt: datetime, to_dt: datetime, persist: bool) -> None:
+async def extract(
+    symbol: str, from_dt: datetime, to_dt: datetime, persist: bool
+) -> None:
     s = _config_module.settings
     svc = MT5IntegrationService(
         host=s.mt5_bridge_host,
@@ -179,11 +184,11 @@ async def extract(symbol: str, from_dt: datetime, to_dt: datetime, persist: bool
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Extrai ticks históricos via bridge MT5")
+    ap = argparse.ArgumentParser(description="Extrai ticks historicos via bridge MT5")
     ap.add_argument("--symbol", default="WINM26")
-    ap.add_argument("--from", dest="from_d", required=True, help="YYYY-MM-DD (00:00 BR)")
-    ap.add_argument("--to", dest="to_d", default=None, help="YYYY-MM-DD (23:59 BR); default=hoje")
-    ap.add_argument("--persist", action="store_true", help="também grava em cam_market_ticks")
+    ap.add_argument("--from", dest="from_d", required=True, help="YYYY-MM-DD (BR)")
+    ap.add_argument("--to", dest="to_d", default=None, help="YYYY-MM-DD (BR); def=hoje")
+    ap.add_argument("--persist", action="store_true", help="grava em cam_market_ticks")
     a = ap.parse_args()
 
     from_dt = datetime.strptime(a.from_d, "%Y-%m-%d").replace(tzinfo=BR_TZ)

@@ -273,3 +273,13 @@ app.include_router(fundamentals_router)
 from cam.api.order_gateway_routes import router as order_gateway_router  # noqa: E402
 
 app.include_router(order_gateway_router)
+
+# Trade Analyzer — report + ticks → IA (Claude/OpenAI) analisa erros/correções
+from cam.features.trade_analyzer.routes import router as trade_analyzer_router  # noqa: E402, E501
+
+app.include_router(trade_analyzer_router)
+
+# Operation Analyzer (CASCA) — ticks+candles+estratégia → sinais (R:R 1:3), sem bloqueio
+from cam.features.operation_analyzer.routes import router as operation_analyzer_router  # noqa: E402, E501
+
+app.include_router(operation_analyzer_router)

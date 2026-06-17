@@ -30,4 +30,25 @@ export const api = {
     }
     return response.json() as Promise<T>;
   },
+
+  // Multipart genérico: vários arquivos + campos de formulário (Trade/Operation Analyzer).
+  uploadForm: async <T>(
+    path: string,
+    files: Record<string, File | null | undefined>,
+    fields?: Record<string, string | number>,
+  ): Promise<T> => {
+    const form = new FormData();
+    for (const [k, f] of Object.entries(files)) {
+      if (f) form.append(k, f);
+    }
+    for (const [k, v] of Object.entries(fields ?? {})) {
+      form.append(k, String(v));
+    }
+    const response = await fetch(`${BASE_URL}${path}`, { method: "POST", body: form });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: response.statusText }));
+      throw new Error(error.error ?? error.detail ?? `HTTP ${response.status}`);
+    }
+    return response.json() as Promise<T>;
+  },
 };

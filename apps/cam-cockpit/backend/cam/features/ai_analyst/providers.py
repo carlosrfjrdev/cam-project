@@ -91,6 +91,40 @@ class AnthropicProvider:
             return response.json()["content"][0]["text"]
 
 
+class OpenAIProvider:
+    """
+    Provider para GPT via API OpenAI (chat completions).
+
+    Usado pelo Trade Analyzer quando o usuário escolhe OpenAI na UI.
+    Requer OPENAI_API_KEY configurada no .env.
+    """
+
+    def __init__(
+        self,
+        api_key: str,
+        model: str | None = None,
+        base_url: str | None = None,
+    ) -> None:
+        from cam._shared.config import settings as _cam_settings
+        self.api_key = api_key
+        self.model = model or _cam_settings.openai_model
+        self.base_url = (base_url or _cam_settings.openai_base_url).rstrip("/")
+
+    async def analyze(self, prompt: str) -> str:
+        async with httpx.AsyncClient(timeout=90.0) as client:
+            response = await client.post(
+                f"{self.base_url}/chat/completions",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                json={
+                    "model": self.model,
+                    "max_tokens": 1500,
+                    "messages": [{"role": "user", "content": prompt}],
+                },
+            )
+            response.raise_for_status()
+            return response.json()["choices"][0]["message"]["content"]
+
+
 class ProviderWithFallback:
     """
     Decorator de fallback automático entre dois providers.
