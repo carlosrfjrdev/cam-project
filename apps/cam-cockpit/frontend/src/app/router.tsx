@@ -25,6 +25,7 @@ import { AssetsStrategyPage } from "../features/strategy-lab/AssetsStrategyPage"
 import { AssetsRunTestsPage } from "../features/strategy-lab/AssetsRunTestsPage";
 import { AssetsExpertsPage } from "../features/strategy-lab/AssetsExpertsPage";
 import { TradeAnalyzerPage } from "../features/trade-analyzer/TradeAnalyzerPage";
+import { TradeAnalyzerHistoryPage } from "../features/trade-analyzer/TradeAnalyzerHistoryPage";
 import { OperationAnalyzerPage } from "../features/operation-analyzer/OperationAnalyzerPage";
 
 // U023 — Research carrega Recharts: rota lazy (bundle isolado).
@@ -46,6 +47,7 @@ export function AppRouter() {
           <Route path="/" element={<CockpitPage />} />
           <Route path="/inspetor" element={<InspetorPage />} />
           <Route path="/trade-analyzer" element={<TradeAnalyzerPage />} />
+          <Route path="/trade-analyzer/history" element={<TradeAnalyzerHistoryPage />} />
           <Route path="/operation-analyzer" element={<OperationAnalyzerPage />} />
           <Route path="/dataset" element={<DatasetPage />} />
           <Route path="/lab" element={<QuantLabPage />} />

@@ -8,11 +8,16 @@ POST /api/v1/trade-analyzer/analyze
 from __future__ import annotations
 
 from fastapi import APIRouter, File, Form, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy import text
 
 from cam._shared.infra import async_session_factory
-from cam.features.trade_analyzer.schemas import AnalyzeResponse, LastTickResponse
+from cam.features.trade_analyzer import repository
+from cam.features.trade_analyzer.schemas import (
+    AnalyzeResponse,
+    HistoryItem,
+    LastTickResponse,
+)
 from cam.features.trade_analyzer.service import (
     EmptyReportError,
     ProviderNotConfiguredError,
@@ -88,8 +93,9 @@ async def analyze_route(
     provider: str = Form("anthropic"),
 ):
     report_bytes = await report.read()
+    filename = report.filename or "report.csv"
     try:
-        result = await analyze(report_bytes, provider)
+        result = await analyze(report_bytes, provider, report_filename=filename)
     except EmptyReportError as exc:
         return JSONResponse(status_code=422, content={"error": str(exc)})
     except ProviderNotConfiguredError as exc:
@@ -100,3 +106,29 @@ async def analyze_route(
             content={"error": f"Falha ao chamar IA ({provider}): {exc}"},
         )
     return AnalyzeResponse(**result)
+
+
+@router.get("/history", response_model=list[HistoryItem])
+async def history(limit: int = 100, offset: int = 0):
+    return await repository.list_analyses(limit=limit, offset=offset)
+
+
+@router.get("/history/{analysis_id}")
+async def history_detail(analysis_id: int):
+    rec = await repository.get_analysis(analysis_id)
+    if rec is None:
+        return JSONResponse(status_code=404, content={"error": "não encontrada"})
+    return rec
+
+
+@router.get("/history/{analysis_id}/report")
+async def history_report(analysis_id: int):
+    rec = await repository.get_report(analysis_id)
+    if rec is None:
+        return JSONResponse(status_code=404, content={"error": "report não encontrado"})
+    filename, content = rec
+    return Response(
+        content=content,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

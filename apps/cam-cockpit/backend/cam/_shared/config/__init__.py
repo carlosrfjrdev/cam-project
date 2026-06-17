@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
     openai_base_url: str = "https://api.openai.com/v1"
 
+    # Limite de tokens de saída da IA (Trade Analyzer). Default alto para não
+    # cortar a narrativa/tabelas. Configurável no .env.
+    ai_max_tokens: int = 4096
+
     # ---------------------------------------------------------------------
     # Profit bridge (ProfitDLL) — ticks READ-ONLY do Profit/Nelogica.
     # Lane de market-data, independente do mutex de execucao R21.03.

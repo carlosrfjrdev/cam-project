@@ -30,7 +30,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   // Telas read-only de pesquisa (sem ordens, sem Risk Engine): escondem o chrome
   // operacional (banner de ambiente AMBIENTE:DEMO). O kill switch global segue
   // intacto nas demais telas e no backend — apenas oculto aqui (ver Header).
-  const READ_ONLY_ROUTES = ["/inspetor", "/trade-analyzer", "/operation-analyzer"];
+  const READ_ONLY_ROUTES = [
+    "/inspetor", "/trade-analyzer", "/trade-analyzer/history", "/operation-analyzer",
+  ];
   const isReadOnlyResearch = READ_ONLY_ROUTES.includes(location.pathname);
 
   return (

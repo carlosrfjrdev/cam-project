@@ -9,6 +9,15 @@ Responsabilidades:
 
 CODE não decide arquitetura aqui — materializa o DAS §1 e ADR-002/ADR-013.
 """
+# Windows: psycopg(async) e pyzmq(asyncio) exigem SelectorEventLoop. O uvicorn usa
+# ProactorEventLoop por padrão no Windows → quebra DB async e bridge. Setar a policy
+# ANTES do uvicorn criar o loop (este módulo é importado no load do app).
+import asyncio
+import sys
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 

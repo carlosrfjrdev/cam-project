@@ -119,13 +119,16 @@ def _build_provider(provider: str):
     raise ProviderNotConfiguredError(f"Provider desconhecido: {provider}")
 
 
-async def analyze(report_bytes: bytes, provider: str) -> dict:
+async def analyze(
+    report_bytes: bytes, provider: str, report_filename: str = "report.csv"
+) -> dict:
     trades = parse_report(report_bytes)
     if not trades:
         raise EmptyReportError(
             "Nenhum trade reconhecido. Esperado layout 'Ativo;Abertura;Fechamento;...'."
         )
     metrics = compute_metrics(trades)
+    metrics_dict = asdict(metrics)
     symbol = _symbol_of(trades)
 
     ticks, tick_status = await _fetch_ticks_from_mt5(symbol, trades)
@@ -135,11 +138,32 @@ async def analyze(report_bytes: bytes, provider: str) -> dict:
     client, model = _build_provider(provider)
     narrative = await client.analyze(prompt)
 
+    # persiste no histórico (best-effort — não derruba a análise se o banco falhar)
+    saved = {"id": None, "created_at": None}
+    try:
+        from cam.features.trade_analyzer import repository
+
+        saved = await repository.save_analysis(
+            provider=provider.lower(),
+            model=model,
+            symbol=symbol,
+            report_filename=report_filename,
+            report_content=report_bytes,
+            metrics=metrics_dict,
+            tick_summary=tick_summary,
+            tick_status=tick_status,
+            narrative=narrative,
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
     return {
+        "id": saved.get("id"),
+        "created_at": saved.get("created_at"),
         "provider": provider.lower(),
         "model": model,
         "narrative": narrative,
-        "metrics": asdict(metrics),
+        "metrics": metrics_dict,
         "tick_summary": tick_summary,
         "tick_status": tick_status,
         "symbol": symbol,

@@ -25,6 +25,7 @@ import TuneIcon from "@mui/icons-material/Tune";
 import StorageIcon from "@mui/icons-material/Storage";
 import PsychologyIcon from "@mui/icons-material/Psychology";
 import InsightsIcon from "@mui/icons-material/Insights";
+import HistoryIcon from "@mui/icons-material/History";
 
 export interface NavItem {
   label: string;
@@ -44,6 +45,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Dataset", path: "/dataset", icon: <StorageIcon />, group: "Pesquisa", visibleInMvp: true },
   { label: "Quant Lab", path: "/lab", icon: <ScienceIcon />, group: "Pesquisa", visibleInMvp: true },
   { label: "Trade Analyzer", path: "/trade-analyzer", icon: <PsychologyIcon />, group: "Pesquisa", visibleInMvp: true },
+  { label: "↳ Históricos", path: "/trade-analyzer/history", icon: <HistoryIcon />, group: "Pesquisa", visibleInMvp: true },
   { label: "Operation Analyzer", path: "/operation-analyzer", icon: <InsightsIcon />, group: "Pesquisa", visibleInMvp: true },
 
   { label: "Estratégias", path: "/strategy-lab/strategies", icon: <HubIcon />, group: "StrategyLab", visibleInMvp: true },

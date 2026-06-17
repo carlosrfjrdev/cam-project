@@ -74,7 +74,8 @@ class AnthropicProvider:
         Raises:
             Exception: se API Anthropic não estiver disponível ou retornar erro
         """
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        from cam._shared.config import settings as _cam_settings
+        async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
                 "https://api.anthropic.com/v1/messages",
                 headers={
@@ -83,7 +84,7 @@ class AnthropicProvider:
                 },
                 json={
                     "model": self.model,
-                    "max_tokens": 1024,
+                    "max_tokens": _cam_settings.ai_max_tokens,
                     "messages": [{"role": "user", "content": prompt}],
                 },
             )
@@ -111,13 +112,14 @@ class OpenAIProvider:
         self.base_url = (base_url or _cam_settings.openai_base_url).rstrip("/")
 
     async def analyze(self, prompt: str) -> str:
-        async with httpx.AsyncClient(timeout=90.0) as client:
+        from cam._shared.config import settings as _cam_settings
+        async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
                 f"{self.base_url}/chat/completions",
                 headers={"Authorization": f"Bearer {self.api_key}"},
                 json={
                     "model": self.model,
-                    "max_tokens": 1500,
+                    "max_tokens": _cam_settings.ai_max_tokens,
                     "messages": [{"role": "user", "content": prompt}],
                 },
             )
