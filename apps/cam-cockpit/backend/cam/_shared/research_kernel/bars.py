@@ -17,7 +17,9 @@ from datetime import datetime, timedelta
 # Minutos por timeframe derivável de M1.
 _TF_MINUTES: dict[str, int] = {
     "M1": 1,
+    "M2": 2,
     "M5": 5,
+    "M10": 10,
     "M15": 15,
     "M30": 30,
     "H1": 60,

@@ -13,8 +13,15 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Form
+from fastapi import APIRouter, Form, Query
+from fastapi.responses import JSONResponse
 
+from cam.features.operation_analyzer.chart_service import (
+    ALL_TFS,
+    LEVEL_TFS,
+    ChartUnavailable,
+    build_chart,
+)
 from cam.features.operation_analyzer.schemas import (
     RiskAnalysis,
     Signal,
@@ -23,6 +30,27 @@ from cam.features.operation_analyzer.schemas import (
 
 router = APIRouter(prefix="/api/v1/operation-analyzer", tags=["operation-analyzer"])
 BR_TZ = ZoneInfo("America/Sao_Paulo")
+
+
+@router.get("/timeframes")
+async def timeframes() -> dict:
+    """TFs disponíveis e em quais há detecção de topos/fundos."""
+    return {"timeframes": ALL_TFS, "level_timeframes": sorted(LEVEL_TFS)}
+
+
+@router.get("/chart")
+async def chart(
+    symbol: str = Query(..., min_length=1),
+    timeframe: str = Query("M5"),
+    count: int = Query(1500, ge=50, le=5000),
+):
+    """Candles + indicadores (EMA/SMA/VWAP) + topos/fundos do símbolo/timeframe."""
+    try:
+        return await build_chart(symbol.upper(), timeframe.upper(), count)
+    except ChartUnavailable as exc:
+        return JSONResponse(status_code=503, content={"error": str(exc)})
+    except Exception as exc:  # noqa: BLE001
+        return JSONResponse(status_code=502, content={"error": f"falha: {exc}"})
 
 
 async def _fetch_market(symbol: str, day: datetime, timeframe: str) -> dict:
