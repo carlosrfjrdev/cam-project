@@ -44,9 +44,20 @@ export const TF_COLOR: Record<string, string> = {
   M2: "#00b0ff",   // azul
 };
 
-export function OperationChart({ data, height = 480 }: { data: ChartData; height?: number }) {
+export function OperationChart({
+  data,
+  height = 480,
+  enabledLevelTfs,
+}: {
+  data: ChartData;
+  height?: number;
+  /** TFs cujos topos/fundos devem aparecer. Default: todos os de levels_by_tf. */
+  enabledLevelTfs?: string[];
+}) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
+  const enabled = enabledLevelTfs ?? Object.keys(data.levels_by_tf);
+  const enabledKey = enabled.slice().sort().join(",");
 
   useEffect(() => {
     if (!containerRef.current || !data.candles.length) return;
@@ -83,8 +94,9 @@ export function OperationChart({ data, height = 480 }: { data: ChartData; height
       s.setData(pts.map((p) => ({ time: p.time as never, value: p.value })));
     }
 
-    // topos/fundos de cada TF → linha horizontal na cor do TF
+    // topos/fundos de cada TF → linha horizontal na cor do TF (só os ativos)
     for (const [tf, levels] of Object.entries(data.levels_by_tf)) {
+      if (!enabled.includes(tf)) continue;
       const color = TF_COLOR[tf] ?? "#9aa4b2";
       for (const lv of levels) {
         candleSeries.createPriceLine({
@@ -110,7 +122,7 @@ export function OperationChart({ data, height = 480 }: { data: ChartData; height
       chart.remove();
       chartRef.current = null;
     };
-  }, [data, height]);
+  }, [data, height, enabledKey]);
 
   if (!data.candles.length) {
     return (
@@ -129,11 +141,6 @@ export function OperationChart({ data, height = 480 }: { data: ChartData; height
               label={s.label} sx={{ borderColor: s.color, color: s.color }} />
           ) : null,
         )}
-        {data.level_tfs.map((tf) => (
-          <Chip key={tf} size="small"
-            label={`${tf} topo/fundo (${data.levels_by_tf[tf]?.length ?? 0})`}
-            sx={{ bgcolor: TF_COLOR[tf], color: "#fff", fontWeight: 700 }} />
-        ))}
       </Stack>
       <Box ref={containerRef} sx={{ width: "100%" }} data-testid="operation-chart" />
     </Box>

@@ -27,6 +27,10 @@ export function OperationAnalyzerPage() {
   const [tf, setTf] = useState("M5");
   const [draft, setDraft] = useState<Params>(DEFAULTS);
   const [applied, setApplied] = useState<Params>(DEFAULTS);
+  const [enabledTfs, setEnabledTfs] = useState<Record<string, boolean>>({
+    D1: true, H1: true, M10: true, M2: true,
+  });
+  const enabledList = Object.keys(enabledTfs).filter((t) => enabledTfs[t]);
 
   const p = applied;
   const { data, isFetching, error } = useQuery({
@@ -41,7 +45,9 @@ export function OperationAnalyzerPage() {
   });
 
   const allLevels = data
-    ? Object.entries(data.levels_by_tf).flatMap(([t, lv]) => lv.map((l) => ({ ...l, tf: t })))
+    ? Object.entries(data.levels_by_tf)
+        .filter(([t]) => enabledTfs[t])
+        .flatMap(([t, lv]) => lv.map((l) => ({ ...l, tf: t })))
     : [];
 
   const numField = (label: string, key: keyof Params, step = 1) => (
@@ -93,7 +99,7 @@ export function OperationAnalyzerPage() {
 
       {symbol != null && !error && (
         <Paper sx={{ p: 2, mb: 2 }}>
-          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
             <Typography variant="subtitle1">{symbol} · {tf}</Typography>
             {isFetching && <CircularProgress size={16} />}
             {data && (
@@ -101,8 +107,33 @@ export function OperationAnalyzerPage() {
                 · {data.persisted_bars} barras persistidas
               </Typography>
             )}
+            {data && (
+              <Stack direction="row" spacing={0.75} sx={{ ml: "auto" }} flexWrap="wrap" useFlexGap>
+                <Typography variant="caption" color="text.secondary" sx={{ alignSelf: "center" }}>
+                  topos/fundos:
+                </Typography>
+                {data.level_tfs.map((t) => {
+                  const on = !!enabledTfs[t];
+                  return (
+                    <Chip
+                      key={t}
+                      size="small"
+                      label={`${t} (${data.levels_by_tf[t]?.length ?? 0})`}
+                      onClick={() => setEnabledTfs((s) => ({ ...s, [t]: !s[t] }))}
+                      sx={{
+                        cursor: "pointer", fontWeight: 700,
+                        bgcolor: on ? TF_COLOR[t] : "transparent",
+                        color: on ? "#fff" : "text.disabled",
+                        border: `1px solid ${TF_COLOR[t]}`,
+                        opacity: on ? 1 : 0.55,
+                      }}
+                    />
+                  );
+                })}
+              </Stack>
+            )}
           </Stack>
-          {data && <OperationChart data={data} />}
+          {data && <OperationChart data={data} enabledLevelTfs={enabledList} />}
         </Paper>
       )}
 
