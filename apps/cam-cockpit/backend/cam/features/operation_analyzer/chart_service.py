@@ -56,13 +56,20 @@ def _to_bar(symbol: str, tf: str, c: dict) -> Bar:
 
 
 def _derive_multi_session(m1: list[Bar], target_tf: str) -> list[Bar]:
+    """
+    Deriva M2/M10 do M1 com buckets alinhados à GRADE DE RELÓGIO (meia-noite),
+    não ao 1º candle da sessão — assim M2 cai sempre em minuto PAR (00:00–01:59,
+    02:00–03:59…) e M10 em :00/:10/:20…, igual ao MT5/TradingView. (O kernel
+    `derive` ancorado na sessão é da research lane, R-10; aqui usamos a grade.)
+    """
     by_session: dict[str, list[Bar]] = defaultdict(list)
     for b in m1:
         by_session[b.session_date].append(b)
     out: list[Bar] = []
     for _date in sorted(by_session):
         sess = sorted(by_session[_date], key=lambda x: x.ts_open)
-        out.extend(derive(sess, target_tf, session_open=sess[0].ts_open))
+        midnight = sess[0].ts_open.replace(hour=0, minute=0, second=0, microsecond=0)
+        out.extend(derive(sess, target_tf, session_open=midnight))
     return out
 
 
