@@ -1,7 +1,7 @@
 /**
  * OperationChart — candles MT5 (lightweight-charts/TradingView) com overlays:
  * EMA 9/20/50/200, SMA 200, VWAP diária e semanal, e linhas horizontais nos
- * topos/fundos detectados. API imperativa (ref + efeito), compatível React 19.
+ * topos/fundos detectados em D1/H1/M10/M2 — CADA TIMEFRAME COM SUA COR.
  */
 import { useEffect, useRef } from "react";
 import {
@@ -20,8 +20,10 @@ export interface ChartData {
   symbol: string; timeframe: string;
   candles: Candle[];
   overlays: Record<string, LinePoint[]>;
-  levels: Level[];
-  level_tf: boolean;
+  levels_by_tf: Record<string, Level[]>;
+  level_tfs: string[];
+  persisted_bars: number;
+  params: { span: number; tol: number; min_touches: number; top_n: number };
 }
 
 const OVERLAY_STYLE: Record<string, { color: string; label: string; width: number }> = {
@@ -34,13 +36,15 @@ const OVERLAY_STYLE: Record<string, { color: string; label: string; width: numbe
   vwap_weekly: { color: "#66bb6a", label: "VWAP sem", width: 2 },
 };
 
-function levelColor(kind: string): string {
-  if (kind === "resistance") return "#e0556e";
-  if (kind === "support") return "#1faa73";
-  return "#9aa4b2";
-}
+// Cor por timeframe das linhas de topo/fundo (R do Founder).
+export const TF_COLOR: Record<string, string> = {
+  D1: "#ff1744",   // vermelho
+  H1: "#ff9100",   // laranja
+  M10: "#d500f9",  // magenta
+  M2: "#00b0ff",   // azul
+};
 
-export function OperationChart({ data, height = 460 }: { data: ChartData; height?: number }) {
+export function OperationChart({ data, height = 480 }: { data: ChartData; height?: number }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
 
@@ -69,7 +73,6 @@ export function OperationChart({ data, height = 460 }: { data: ChartData; height
       time: c.time as never, open: c.open, high: c.high, low: c.low, close: c.close,
     })));
 
-    // overlays (médias + vwaps)
     for (const [key, style] of Object.entries(OVERLAY_STYLE)) {
       const pts = data.overlays[key];
       if (!pts?.length) continue;
@@ -80,16 +83,19 @@ export function OperationChart({ data, height = 460 }: { data: ChartData; height
       s.setData(pts.map((p) => ({ time: p.time as never, value: p.value })));
     }
 
-    // topos/fundos → linhas horizontais
-    for (const lv of data.levels) {
-      candleSeries.createPriceLine({
-        price: lv.price,
-        color: levelColor(lv.kind),
-        lineWidth: 1,
-        lineStyle: LineStyle.Dashed,
-        axisLabelVisible: true,
-        title: `${lv.kind[0].toUpperCase()} ×${lv.touches}`,
-      });
+    // topos/fundos de cada TF → linha horizontal na cor do TF
+    for (const [tf, levels] of Object.entries(data.levels_by_tf)) {
+      const color = TF_COLOR[tf] ?? "#9aa4b2";
+      for (const lv of levels) {
+        candleSeries.createPriceLine({
+          price: lv.price,
+          color,
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: `${tf} ${lv.kind === "resistance" ? "R" : lv.kind === "support" ? "S" : "·"}×${lv.touches}`,
+        });
+      }
     }
 
     chart.timeScale().fitContent();
@@ -123,9 +129,11 @@ export function OperationChart({ data, height = 460 }: { data: ChartData; height
               label={s.label} sx={{ borderColor: s.color, color: s.color }} />
           ) : null,
         )}
-        {data.level_tf && (
-          <Chip size="small" label={`${data.levels.length} topos/fundos`} color="info" variant="outlined" />
-        )}
+        {data.level_tfs.map((tf) => (
+          <Chip key={tf} size="small"
+            label={`${tf} topo/fundo (${data.levels_by_tf[tf]?.length ?? 0})`}
+            sx={{ bgcolor: TF_COLOR[tf], color: "#fff", fontWeight: 700 }} />
+        ))}
       </Stack>
       <Box ref={containerRef} sx={{ width: "100%" }} data-testid="operation-chart" />
     </Box>

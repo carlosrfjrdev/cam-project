@@ -43,10 +43,20 @@ async def chart(
     symbol: str = Query(..., min_length=1),
     timeframe: str = Query("M5"),
     count: int = Query(1500, ge=50, le=5000),
+    span: int = Query(3, ge=1, le=20),
+    tol: float = Query(0.0015, ge=0.0, le=0.05),
+    min_touches: int = Query(2, ge=1, le=10),
+    top_n: int = Query(12, ge=1, le=50),
 ):
-    """Candles + indicadores (EMA/SMA/VWAP) + topos/fundos do símbolo/timeframe."""
+    """
+    Candles + indicadores (EMA/SMA/VWAP) + topos/fundos (D1/H1/M10/M2). Persiste
+    os candles importados. `span`/`tol`/`min_touches`/`top_n` calibram os níveis.
+    """
     try:
-        return await build_chart(symbol.upper(), timeframe.upper(), count)
+        return await build_chart(
+            symbol.upper(), timeframe.upper(), count,
+            span=span, tol=tol, min_touches=min_touches, top_n=top_n,
+        )
     except ChartUnavailable as exc:
         return JSONResponse(status_code=503, content={"error": str(exc)})
     except Exception as exc:  # noqa: BLE001
