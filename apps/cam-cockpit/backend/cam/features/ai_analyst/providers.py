@@ -113,17 +113,22 @@ class OpenAIProvider:
 
     async def analyze(self, prompt: str) -> str:
         from cam._shared.config import settings as _cam_settings
-        async with httpx.AsyncClient(timeout=120.0) as client:
+        async with httpx.AsyncClient(timeout=180.0) as client:
             response = await client.post(
                 f"{self.base_url}/chat/completions",
                 headers={"Authorization": f"Bearer {self.api_key}"},
                 json={
                     "model": self.model,
-                    "max_tokens": _cam_settings.ai_max_tokens,
+                    # GPT-5.x/o-series exigem max_completion_tokens (max_tokens dá 400)
+                    # e o budget inclui tokens de raciocínio → folga grande.
+                    "max_completion_tokens": _cam_settings.openai_max_completion_tokens,
                     "messages": [{"role": "user", "content": prompt}],
                 },
             )
-            response.raise_for_status()
+            if response.status_code >= 400:
+                raise RuntimeError(
+                    f"OpenAI {response.status_code}: {response.text[:300]}"
+                )
             return response.json()["choices"][0]["message"]["content"]
 
 

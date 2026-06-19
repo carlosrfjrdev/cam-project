@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-5.5"
     openai_base_url: str = "https://api.openai.com/v1"
+    # GPT-5.x são reasoning models: o budget inclui tokens de raciocínio, então
+    # precisa de folga grande (senão a resposta visível sai vazia).
+    openai_max_completion_tokens: int = 16000
 
     # Limite de tokens de saída da IA (Trade Analyzer). Default alto para não
     # cortar a narrativa/tabelas. Configurável no .env.
