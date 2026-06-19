@@ -29,25 +29,10 @@ router = APIRouter(prefix="/api/v1/trade-analyzer", tags=["trade-analyzer"])
 
 @router.get("/providers")
 async def list_providers() -> dict:
-    """Providers disponíveis para o seletor da UI."""
-    from cam._shared.config import settings
+    """Providers + modelos disponíveis para o seletor da UI."""
+    from cam.features.trade_analyzer.catalog import list_providers as _cat
 
-    return {
-        "providers": [
-            {
-                "id": "anthropic",
-                "label": "Claude (Anthropic)",
-                "model": settings.anthropic_model,
-                "configured": bool(settings.anthropic_api_key),
-            },
-            {
-                "id": "openai",
-                "label": "OpenAI (GPT)",
-                "model": settings.openai_model,
-                "configured": bool(settings.openai_api_key),
-            },
-        ]
-    }
+    return {"providers": _cat()}
 
 
 @router.get("/last-tick", response_model=LastTickResponse)
@@ -91,11 +76,14 @@ async def last_tick() -> LastTickResponse:
 async def analyze_route(
     report: UploadFile = File(...),
     provider: str = Form("anthropic"),
+    model: str | None = Form(None),
 ):
     report_bytes = await report.read()
     filename = report.filename or "report.csv"
     try:
-        result = await analyze(report_bytes, provider, report_filename=filename)
+        result = await analyze(
+            report_bytes, provider, model=model, report_filename=filename
+        )
     except EmptyReportError as exc:
         return JSONResponse(status_code=422, content={"error": str(exc)})
     except ProviderNotConfiguredError as exc:

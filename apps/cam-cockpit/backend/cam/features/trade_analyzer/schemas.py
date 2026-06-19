@@ -12,8 +12,9 @@ class AnalyzeResponse(BaseModel):
     narrative: str
     metrics: dict
     symbol: str
-    tick_summary: dict | None = None
-    tick_status: str = "ok"
+    enrichment: dict | None = None
+    candle_status: str = "none"
+    candles_count: int = 0
 
 
 class HistoryItem(BaseModel):

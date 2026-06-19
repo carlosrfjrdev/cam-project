@@ -1,29 +1,28 @@
 """
-Orquestra a análise: parse report → métricas → ticks do dia (AUTO do MT5) → IA.
+Orquestra a análise: parse report → métricas → candles M2 do range (busca/persiste
+se faltar) → enriquecimento (1:3, MFE/MAE, mão de alface) → IA.
 
-Os ticks NÃO são mais enviados por upload: são puxados automaticamente da bridge
-MT5 (GET_TICKS) para o símbolo e o período do report. Provider selecionável
-(anthropic | openai). Sem default fixo: a UI manda.
+Provider e modelo selecionáveis (catálogo): anthropic/openai/deepseek/ollama.
 """
 from __future__ import annotations
 
 from collections import Counter
 from dataclasses import asdict
-from datetime import datetime, timedelta
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from cam._shared.config import settings
-from cam.features.ai_analyst.providers import AnthropicProvider, OpenAIProvider
 from cam.features.trade_analyzer import prompts
+from cam.features.trade_analyzer.candle_data import ensure_m2
+from cam.features.trade_analyzer.catalog import (
+    ProviderNotConfiguredError,
+    build_client,
+)
+from cam.features.trade_analyzer.enrichment import enrich
 from cam.features.trade_analyzer.metrics import Trade, compute_metrics, parse_report
 
 BR_TZ = ZoneInfo("America/Sao_Paulo")
-FLAG_BUY = 4
-FLAG_SELL = 8
 
-
-class ProviderNotConfiguredError(RuntimeError):
-    """Provider escolhido sem API key no .env."""
+__all__ = ["analyze", "EmptyReportError", "ProviderNotConfiguredError"]
 
 
 class EmptyReportError(ValueError):
@@ -34,93 +33,21 @@ def _symbol_of(trades: list[Trade]) -> str:
     return Counter(t.asset for t in trades).most_common(1)[0][0]
 
 
-def _msc_range(trades: list[Trade]) -> tuple[int, int]:
-    first = min(t.abertura for t in trades).replace(
+def _range(trades: list[Trade]) -> tuple[datetime, datetime]:
+    start = min(t.abertura for t in trades).replace(
         hour=0, minute=0, second=0, tzinfo=BR_TZ
-    ) - timedelta(hours=3)  # buffer p/ tz do servidor de trade
-    last = max(t.fechamento for t in trades).replace(
+    )
+    end = max(t.fechamento for t in trades).replace(
         hour=23, minute=59, second=59, tzinfo=BR_TZ
     )
-    return int(first.timestamp() * 1000), int(last.timestamp() * 1000)
-
-
-def summarize_tick_dicts(ticks: list[dict]) -> dict | None:
-    """Resumo leve dos ticks vindos do MT5 (count, por data, agressor)."""
-    if not ticks:
-        return None
-    by_date: Counter = Counter()
-    aggr = {"B": 0, "S": 0}
-    last_t = 0
-    for t in ticks:
-        ms = t.get("t", 0)
-        last_t = max(last_t, ms)
-        if ms:
-            d = datetime.fromtimestamp(ms / 1000.0, tz=BR_TZ).strftime("%Y-%m-%d")
-            by_date[d] += 1
-        f = int(t.get("f") or 0)
-        if f & FLAG_BUY:
-            aggr["B"] += 1
-        elif f & FLAG_SELL:
-            aggr["S"] += 1
-    last_iso = (
-        datetime.fromtimestamp(last_t / 1000.0, tz=BR_TZ).isoformat()
-        if last_t
-        else None
-    )
-    return {
-        "total_ticks": len(ticks),
-        "por_data": dict(by_date),
-        "agressor": {"compra_B": aggr["B"], "venda_S": aggr["S"]},
-        "ultimo_tick": last_iso,
-        "fonte": "mt5_auto",
-    }
-
-
-async def _fetch_ticks_from_mt5(
-    symbol: str, trades: list[Trade]
-) -> tuple[list[dict], str]:
-    """Puxa ticks do período conforme o provider. Falha segura → ([], motivo)."""
-    from cam.features.app_settings import store
-
-    provider = store.get_market_data_provider()
-    if provider != "mt5":
-        return [], (
-            f"provedor '{provider}' selecionado — ainda em casca; "
-            "ative MT5 nas Configurações para incluir ticks."
-        )
-    try:
-        from cam.features.mt5_integration.routes import _service as mt5
-    except Exception:  # noqa: BLE001
-        return [], "integração MT5 indisponível"
-    if not mt5.bridge.is_alive():
-        return [], "bridge MT5 offline — atache o EA cam_bridge no gráfico"
-    from_msc, to_msc = _msc_range(trades)
-    try:
-        ticks = await mt5.get_ticks_range(symbol, from_msc, to_msc)
-    except Exception as exc:  # noqa: BLE001
-        return [], f"falha ao buscar ticks: {exc}"
-    return ticks, "ok"
-
-
-def _build_provider(provider: str):
-    p = provider.lower().strip()
-    if p == "anthropic":
-        if not settings.anthropic_api_key:
-            raise ProviderNotConfiguredError(
-                "ANTHROPIC_API_KEY ausente no .env — configure para usar Claude."
-            )
-        return AnthropicProvider(settings.anthropic_api_key), settings.anthropic_model
-    if p == "openai":
-        if not settings.openai_api_key:
-            raise ProviderNotConfiguredError(
-                "OPENAI_API_KEY ausente no .env — configure para usar OpenAI."
-            )
-        return OpenAIProvider(settings.openai_api_key), settings.openai_model
-    raise ProviderNotConfiguredError(f"Provider desconhecido: {provider}")
+    return start, end
 
 
 async def analyze(
-    report_bytes: bytes, provider: str, report_filename: str = "report.csv"
+    report_bytes: bytes,
+    provider: str,
+    model: str | None = None,
+    report_filename: str = "report.csv",
 ) -> dict:
     trades = parse_report(report_bytes)
     if not trades:
@@ -130,28 +57,30 @@ async def analyze(
     metrics = compute_metrics(trades)
     metrics_dict = asdict(metrics)
     symbol = _symbol_of(trades)
+    start, end = _range(trades)
 
-    ticks, tick_status = await _fetch_ticks_from_mt5(symbol, trades)
-    tick_summary = summarize_tick_dicts(ticks)
-    prompt = prompts.build_prompt(metrics, tick_summary)
+    # candles M2 do range: usa research_bars; busca+persiste do MT5 se faltar
+    candles, candle_status = await ensure_m2(symbol, start, end)
+    enrichment = enrich(trades, candles)
 
-    client, model = _build_provider(provider)
+    prompt = prompts.build_prompt(metrics, enrichment, symbol, candle_status)
+
+    client, model_id = build_client(provider, model)
     narrative = await client.analyze(prompt)
 
-    # persiste no histórico (best-effort — não derruba a análise se o banco falhar)
     saved = {"id": None, "created_at": None}
     try:
         from cam.features.trade_analyzer import repository
 
         saved = await repository.save_analysis(
             provider=provider.lower(),
-            model=model,
+            model=model_id,
             symbol=symbol,
             report_filename=report_filename,
             report_content=report_bytes,
             metrics=metrics_dict,
-            tick_summary=tick_summary,
-            tick_status=tick_status,
+            tick_summary=enrichment,  # guarda o enriquecimento junto
+            tick_status=candle_status,
             narrative=narrative,
         )
     except Exception:  # noqa: BLE001
@@ -161,10 +90,11 @@ async def analyze(
         "id": saved.get("id"),
         "created_at": saved.get("created_at"),
         "provider": provider.lower(),
-        "model": model,
+        "model": model_id,
         "narrative": narrative,
         "metrics": metrics_dict,
-        "tick_summary": tick_summary,
-        "tick_status": tick_status,
         "symbol": symbol,
+        "enrichment": enrichment,
+        "candle_status": candle_status,
+        "candles_count": len(candles),
     }

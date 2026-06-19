@@ -65,6 +65,14 @@ class Settings(BaseSettings):
     # cortar a narrativa/tabelas. Configurável no .env.
     ai_max_tokens: int = 4096
 
+    # DeepSeek (OpenAI-compatible). Key/base no .env.
+    deepseek_api_key: str = ""
+    deepseek_base_url: str = "https://api.deepseek.com/v1"
+
+    # Ollama local — modelo default (catálogo configurável via .env CSV)
+    ollama_model: str = "llama3.1:8b"
+    ollama_models: list[str] = ["llama3.1:8b", "qwen2.5:14b", "deepseek-r1:14b"]
+
     # ---------------------------------------------------------------------
     # Profit bridge (ProfitDLL) — ticks READ-ONLY do Profit/Nelogica.
     # Lane de market-data, independente do mutex de execucao R21.03.
@@ -105,10 +113,10 @@ class Settings(BaseSettings):
         "extra": "ignore",
     }
 
-    @field_validator("real_trading_accounts", mode="before")
+    @field_validator("real_trading_accounts", "ollama_models", mode="before")
     @classmethod
-    def _split_accounts(cls, v):  # type: ignore[no-untyped-def]
-        """Aceita string CSV em .env (ex.: 'acc1,acc2,acc3') ou lista nativa."""
+    def _split_csv(cls, v):  # type: ignore[no-untyped-def]
+        """Aceita string CSV em .env (ex.: 'a,b,c') ou lista nativa."""
         if isinstance(v, str):
             stripped = v.strip()
             if not stripped:

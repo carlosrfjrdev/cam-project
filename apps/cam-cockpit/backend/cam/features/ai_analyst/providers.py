@@ -127,6 +127,36 @@ class OpenAIProvider:
             return response.json()["choices"][0]["message"]["content"]
 
 
+class DeepSeekProvider:
+    """
+    Provider para DeepSeek (API OpenAI-compatible: /chat/completions).
+    Requer DEEPSEEK_API_KEY no .env. Modelos: deepseek-chat, deepseek-reasoner.
+    """
+
+    def __init__(
+        self, api_key: str, model: str = "deepseek-chat", base_url: str | None = None
+    ) -> None:
+        from cam._shared.config import settings as _cam_settings
+        self.api_key = api_key
+        self.model = model
+        self.base_url = (base_url or _cam_settings.deepseek_base_url).rstrip("/")
+
+    async def analyze(self, prompt: str) -> str:
+        from cam._shared.config import settings as _cam_settings
+        async with httpx.AsyncClient(timeout=180.0) as client:
+            response = await client.post(
+                f"{self.base_url}/chat/completions",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                json={
+                    "model": self.model,
+                    "max_tokens": _cam_settings.ai_max_tokens,
+                    "messages": [{"role": "user", "content": prompt}],
+                },
+            )
+            response.raise_for_status()
+            return response.json()["choices"][0]["message"]["content"]
+
+
 class ProviderWithFallback:
     """
     Decorator de fallback automático entre dois providers.

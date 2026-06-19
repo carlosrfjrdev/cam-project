@@ -25,6 +25,9 @@ class Trade:
     qty: int
     result: float
     duration_s: float
+    entry_price: float = 0.0
+    exit_price: float = 0.0
+    direction: str = ""  # LONG | SHORT
 
 
 @dataclass
@@ -80,10 +83,15 @@ def parse_report(content: bytes) -> list[Trade]:
     header = lines[hdr_idx].split(";")
     reader = csv.reader(lines[hdr_idx + 1 :], delimiter=";")
     # índice da coluna de resultado da operação (R$)
-    try:
-        res_idx = header.index("Res. Operação")
-    except ValueError:
-        res_idx = 13  # layout padrão Profit/Genial
+    def _idx(name: str, default: int) -> int:
+        try:
+            return header.index(name)
+        except ValueError:
+            return default
+
+    res_idx = _idx("Res. Operação", 13)
+    buy_idx = _idx("Preço Compra", 7)
+    sell_idx = _idx("Preço Venda", 8)
 
     trades: list[Trade] = []
     for row in reader:
@@ -95,15 +103,27 @@ def parse_report(content: bytes) -> list[Trade]:
         if ab is None or fe is None or res is None:
             continue
         qty = int(_num(row[4]) or 1)
+        lado = row[6].strip().upper()
+        buy_px = _num(row[buy_idx]) if len(row) > buy_idx else None
+        sell_px = _num(row[sell_idx]) if len(row) > sell_idx else None
+        # lado C = comprou primeiro (LONG): entra na compra, sai na venda.
+        # lado V = vendeu primeiro (SHORT): entra na venda, sai na compra.
+        if lado == "C":
+            entry, exit_, direction = buy_px or 0.0, sell_px or 0.0, "LONG"
+        else:
+            entry, exit_, direction = sell_px or 0.0, buy_px or 0.0, "SHORT"
         trades.append(
             Trade(
                 asset=row[0].strip(),
                 abertura=ab,
                 fechamento=fe,
-                lado=row[6].strip().upper(),
+                lado=lado,
                 qty=qty,
                 result=res,
                 duration_s=(fe - ab).total_seconds(),
+                entry_price=entry,
+                exit_price=exit_,
+                direction=direction,
             )
         )
     return trades

@@ -1,9 +1,7 @@
 /**
- * Trade Analyzer — sobe o report de operações e a IA (Claude ou OpenAI, escolhida
- * aqui) aponta erros e correções.
- *
- * Os TICKS DO DIA vêm automaticamente do MT5 (bridge) — não há upload de ticks.
- * Métricas são calculadas no backend (números confiáveis); a narrativa é da IA.
+ * Trade Analyzer — sobe o report; a IA (provider + modelo escolhidos) analisa as
+ * operações + os candles M2 do range (oportunidades perdidas, simulação 1:3).
+ * Métricas e enriquecimento são calculados no backend; a narrativa é da IA.
  */
 import { useState } from "react";
 import {
@@ -18,8 +16,10 @@ import { PageHeader } from "../../_shared/components/PageHeader";
 import { Markdown } from "../../_shared/components/Markdown";
 import { api } from "../../api/client";
 
+interface ModelInfo { id: string; label: string }
 interface ProviderInfo {
-  id: string; label: string; model: string; configured: boolean;
+  id: string; label: string; configured: boolean;
+  models: ModelInfo[]; default_model: string;
 }
 interface LastTick {
   asset: string | null; timestamp: string | null; source: string | null; bridge_online: boolean;
@@ -27,13 +27,7 @@ interface LastTick {
 interface AnalyzeResult {
   provider: string; model: string; narrative: string;
   metrics: Record<string, unknown>; symbol: string;
-  tick_summary: Record<string, unknown> | null; tick_status: string;
-}
-
-function fmtDate(iso: string | null): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  return d.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+  enrichment: Record<string, unknown> | null; candle_status: string; candles_count: number;
 }
 
 function StatBox({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
@@ -62,18 +56,25 @@ export function TradeAnalyzerPage() {
 
   const [report, setReport] = useState<File | null>(null);
   const [provider, setProvider] = useState("anthropic");
+  const [model, setModel] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalyzeResult | null>(null);
 
   const selected = providers.find((p) => p.id === provider);
+  const modelId = model || selected?.default_model || "";
+
+  function onProvider(pid: string) {
+    setProvider(pid);
+    setModel(providers.find((p) => p.id === pid)?.default_model ?? "");
+  }
 
   async function run() {
     if (!report) { setError("Selecione o report de operações (CSV)."); return; }
     setLoading(true); setError(null); setResult(null);
     try {
       const r = await api.uploadForm<AnalyzeResult>(
-        "/trade-analyzer/analyze", { report }, { provider },
+        "/trade-analyzer/analyze", { report }, { provider, model: modelId },
       );
       setResult(r);
     } catch (e) {
@@ -85,7 +86,12 @@ export function TradeAnalyzerPage() {
 
   const m = result?.metrics as Record<string, number> | undefined;
   const byQty = (result?.metrics?.by_qty ?? []) as Array<Record<string, number>>;
-  const tick = result?.tick_summary as Record<string, unknown> | null;
+  const e = result?.enrichment as Record<string, number> | undefined;
+  const evals = (result?.enrichment?.trades ?? []) as Array<Record<string, unknown>>;
+  const lettuceTop = evals
+    .filter((t) => t.lettuce)
+    .sort((a, b) => (b.left_on_table_pts as number) - (a.left_on_table_pts as number))
+    .slice(0, 10);
 
   return (
     <PageContainer maxWidth={1100}>
@@ -98,20 +104,11 @@ export function TradeAnalyzerPage() {
             icon={<FiberManualRecordIcon sx={{ fontSize: 12 }} />}
             color={lastTick?.bridge_online ? "success" : "default"}
             variant={lastTick?.bridge_online ? "filled" : "outlined"}
-            label={
-              lastTick?.timestamp
-                ? `MT5: último tick ${fmtDate(lastTick.timestamp)}`
-                : lastTick?.bridge_online
-                  ? "MT5 online (sem tick ainda)"
-                  : "MT5 offline"
-            }
+            label={lastTick?.bridge_online ? "MT5 online" : "MT5 offline"}
           />
           {selected && (
-            <Chip
-              size="small"
-              color={selected.configured ? "success" : "warning"}
-              label={selected.configured ? `${selected.model} pronto` : "sem API key (.env)"}
-            />
+            <Chip size="small" color={selected.configured ? "success" : "warning"}
+              label={selected.configured ? "provider pronto" : "sem API key (.env)"} />
           )}
         </>}
       />
@@ -121,30 +118,37 @@ export function TradeAnalyzerPage() {
           <Button variant="outlined" component="label" size="small">
             {report ? `✓ ${report.name}` : "Report de operações (CSV)"}
             <input hidden type="file" accept=".csv"
-              onChange={(e) => setReport(e.target.files?.[0] ?? null)} />
+              onChange={(e2) => setReport(e2.target.files?.[0] ?? null)} />
           </Button>
-          <TextField select size="small" label="IA" value={provider}
-            onChange={(e) => setProvider(e.target.value)} sx={{ minWidth: 200 }}>
+          <TextField select size="small" label="Provider" value={provider}
+            onChange={(e2) => onProvider(e2.target.value)} sx={{ minWidth: 180 }}>
             {providers.map((p) => (
               <MenuItem key={p.id} value={p.id}>
                 {p.label}{p.configured ? "" : " (sem key)"}
               </MenuItem>
             ))}
           </TextField>
+          <TextField select size="small" label="Modelo" value={modelId}
+            onChange={(e2) => setModel(e2.target.value)} sx={{ minWidth: 200 }}>
+            {(selected?.models ?? []).map((mo) => (
+              <MenuItem key={mo.id} value={mo.id}>{mo.label}</MenuItem>
+            ))}
+          </TextField>
           <Button variant="contained" onClick={run} disabled={loading || !report}>
             {loading ? <CircularProgress size={20} /> : "Analisar"}
           </Button>
           <Typography variant="caption" color="text.secondary">
-            Ticks do dia entram automaticamente do MT5.
+            Candles M2 do range entram automaticamente do MT5 (busca/persiste).
           </Typography>
         </Stack>
       </Paper>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      {result && result.tick_status !== "ok" && (
+      {result && (result.candle_status === "partial" || result.candle_status === "none") && (
         <Alert severity="warning" sx={{ mb: 2 }}>
-          Ticks do MT5 não incluídos: {result.tick_status}. A análise seguiu só com o report.
+          Candles M2 ausentes/insuficientes no range ({result.candle_status}). Carregue o
+          ativo no Operation Analyzer para persistir e enriquecer a análise.
         </Alert>
       )}
 
@@ -157,9 +161,54 @@ export function TradeAnalyzerPage() {
           <StatBox label="Payoff" value={String(m.payoff)} />
           <StatBox label="Profit factor" value={String(m.profit_factor)} danger={m.profit_factor < 1} />
           <StatBox label="Max perdas seguidas" value={String(m.max_loss_streak)} danger={m.max_loss_streak >= 4} />
-          <StatBox label="Ultracurtos ≤30s" value={`${m.ultrashort_count} (R$ ${m.ultrashort_result})`} danger={m.ultrashort_result < 0} />
-          {tick && <StatBox label="Ticks MT5" value={String(tick.total_ticks ?? 0)} />}
         </Stack>
+      )}
+
+      {e && e.trades_avaliados > 0 && (
+        <Paper sx={{ p: 2, mb: 2 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            Oportunidades (candles M2 · setup 1:3 = stop {e.stop_pts}/alvo {e.target_pts} pts ·
+            janela 120min · {result?.candles_count} candles)
+          </Typography>
+          <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+            <StatBox label="Trades avaliados" value={String(e.trades_avaliados)} />
+            <StatBox label="1:3 bateria alvo" value={`${e.rr13_alvo} (${e.rr13_taxa_alvo_pct}%)`} />
+            <StatBox label="1:3 bateria stop" value={String(e.rr13_stop)} danger />
+            <StatBox label="Mão de alface" value={String(e.mao_de_alface)} danger={Number(e.mao_de_alface) > 0} />
+            <StatBox label="Pts deixados na mesa" value={String(e.pts_deixados_na_mesa)} danger />
+            <StatBox label="MFE médio (pts)" value={String(e.mfe_medio)} />
+            <StatBox label="MAE médio (pts)" value={String(e.mae_medio)} />
+          </Stack>
+        </Paper>
+      )}
+
+      {lettuceTop.length > 0 && (
+        <Paper sx={{ p: 2, mb: 2 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            Mão de alface — top oportunidades perdidas
+          </Typography>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Entrada</TableCell><TableCell>Lado</TableCell>
+                <TableCell align="right">Capturado</TableCell><TableCell align="right">MFE</TableCell>
+                <TableCell align="right">Deixou na mesa</TableCell><TableCell>1:3</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {lettuceTop.map((t, i) => (
+                <TableRow key={i}>
+                  <TableCell sx={{ fontSize: 12 }}>{String(t.abertura).slice(0, 16).replace("T", " ")}</TableCell>
+                  <TableCell>{String(t.direction)}</TableCell>
+                  <TableCell align="right" sx={{ color: "success.main" }}>{String(t.captured_pts)}</TableCell>
+                  <TableCell align="right">{String(t.mfe_pts)}</TableCell>
+                  <TableCell align="right" sx={{ color: "warning.main" }}>{String(t.left_on_table_pts)}</TableCell>
+                  <TableCell>{String(t.rr13)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Paper>
       )}
 
       {byQty.length > 0 && (
