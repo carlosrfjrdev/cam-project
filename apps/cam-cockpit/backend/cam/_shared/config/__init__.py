@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     # Trade Analyzer — OpenAI (provider selecionavel na UI). Sem default fixo:
     # o usuario escolhe Claude ou OpenAI a cada analise. Key vive no .env.
     openai_api_key: str = ""
-    openai_model: str = "gpt-4o-mini"
+    openai_model: str = "gpt-5.5"
     openai_base_url: str = "https://api.openai.com/v1"
 
     # Limite de tokens de saída da IA (Trade Analyzer). Default alto para não

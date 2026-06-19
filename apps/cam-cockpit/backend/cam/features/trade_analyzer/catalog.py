@@ -37,11 +37,11 @@ def _catalog() -> dict[str, dict]:
             "label": "OpenAI (GPT)",
             "configured": bool(settings.openai_api_key),
             "models": [
-                {"id": "gpt-4o", "label": "GPT-4o"},
-                {"id": "gpt-4.1", "label": "GPT-4.1"},
-                {"id": "gpt-4o-mini", "label": "GPT-4o mini"},
+                {"id": "gpt-5.5", "label": "GPT-5.5"},
+                {"id": "gpt-5.4", "label": "GPT-5.4"},
+                {"id": "gpt-5.4-mini", "label": "GPT-5.4 mini"},
             ],
-            "default": "gpt-4o",
+            "default": "gpt-5.5",
         },
         "deepseek": {
             "label": "DeepSeek",
