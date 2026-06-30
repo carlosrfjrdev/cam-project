@@ -1,0 +1,165 @@
+//------------------------------------------------------------------//
+//  cam_disciplina_2c_exec.src  —  Profit (NTSL / Nelogica)          //
+//  ROBO EXECUTOR DE DISCIPLINA (2 contratos) — paridade do MQL5      //
+//                                                                    //
+//  Replica em NTSL o cam_disciplina_2c.mq5 (MetaTrader) p/ a         //
+//  VALIDACAO TRIPLA (Profit x MT5 x CAM — ver POLITICA-ROBOS.md).    //
+//                                                                    //
+//  ===================  O QUE ESTE ROBO FAZ  =====================   //
+//  Impoe a SAIDA DISCIPLINADA de uma posicao (tira o emocional, que  //
+//  e onde o trader perde: corta o vencedor cedo). NAO decide entrada //
+//  — a edge esta na leitura do trader. Sobre a posicao em aberto:    //
+//    - PERNA 1 (Leg1Contratos): sai no ALVO CURTO (Alvo1Pts).        //
+//    - PERNA 2 (resto): apos a P1 realizar, STOP vai a BREAKEVEN e a //
+//      posicao CORRE com trailing ate o ALVO LONGO (Alvo2Pts).       //
+//    - STOP inicial unico protege as 2 pernas ate a P1.              //
+//  Guard-rails: janela de NAO-operar, FLAT no fim do pregao,         //
+//  contador de OPS/DIA. (Stop diario em R$ — ver NOTA abaixo.)       //
+//                                                                    //
+//  =====================  NOTAS / LIMITES  =======================   //
+//  - Stop/alvos sao PARAMETROS — calibrados pelo motor MAE/MFE x     //
+//    regime do CAM. Use os MESMOS valores no MT5/CAM (paridade).     //
+//  - NTSL nao expoe de forma confiavel o preco de entrada de uma     //
+//    ordem MANUAL; como os executores existentes, a entrada e        //
+//    capturada na transicao flat->posicao (entryPrice := Close).     //
+//    Em uso live no Profit p/ entradas na mao, prefira os brackets   //
+//    NATIVOS do Profit com os MESMOS parametros; este .src e o par   //
+//    de PARIDADE (backtest/validacao). Status: INDEV / DEMO-only.    //
+//  - Stop diario em R$ depende de funcao de P&L da conta no Profit   //
+//    (a validar no ambiente). Aqui fica como TODO explicito, NAO     //
+//    implementado as cegas.                                          //
+//------------------------------------------------------------------//
+
+input
+  Contratos(2);            // tamanho total da posicao (referencia)
+  Leg1Contratos(1);        // contratos da PERNA 1 (resto = PERNA 2)
+  StopPts(80);             // stop inicial (pontos) — protege as 2 pernas
+  Alvo1Pts(100);           // alvo da PERNA 1 (curto)
+  Alvo2Pts(300);           // alvo da PERNA 2 (runner)
+  TrailPts(80);            // trailing da P2 apos breakeven (0 = off)
+  BreakevenOffsetPts(0);   // offset do breakeven da P2 (entrada +/- offset)
+  NaoOperarIniHHMM(900);   // janela de NAO-operar — inicio (HHMM; 0 = off)
+  NaoOperarFimHHMM(930);   // janela de NAO-operar — fim (HHMM)
+  EntradaAteHHMM(1700);    // apos isso, posicao nova e encerrada (disciplina)
+  FechamentoHHMM(1755);    // flat compulsorio a partir de (HHMM)
+  MaxOpsDia(10);           // maximo de operacoes por dia (0 = sem limite)
+
+var
+  curDate    : Float;
+  entryPrice : Float;
+  initQty    : Float;
+  leg1Done   : Boolean;
+  maxFavor   : Float;
+  stopPrice  : Float;
+  beePrice   : Float;      // preco de breakeven da P2
+  inPosPrev  : Boolean;
+  opsHoje    : Integer;
+
+begin
+  // ============== RESET DIARIO ==============
+  if (Date <> curDate) then
+  begin
+    curDate   := Date;
+    opsHoje   := 0;
+    inPosPrev := False;
+    leg1Done  := False;
+  end;
+
+  // ============== DETECCAO DE NOVA POSICAO (flat -> posicao) ==============
+  // Captura entrada e aplica guard-rails de ENTRADA. (entryPrice ~ Close da
+  // barra em que a posicao aparece — limite do NTSL, ver cabecalho.)
+  if ((IsBought) or (IsSold)) and (not inPosPrev) then
+  begin
+    inPosPrev  := True;
+    entryPrice := Close;
+    initQty    := PositionQty;
+    leg1Done   := False;
+    maxFavor   := Close;
+    opsHoje    := opsHoje + 1;
+
+    if (IsBought) then stopPrice := entryPrice - StopPts
+    else stopPrice := entryPrice + StopPts;
+
+    // GUARD-RAILS de entrada: janela de nao-operar / corte / max ops -> encerra.
+    if ( ((NaoOperarIniHHMM > 0) and (Time >= NaoOperarIniHHMM) and (Time < NaoOperarFimHHMM))
+         or (Time >= EntradaAteHHMM)
+         or ((MaxOpsDia > 0) and (opsHoje > MaxOpsDia)) ) then
+    begin
+      if (IsBought) then SellToCoverAtMarket
+      else BuyToCoverAtMarket;
+    end;
+  end;
+
+  // ============== GESTAO DA POSICAO (toda barra) ==============
+  if (IsBought) then
+  begin
+    if (Time >= FechamentoHHMM) then
+      SellToCoverAtMarket                          // flat no fim do pregao
+    else
+    begin
+      // PERNA 1 ainda aberta: alvo curto (parcial) + stop unico.
+      if (not leg1Done) then
+      begin
+        SellToCoverStop(stopPrice);                // stop protege as 2 pernas
+        SellToCoverLimit(entryPrice + Alvo1Pts, Leg1Contratos);  // realiza P1
+        // P1 preenchida? a posicao encolheu -> move stop a breakeven.
+        if (PositionQty < initQty) then
+        begin
+          leg1Done := True;
+          beePrice := entryPrice + BreakevenOffsetPts;
+          stopPrice := beePrice;
+          maxFavor  := High;
+        end;
+      end
+      else
+      begin
+        // PERNA 2: trailing apos breakeven (stop so anda a favor, >= breakeven).
+        if (TrailPts > 0) then
+        begin
+          if (High > maxFavor) then maxFavor := High;
+          if ((maxFavor - TrailPts) > stopPrice) and ((maxFavor - TrailPts) >= beePrice) then
+            stopPrice := maxFavor - TrailPts;
+        end;
+        SellToCoverStop(stopPrice);
+        SellToCoverLimit(entryPrice + Alvo2Pts);   // alvo longo (runner)
+      end;
+    end;
+  end
+  else if (IsSold) then
+  begin
+    if (Time >= FechamentoHHMM) then
+      BuyToCoverAtMarket
+    else
+    begin
+      if (not leg1Done) then
+      begin
+        BuyToCoverStop(stopPrice);
+        BuyToCoverLimit(entryPrice - Alvo1Pts, Leg1Contratos);
+        if (PositionQty < initQty) then
+        begin
+          leg1Done := True;
+          beePrice := entryPrice - BreakevenOffsetPts;
+          stopPrice := beePrice;
+          maxFavor  := Low;
+        end;
+      end
+      else
+      begin
+        if (TrailPts > 0) then
+        begin
+          if (Low < maxFavor) then maxFavor := Low;
+          if ((maxFavor + TrailPts) < stopPrice) and ((maxFavor + TrailPts) <= beePrice) then
+            stopPrice := maxFavor + TrailPts;
+        end;
+        BuyToCoverStop(stopPrice);
+        BuyToCoverLimit(entryPrice - Alvo2Pts);
+      end;
+    end;
+  end
+  else
+  begin
+    // FLAT: encerra o ciclo de gestao (pronto p/ a proxima posicao).
+    inPosPrev := False;
+    leg1Done  := False;
+  end;
+end;

@@ -101,8 +101,8 @@ Estado: ✅ vivo · 🟡 stub/casca · 💀 morto/deprecado (remover)
 
 | Caminho | Conteúdo |
 |---|---|
-| `mql5/experts/` | EAs MetaTrader: executores (ORB-30, VWAP, híbridos), gravadores, `cam_risk_mirror.mq5` (guard-rails), `cam_bridge.mq5` (ZeroMQ). |
-| `ntsl/` | Executores Profit (NTSL): `cam_d1_orb30`, `cam_d2_vwap`, `risk_mirror` (casca). |
+| `mql5/experts/` | EAs MetaTrader: executores (ORB-30, VWAP, híbridos), **`cam_disciplina_2c.mq5`** (gestor de saída disciplinada p/ entradas manuais), gravadores, `cam_risk_mirror.mq5` (guard-rails), `cam_bridge.mq5` (ZeroMQ). |
+| `ntsl/` | Executores Profit (NTSL): `cam_d1_orb30`, `cam_d2_vwap`, **`cam_disciplina_2c`** (paridade), `risk_mirror` (casca). |
 | Docs/política | [`project/trader-robots/`](./trader-robots/) — `POLITICA-ROBOS.md` (ciclo INDEV→APROVADO, validação tripla Profit×MT5×CAM), fichas por robô, `manualNTSL.md`. |
 
 ---
