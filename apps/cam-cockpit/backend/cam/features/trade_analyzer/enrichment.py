@@ -18,6 +18,11 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from cam._shared.research_kernel.excursion import (
+    excursion,
+    select_window,
+    simulate_bracket,
+)
 from cam.features.trade_analyzer.metrics import Trade
 
 BR_TZ = ZoneInfo("America/Sao_Paulo")
@@ -58,7 +63,7 @@ def _simulate(trade: Trade, candles: Sequence[dict]) -> TradeEval:
     is_long = trade.direction == "LONG"
     captured = (trade.exit_price - entry) if is_long else (entry - trade.exit_price)
 
-    window = [c for c in candles if entry_e <= c["ts"] <= win_end]
+    window = select_window(candles, entry_e, win_end)
     if not entry or not window:
         return TradeEval(
             abertura=entry_dt.isoformat(), direction=trade.direction, entry=entry,
@@ -67,28 +72,14 @@ def _simulate(trade: Trade, candles: Sequence[dict]) -> TradeEval:
             rr13="no_data", rr13_minutes=None, lettuce=False, left_on_table_pts=0.0,
         )
 
-    if is_long:
-        mfe = max(c["h"] for c in window) - entry
-        mae = entry - min(c["l"] for c in window)
-        target, stop = entry + TARGET_PTS, entry - STOP_PTS
-    else:
-        mfe = entry - min(c["l"] for c in window)
-        mae = max(c["h"] for c in window) - entry
-        target, stop = entry - TARGET_PTS, entry + STOP_PTS
-
-    rr13, rr13_min = "none", None
-    for c in window:
-        hit_target = c["h"] >= target if is_long else c["l"] <= target
-        hit_stop = c["l"] <= stop if is_long else c["h"] >= stop
-        if hit_target and hit_stop:
-            rr13 = "stop"  # pessimista: no mesmo M2, assume stop primeiro
-        elif hit_target:
-            rr13 = "target"
-        elif hit_stop:
-            rr13 = "stop"
-        if rr13 != "none":
-            rr13_min = round((c["ts"] - entry_e) / 60.0, 1)
-            break
+    # MAE/MFE e o setup fixo 1:3 agora delegam ao kernel puro (research_kernel).
+    ex = excursion(entry, trade.direction, window, entry_e)
+    mfe, mae = ex.mfe_pts, ex.mae_pts
+    bracket = simulate_bracket(
+        entry, trade.direction, window, entry_e, STOP_PTS, TARGET_PTS
+    )
+    rr13 = bracket.exit_reason  # target | stop | none
+    rr13_min = bracket.minutes
 
     lettuce = (
         captured > 0 and mfe >= LETTUCE_MIN_MFE and captured < LETTUCE_MAX_CAPTURED
