@@ -10,7 +10,7 @@ status: Under-evaluation
 > sequencial permanece válido** independentemente do broker (cada camada só avança
 > quando a anterior é estável; falha degrada para "não opera"). O **broker está em
 > aberto**: **MT5 em avaliação** (caminho em teste), **Profit em STANDBY** (não
-> descartado) — ver ADR-001. Mapeamento por broker:
+> descartado) — ver ADR-016. Mapeamento por broker:
 > - **Se MT5:** "ProfitDLL/ctypes" → **bridge ZeroMQ** (`cam_bridge.mq5` read-only
 >   + `cam_risk_mirror.mq5`); `MetaTrader5` package nativo como opção futura.
 > - **Se Profit:** integração via CSV/ProfitDLL conforme texto original.
@@ -96,4 +96,4 @@ A integração entre CaM e Profit cresce de forma **faseada e sequencial** — c
 
 - DAS: [`../DAS.md`](../DAS.md) §4 (fluxo de registro de operação)
 - Stack Oficial: [`/project/STACK-CAM-OFICIAL.md`](/project/STACK-CAM-OFICIAL.md) §6.1
-- ADRs relacionadas: ADR-001 (Profit como plataforma), ADR-009 (NTSL como 2ª linha de defesa), ADR-012 (dev Linux / prod Windows)
+- ADRs relacionadas: ADR-016 (plataforma de execução), ADR-009 (NTSL como 2ª linha de defesa), ADR-012 (dev Linux / prod Windows)

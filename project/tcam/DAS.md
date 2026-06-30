@@ -87,7 +87,7 @@ A hierarquia constitucional `Constituição > Risk Engine > Estratégia validada
 | Camada | Responsabilidade | Tecnologia | ADR |
 |---|---|---|---|
 | **Fonte de market data** | Candles, tick e book read-only do MT5 | EA `cam_bridge` (MQL5) + ZeroMQ 127.0.0.1 | **ADR-014** |
-| **Plataforma de execução** | Envio de ordens ao mercado (B3) — *broker sob reavaliação (OP-014/OP-015)* | Profit Pro/Ultra + NTSL | ADR-001 |
+| **Plataforma de execução** | Envio de ordens ao mercado (B3) — *broker sob reavaliação (OP-014/OP-015)* | Profit Pro/Ultra + NTSL | ADR-016 |
 | **Backend — Shared Kernel** | Risk Engine (autoridade), domain primitives, event bus, audit log, DB sessions | Python 3.12 (Pure Python no risk/) | ADR-007, ADR-013 |
 | **Backend — Features** | Módulos de negócio auto-contidos (journal, fiscal, ledger, backtest, etc.) | Python 3.12 + FastAPI routers | ADR-013 |
 | **Backend — API Composer** | Montar app FastAPI, registrar routers, lifespan, middlewares, WebSocket broker | FastAPI + Uvicorn | ADR-002 |
@@ -98,7 +98,7 @@ A hierarquia constitucional `Constituição > Risk Engine > Estratégia validada
 | **Research Lane** | Descoberta estatística read-only (Lead-Lag): ingestão MT5→`research_*`, barras canônicas M1→derivadas, análise; **isolada do live por barreira técnica** | Vertical slice `features/research/` + schema `research_*` + TimescaleDB | ADR-015 |
 | **Canal externo de alertas** | Notificações operacionais independentes do cockpit | Telegram Bot | ADR-010 |
 | **IA auditora** | Análise pós-mercado, hipóteses, revisão de journal — SEM autoridade de execução | Ollama local + Anthropic API | ADR-006 |
-| **Integração Profit** | Faseada: CSV → semi-auto → NTSL → ProfitDLL (Fase F4+) | NTSL + ctypes (futuro) | ADR-001, ADR-008 |
+| **Integração Profit** | Faseada: CSV → semi-auto → NTSL → ProfitDLL (Fase F4+) | NTSL + ctypes (futuro) | ADR-016, ADR-008 |
 | **Estratégias NTSL (2ª defesa)** | Regras de risco espelhadas no Profit como linha adicional de proteção | NTSL (Nelogica Trading System Language) | ADR-009 |
 
 ---
@@ -107,7 +107,7 @@ A hierarquia constitucional `Constituição > Risk Engine > Estratégia validada
 
 | ADR | Decisão | Link |
 |---|---|---|
-| ADR-001 | Profit como plataforma oficial de execução | [ADR-001](./adrs/ADR-001-profit-plataforma-execucao.md) |
+| ADR-016 | Plataforma de execução: MT5 em avaliação · Profit em standby | [ADR-016](./adrs/ADR-016-plataforma-execucao.md) |
 | ADR-002 | Python 3.12 + FastAPI como backend cockpit | [ADR-002](./adrs/ADR-002-python-fastapi-backend.md) |
 | ADR-003 | React 19 + Vite + MUI — SPA local, sem Next.js | [ADR-003](./adrs/ADR-003-react-vite-mui-frontend.md) |
 | ADR-004 | PostgreSQL 16 + TimescaleDB desde Fase 0 (revoga SQLite) | [ADR-004](./adrs/ADR-004-postgresql-timescaledb.md) |
@@ -125,7 +125,7 @@ A hierarquia constitucional `Constituição > Risk Engine > Estratégia validada
 
 > **Nota de recalibração (2026-05-31, ADR-014):** o SO firme é **Windows 11** (Wine/Linux falhou,
 > 2026-05-30) e a **fonte de market data é o MT5** via EA `cam_bridge`+ZeroMQ (read-only). ADR-014
-> corrige a linha de dados deste DAS. ADR-001/008/012 (Profit / dev-Linux) seguem **vigentes mas
+> corrige a linha de dados deste DAS. ADR-016/008/012 (Profit / dev-Linux) seguem **vigentes mas
 > sob reavaliação** (broker de *execução* pende de OP-014/OP-015) — não revogados aqui. Estado real
 > (`/apps`) vence intenção (NCC-1701 §2).
 

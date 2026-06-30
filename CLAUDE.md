@@ -239,7 +239,7 @@ falhou). **Broker em avaliação:** **MT5 em teste** agora; **Profit em STANDBY*
 (pré-v1): docs e ADRs **moldáveis, não-HARD**.
 
 > ⚙️ **Continuar a partir de um `git clone` no Windows:** siga o runbook
-> [`project/runbooks/RUNBOOK-WINDOWS.md`](./project/runbooks/RUNBOOK-WINDOWS.md)
+> [`project/tcam/runbooks/RUNBOOK-WINDOWS.md`](./project/tcam/runbooks/RUNBOOK-WINDOWS.md)
 > (setup, MT5 + EAs, bridge ZeroMQ, guardrails DEMO-only). O `cam-cockpit`
 > (backend/frontend/banco) é multiplataforma; só a camada de broker é Windows.
 > EAs MT5 em `apps/cam-cockpit/mql5/` (`cam_bridge.mq5`, `cam_risk_mirror.mq5`);
@@ -286,6 +286,7 @@ Quando o cockpit CaM começar a materializar código em `/apps/{codinome}/`, cad
 
 ## Checklist de orientação (para qualquer Claude novo entrando aqui)
 
+0. **Abra [`project/ORIENTACAO.md`](./project/ORIENTACAO.md)** — mapa de navegação único do repo (onde mora o quê + estado vivo/stub/morto de cada feature). É o ponto de partida para se localizar.
 1. Leia esta seção "O que este repositório é" — entenda a **virada para produto** e que a **Constituição está descomissionada** (sem força de lei).
 2. Leia [`project/tcam/`](./project/tcam/) — a estratégia da virada (PIVOT, DECOMMISSION, MAP de módulos).
 3. Leia [`teczi-devflow/NCC-1701/process.md`](./teczi-devflow/NCC-1701/process.md) — o processo de engenharia (continua válido).

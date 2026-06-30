@@ -24,7 +24,7 @@ O DAS (2026-05-24) está **desatualizado** quanto a este ponto:
 
 - §2 e §9 ainda tratam **Profit/Nelogica** como plataforma e listam **"MT5 como fallback —
   out-of-scope"**.
-- ADR-001/008/012 ainda dizem **Profit** + **dev-Linux/prod-Windows**.
+- ADR-016/008/012 ainda dizem **Profit** + **dev-Linux/prod-Windows**.
 
 A recalibração registrada em 2026-05-30 (commits `79a0680`, `5f884d9`, `73d4bde`) tornou
 **Windows 11 o SO firme** (Wine/Linux falhou) e colocou **MT5 em teste como broker** (Profit em
@@ -46,7 +46,7 @@ do EA `cam_bridge` sobre ZeroMQ (loopback 127.0.0.1).**
    `PositionOpen`/`PositionClose` (CA15.1). O canal REP é **allowlistado** (CA15.3); comandos novos
    desta decisão (`GET_CANDLES`, `GET_SYMBOLS`, `SUBSCRIBE`, `UNSUBSCRIBE`) são **todos de leitura**.
    Comandos de escrita vivem apenas em `cam_risk_mirror.mq5`, fora deste perímetro.
-3. **Escopo é dado, não execução:** esta ADR **não** decide o broker de execução. ADR-001 (Profit)
+3. **Escopo é dado, não execução:** esta ADR **não** decide o broker de execução. ADR-016 (Profit)
    permanece formalmente vigente até OP-014/OP-015 fecharem; a decisão de *dados* é independente da
    de *ordens*.
 4. **Conta REAL permitida em read-only:** como o bridge é estruturalmente read-only, consumir dados
@@ -79,7 +79,7 @@ do EA `cam_bridge` sobre ZeroMQ (loopback 127.0.0.1).**
 
 ### Neutras
 - O DAS precisa ser corrigido na linha de market data (ver §6) — feito junto desta ADR.
-- ADR-001/008/012 permanecem como estão até OP-014/OP-015; esta ADR não os revoga.
+- ADR-016/008/012 permanecem como estão até OP-014/OP-015; esta ADR não os revoga.
 
 ### Controles SEC-GOV (Kevin) — condição de aceite para conta REAL
 1. Banner **REAL** permanente no header do cockpit enquanto a conta for real.
@@ -100,5 +100,5 @@ decisão de fundação.
 - DAS: [`../DAS.md`](../DAS.md) — §2 (camadas) e §9 (não-decisões) corrigidos por esta ADR
 - Código: `apps/cam-cockpit/mql5/experts/cam_bridge.mq5` (v0.3), `mql5/include/cam_zmq.mqh`
 - ADRs relacionadas: ADR-013 (vertical slice), ADR-006 (IA sem autoridade), ADR-004 (TimescaleDB);
-  ADR-001/008/012 (Profit/dev-Linux) **não revogadas** — pendentes de OP-014/OP-015
+  ADR-016/008/012 (Profit/dev-Linux) **não revogadas** — pendentes de OP-014/OP-015
 - Decisões abertas: OP-014 (MT5 vs Profit execução), OP-015 (gate de broker)

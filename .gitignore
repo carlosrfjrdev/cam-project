@@ -7,3 +7,6 @@
 # Relatórios de operações exportados (contêm conta/titular = PII) — NÃO commitar.
 # Massa de trades p/ análise (trade_analyzer / motor estatístico) vive aqui.
 /data/
+
+# Manual NTSL em PDF (binário grande do vendor). A versão .md (texto) é versionada.
+/project/trader-robots/ManualNTSL.pdf

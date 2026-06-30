@@ -163,7 +163,7 @@ Decisões já tomadas no STACK-CAM-OFICIAL.md que este DVP herda:
 
 | ADR | Decisão | Status |
 |---|---|---|
-| ADR-001 | Profit como plataforma oficial de execução | Aceita |
+| ADR-016 | Plataforma de execução: MT5 em avaliação · Profit em standby | Under-evaluation |
 | ADR-002 | Python 3.12 + FastAPI como backend | Aceita |
 | ADR-003 | React 19 + Vite + MUI (SPA local, sem Next.js) | Aceita |
 | ADR-004 | PostgreSQL 16 + TimescaleDB desde Fase 0 | Aceita |

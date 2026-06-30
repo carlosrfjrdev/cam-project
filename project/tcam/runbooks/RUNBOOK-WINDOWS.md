@@ -247,7 +247,7 @@ Se o Docker Desktop não for viável:
 ## 11. Decisão pendente + próximos passos
 
 Em soft-stage (pré-v1) **não abrimos ADR HARD** — atualizamos as docs existentes
-(já feito: `STACK-CAM-OFICIAL.md`, `DECISION-MEMO §10`, `ADR-001/008/009/012`).
+(já feito: `STACK-CAM-OFICIAL.md`, `DECISION-MEMO §10`, `ADR-016/008/009/012`).
 
 **Decisão de broker — gate do Founder após o 1º teste do MT5:**
 

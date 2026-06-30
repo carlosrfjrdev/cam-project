@@ -1,5 +1,10 @@
 # CLAUDE_MEMORY.MD — Memória Portátil do CaM Project
 
+> **Hierarquia dos docs (leia nesta ordem):**
+> 1. [`CLAUDE.md`](./CLAUDE.md) — **instruções de agente autoritativas** (carregado automaticamente). Manda.
+> 2. [`project/ORIENTACAO.md`](./project/ORIENTACAO.md) — **mapa de navegação** do repo (onde mora o quê).
+> 3. **Este arquivo** — *snapshot de contexto operacional* (condensa o histórico). Conveniência, não autoridade; em conflito, `CLAUDE.md` vence.
+
 > **Para quem é este documento:** instância do Claude Code abrindo o repositório do CaM.
 > Permite reconstruir o contexto operacional em segundos sem reler todo o histórico.
 >

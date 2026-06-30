@@ -12,7 +12,7 @@ status: Superseded-in-part
 > "dev Linux / prod Windows" deixa de valer, **mas as regras de código
 > cross-platform (§2) seguem recomendadas** (pathlib, encoding utf-8, `.gitattributes`,
 > DI de adapters) — protegem contra regressões e mantêm a opção de CI bi-SO.
-> O broker é **MT5** (não Profit — ADR-001 também defasada nesse ponto).
+> O broker é **MT5** (não Profit — ADR-016 também defasada nesse ponto).
 > Runbook: [`../../runbooks/RUNBOOK-WINDOWS.md`](../../runbooks/RUNBOOK-WINDOWS.md).
 
 > **Data:** 2026-05-24 · **Atualizada:** 2026-05-30 (reversão p/ Windows)
@@ -25,7 +25,7 @@ status: Superseded-in-part
 
 ## 1. Contexto
 
-Carlos desenvolve em Linux (eficiência de tooling, Docker nativo, Python toolchain mais limpa). O CaM opera em produção no Windows 11 porque o Profit/Nelogica é Windows-only (ADR-001).
+Carlos desenvolve em Linux (eficiência de tooling, Docker nativo, Python toolchain mais limpa). O CaM opera em produção no Windows 11 porque o Profit/Nelogica é Windows-only (ADR-016).
 
 Isso cria um ambiente bi-SO que precisa ser gerido com disciplina para evitar que código funcione em Linux e quebre no Windows (ou vice-versa).
 
@@ -99,4 +99,4 @@ Desenvolvimento primário em Linux; produção em Windows 11. Código escrito pa
 
 - DAS: [`../DAS.md`](../DAS.md) §8 (infraestrutura local)
 - Stack Oficial: [`/project/STACK-CAM-OFICIAL.md`](/project/STACK-CAM-OFICIAL.md) §7
-- ADRs relacionadas: ADR-001 (Profit Windows-only), ADR-008 (integração faseada com DI)
+- ADRs relacionadas: ADR-016 (plataforma de execução, Windows-only), ADR-008 (integração faseada com DI)

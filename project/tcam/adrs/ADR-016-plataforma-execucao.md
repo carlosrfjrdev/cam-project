@@ -4,7 +4,10 @@ phase: ARCH
 status: Under-evaluation
 ---
 
-# ADR-001 — Plataforma de Execução: **MetaTrader 5 em avaliação · Profit em standby**
+# ADR-016 — Plataforma de Execução: **MetaTrader 5 em avaliação · Profit em standby**
+
+> ℹ️ *Renumerado de ADR-001 → ADR-016 em 2026-06-30 (reorg A3) para resolver a
+> colisão com o ADR-001 (repo-wide) de personas. Conteúdo inalterado.*
 
 > ⚠️ **EM REAVALIAÇÃO (soft-stage, 2026-05-30).** A escolha de broker está **em
 > aberto**. Estado atual:
@@ -23,7 +26,7 @@ status: Under-evaluation
 > **Status:** Under-evaluation (MT5 em teste · Profit em standby · decide após 1º teste)
 > **Lead:** Oscar
 > **Aprovador final:** Founder (Carlos Rodrigues Ferreira Junior)
-> **Vive em:** `/project/cam-cockpit/adrs/ADR-001-profit-plataforma-execucao.md`
+> **Vive em:** `/project/tcam/adrs/ADR-016-plataforma-execucao.md`
 
 ---
 

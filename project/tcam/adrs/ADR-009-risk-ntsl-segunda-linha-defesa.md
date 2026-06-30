@@ -9,7 +9,7 @@ status: Active
 > ⚠️ **ATUALIZADA (soft-stage, 2026-05-30).** O **princípio permanece intacto e
 > ativo**: regras de risco não-negociáveis espelhadas no broker como segunda linha
 > de defesa hard-coded (Arts. 15º/18º/19º). A **implementação depende do broker**
-> (em avaliação — ver ADR-001):
+> (em avaliação — ver ADR-016):
 > - **MT5 (em teste):** espelho em **MQL5** → `apps/cam-cockpit/mql5/experts/cam_risk_mirror.mq5`,
 >   ÚNICO arquivo autorizado a `OrderSend` (allowlist por `scripts/lint_mql5.py`),
 >   entrega **só em conta DEMO**.
@@ -96,4 +96,4 @@ As **regras de risco mecânico não-negociáveis** da Constituição são **espe
 - Constituição: Arts. 11º, 15º, 18º, 19º
 - DAS: [`../DAS.md`](../DAS.md)
 - Stack Oficial: [`/project/STACK-CAM-OFICIAL.md`](/project/STACK-CAM-OFICIAL.md) §2 (Princípio 10)
-- ADRs relacionadas: ADR-001 (Profit como plataforma), ADR-007 (Risk Engine primário), ADR-008 (integração faseada)
+- ADRs relacionadas: ADR-016 (plataforma de execução), ADR-007 (Risk Engine primário), ADR-008 (integração faseada)
