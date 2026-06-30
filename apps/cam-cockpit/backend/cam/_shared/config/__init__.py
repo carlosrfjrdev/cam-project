@@ -116,6 +116,21 @@ class Settings(BaseSettings):
         "extra": "ignore",
     }
 
+    @field_validator("cam_journal_dir", "mt5_wine_prefix", mode="before")
+    @classmethod
+    def _expand_user_path(cls, v):  # type: ignore[no-untyped-def]
+        """
+        Expande `~` em paths vindos do .env/env var.
+
+        pydantic-settings entrega o valor como string literal (ex.:
+        "~/.cam/journal") e `Path("~/...")` NÃO expande o til — isso criava um
+        diretório literal `~/` relativo ao CWD (bug do `backend/~/`). Forçar
+        expanduser aqui resolve a causa raiz independentemente da fonte.
+        """
+        if v in (None, ""):
+            return v
+        return Path(v).expanduser()
+
     @field_validator("real_trading_accounts", "ollama_models", mode="before")
     @classmethod
     def _split_csv(cls, v):  # type: ignore[no-untyped-def]
