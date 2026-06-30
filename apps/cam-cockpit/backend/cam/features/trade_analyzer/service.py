@@ -19,6 +19,7 @@ from cam.features.trade_analyzer.catalog import (
 )
 from cam.features.trade_analyzer.enrichment import enrich
 from cam.features.trade_analyzer.metrics import Trade, compute_metrics, parse_report
+from cam.features.trade_analyzer.motor import run_motor
 
 BR_TZ = ZoneInfo("America/Sao_Paulo")
 
@@ -63,6 +64,11 @@ async def analyze(
     candles, candle_status = await ensure_m2(symbol, start, end)
     enrichment = enrich(trades, candles)
 
+    # Motor estatístico: varredura stop×alvo + expectância por regime/hora/lado
+    # (responde "qual stop sobrevive ao ruído em cada regime?"). Reusa os mesmos
+    # candles já buscados — degrada para cobertura vazia se faltarem.
+    motor = run_motor(trades, candles)
+
     prompt = prompts.build_prompt(metrics, enrichment, symbol, candle_status)
 
     client, model_id = build_client(provider, model)
@@ -95,6 +101,7 @@ async def analyze(
         "metrics": metrics_dict,
         "symbol": symbol,
         "enrichment": enrichment,
+        "motor": motor,
         "candle_status": candle_status,
         "candles_count": len(candles),
     }
