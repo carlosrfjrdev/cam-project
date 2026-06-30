@@ -50,6 +50,8 @@ _FORBIDDEN_FUNCS = (
 #   - cam_hibrido_orb30_vwap.mq5 (ADR-SL-04) — executor hibrido D1+D2 (recuperacao).
 #   - cam_hibrido_orb30_vwap_fbr.mq5 — hibrido 3 pernas D1+D3(FBR)+D2 (DEMO-only).
 #   - cam_hibrido_orb30_vwap_fbr_fulltrailing.mq5 — idem + stop hibrido tick-a-tick.
+#   - cam_disciplina_2c.mq5  — gestor de saida disciplinada p/ entradas manuais
+#                              (bracket 2 pernas + guard-rails, DEMO-only).
 _ALLOWED_FILES = {
     "cam_risk_mirror.mq5",
     "cam_d1_orb30_exec.mq5",
@@ -58,6 +60,7 @@ _ALLOWED_FILES = {
     "cam_hibrido_orb30_vwap.mq5",
     "cam_hibrido_orb30_vwap_fbr.mq5",
     "cam_hibrido_orb30_vwap_fbr_fulltrailing.mq5",
+    "cam_disciplina_2c.mq5",
 }
 
 
@@ -129,6 +132,13 @@ def main(argv: list[str] | None = None) -> int:
         help="Saída JSON consumível por CI.",
     )
     args = parser.parse_args(argv)
+
+    # Windows e o SO oficial do projeto; o console padrao (cp1252) nao encoda os
+    # emojis abaixo. Forca utf-8 no stdout p/ o script nao quebrar ao reportar.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
+    except (AttributeError, ValueError):
+        pass
 
     files = find_mql5_files(args.mql5_dir)
     all_violations: list[dict] = []
