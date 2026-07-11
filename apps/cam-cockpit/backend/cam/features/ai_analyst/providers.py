@@ -74,7 +74,8 @@ class AnthropicProvider:
         Raises:
             Exception: se API Anthropic não estiver disponível ou retornar erro
         """
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        from cam._shared.config import settings as _cam_settings
+        async with httpx.AsyncClient(timeout=120.0) as client:
             response = await client.post(
                 "https://api.anthropic.com/v1/messages",
                 headers={
@@ -83,12 +84,82 @@ class AnthropicProvider:
                 },
                 json={
                     "model": self.model,
-                    "max_tokens": 1024,
+                    "max_tokens": _cam_settings.ai_max_tokens,
                     "messages": [{"role": "user", "content": prompt}],
                 },
             )
             response.raise_for_status()
             return response.json()["content"][0]["text"]
+
+
+class OpenAIProvider:
+    """
+    Provider para GPT via API OpenAI (chat completions).
+
+    Usado pelo Trade Analyzer quando o usuário escolhe OpenAI na UI.
+    Requer OPENAI_API_KEY configurada no .env.
+    """
+
+    def __init__(
+        self,
+        api_key: str,
+        model: str | None = None,
+        base_url: str | None = None,
+    ) -> None:
+        from cam._shared.config import settings as _cam_settings
+        self.api_key = api_key
+        self.model = model or _cam_settings.openai_model
+        self.base_url = (base_url or _cam_settings.openai_base_url).rstrip("/")
+
+    async def analyze(self, prompt: str) -> str:
+        from cam._shared.config import settings as _cam_settings
+        async with httpx.AsyncClient(timeout=180.0) as client:
+            response = await client.post(
+                f"{self.base_url}/chat/completions",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                json={
+                    "model": self.model,
+                    # GPT-5.x/o-series exigem max_completion_tokens (max_tokens dá 400)
+                    # e o budget inclui tokens de raciocínio → folga grande.
+                    "max_completion_tokens": _cam_settings.openai_max_completion_tokens,
+                    "messages": [{"role": "user", "content": prompt}],
+                },
+            )
+            if response.status_code >= 400:
+                raise RuntimeError(
+                    f"OpenAI {response.status_code}: {response.text[:300]}"
+                )
+            return response.json()["choices"][0]["message"]["content"]
+
+
+class DeepSeekProvider:
+    """
+    Provider para DeepSeek (API OpenAI-compatible: /chat/completions).
+    Requer DEEPSEEK_API_KEY no .env. Modelos: deepseek-chat, deepseek-reasoner.
+    """
+
+    def __init__(
+        self, api_key: str, model: str = "deepseek-chat", base_url: str | None = None
+    ) -> None:
+        from cam._shared.config import settings as _cam_settings
+        self.api_key = api_key
+        self.model = model
+        self.base_url = (base_url or _cam_settings.deepseek_base_url).rstrip("/")
+
+    async def analyze(self, prompt: str) -> str:
+        from cam._shared.config import settings as _cam_settings
+        async with httpx.AsyncClient(timeout=180.0) as client:
+            response = await client.post(
+                f"{self.base_url}/chat/completions",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                json={
+                    "model": self.model,
+                    "max_tokens": _cam_settings.ai_max_tokens,
+                    "messages": [{"role": "user", "content": prompt}],
+                },
+            )
+            response.raise_for_status()
+            return response.json()["choices"][0]["message"]["content"]
 
 
 class ProviderWithFallback:

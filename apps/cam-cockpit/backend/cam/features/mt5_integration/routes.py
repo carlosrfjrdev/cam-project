@@ -3,19 +3,12 @@ Routes HTTP da feature mt5_integration — SPEC v0.2 §4.2.
 
 Coexistencia com /api/v1/profit/* (R20.03) — endpoints MT5 sao NOVOS, paralelos.
 """
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-
-from cam.features.mt5_integration.importer import (
-    ParsedTrade,
-    compute_trade_hash,
-    parse_csv,
-    parse_html,
-)
 
 from cam._shared import config as _config_module
 from cam._shared.domain.primitives import (
@@ -26,10 +19,15 @@ from cam._shared.domain.primitives import (
     Phase,
 )
 from cam._shared.risk.context import OrderCandidate, RiskContext
+from cam.features.mt5_integration.importer import (
+    ParsedTrade,
+    compute_trade_hash,
+    parse_csv,
+    parse_html,
+)
 from cam.features.mt5_integration.schemas import (
     MT5BridgeOfflinePayload,
     MT5BridgeStatus,
-    MT5Position,
     ValidateIntentionRequest,
     ValidateIntentionResponse,
 )
@@ -66,7 +64,7 @@ def _build_stub_context() -> RiskContext:
 
 
 def _offline_payload() -> dict:
-    payload = MT5BridgeOfflinePayload(since=datetime.now(timezone.utc))
+    payload = MT5BridgeOfflinePayload(since=datetime.now(UTC))
     return payload.model_dump(mode="json")
 
 
@@ -166,3 +164,76 @@ async def reconciliation(date: str) -> dict:
         "probable_matches": [],
         "note": "Reconciliacao real exige journal repository conectado ao DB.",
     }
+
+
+# ---------------------------------------------------------------------------
+# EA Control Panel — TASK-U008 (BL-UI-0)
+# ---------------------------------------------------------------------------
+# Controle SEGURO do Expert Advisor: versao/hash/paused + PAUSE/RESUME.
+# NUNCA envia ordem — PAUSE_EA/RESUME_EA so alternam o flag local. O unico
+# arquivo autorizado a OrderSend continua sendo cam_risk_mirror.mq5 (Constituicao).
+# Estado em memoria; persistencia real e debito (TD-v0.5-EASTATE).
+
+_EA_STATE: dict[str, dict] = {
+    "cam_risk_mirror_win": {
+        "ea_id": "cam_risk_mirror_win",
+        "asset": "WIN",
+        "version": "0.4.0",
+        "hash": "stub-win-0000",
+        "paused": False,
+        "online": False,
+    },
+    "cam_risk_mirror_wdo": {
+        "ea_id": "cam_risk_mirror_wdo",
+        "asset": "WDO",
+        "version": "0.4.0",
+        "hash": "stub-wdo-0000",
+        "paused": False,
+        "online": False,
+    },
+}
+
+
+def _get_ea_or_404(ea_id: str) -> dict:
+    ea = _EA_STATE.get(ea_id)
+    if ea is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "EA_NOT_FOUND", "ea_id": ea_id},
+        )
+    return ea
+
+
+@router.get("/ea/status")
+async def ea_status() -> dict:
+    """Status de todos os EAs: versao, hash, paused, online (heartbeat)."""
+    return {"eas": list(_EA_STATE.values())}
+
+
+@router.get("/ea/{ea_id}/version")
+async def ea_version(ea_id: str) -> dict:
+    """Versao + hash + paused de um EA especifico."""
+    ea = _get_ea_or_404(ea_id)
+    return {
+        "ea_id": ea["ea_id"],
+        "version": ea["version"],
+        "hash": ea["hash"],
+        "paused": ea["paused"],
+        "online": ea["online"],
+    }
+
+
+@router.post("/ea/{ea_id}/pause")
+async def ea_pause(ea_id: str) -> dict:
+    """PAUSE_EA — suspende o EA (preserva capital). NAO envia ordem."""
+    ea = _get_ea_or_404(ea_id)
+    ea["paused"] = True
+    return {"ea_id": ea_id, "paused": True, "command": "PAUSE_EA"}
+
+
+@router.post("/ea/{ea_id}/resume")
+async def ea_resume(ea_id: str) -> dict:
+    """RESUME_EA — reativa o EA. NAO envia ordem; apenas remove a pausa."""
+    ea = _get_ea_or_404(ea_id)
+    ea["paused"] = False
+    return {"ea_id": ea_id, "paused": False, "command": "RESUME_EA"}

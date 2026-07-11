@@ -9,6 +9,15 @@ Responsabilidades:
 
 CODE não decide arquitetura aqui — materializa o DAS §1 e ADR-002/ADR-013.
 """
+# Windows: psycopg(async) e pyzmq(asyncio) exigem SelectorEventLoop. O uvicorn usa
+# ProactorEventLoop por padrão no Windows → quebra DB async e bridge. Setar a policy
+# ANTES do uvicorn criar o loop (este módulo é importado no load do app).
+import asyncio
+import sys
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -65,9 +74,26 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     from cam.features.harvest.routes import _service as harvest_service
     event_bus.subscribe(DarfPaid, harvest_service.handle_darf_paid)
 
+    # Inspetor (ADR-014) — conecta a bridge ZeroMQ se autoconnect habilitado.
+    # Best-effort: sem MT5/EA, sobe os sockets mas fica OFFLINE (falha segura).
+    if cam_settings.mt5_bridge_autoconnect:
+        try:
+            from cam.features.mt5_integration.routes import _service as mt5_service
+            await mt5_service.connect()
+        except Exception:
+            # falha de conexão não derruba o app — endpoints retornam 503 OFFLINE
+            pass
+
     # startup completo
     yield
-    # shutdown — recursos serão liberados em Bloco B+
+
+    # shutdown — desconecta bridge se conectada
+    if cam_settings.mt5_bridge_autoconnect:
+        try:
+            from cam.features.mt5_integration.routes import _service as mt5_service
+            await mt5_service.disconnect()
+        except Exception:
+            pass
 
 
 app = FastAPI(
@@ -184,7 +210,90 @@ from cam.features.mt5_integration.routes import router as mt5_router  # noqa: E4
 
 app.include_router(mt5_router)
 
+# Inspetor de Ativo (ADR-014) — market data read-only (candles/symbols/WS)
+from cam.features.mt5_integration.market_routes import (  # noqa: E402
+    router as mt5_market_router,
+)
+
+app.include_router(mt5_market_router)
+
+# Inspetor de Ativo (ADR-014) — overlay de Regime de Markov (read-only)
+from cam.features.regime.routes import router as regime_router  # noqa: E402
+
+app.include_router(regime_router)
+
+# Research Lane v0.5.1 (ADR-015) — Lead-Lag: ingestão MT5→research_* + Data Health.
+# Composição vive em cam/api/ (autorizado a conhecer features — ADR-013); o slice
+# cam.features.research NÃO importa MT5 (import-linter enforce).
+from cam.api.research_routes import router as research_leadlag_router  # noqa: E402
+
+app.include_router(research_leadlag_router)
+
+# StrategyLab (Onda 1 — D1 ORB-30): Assets Strategy + RunTests + Experts.
+# Composição vive em cam/api/ (ADR-013); o slice cam.features.strategy_lab NÃO
+# importa MT5 nem execução (import-linter enforce). Valores BRUTOS (R-11).
+from cam.api.strategy_lab_routes import router as strategy_lab_router  # noqa: E402
+
+app.include_router(strategy_lab_router)
+
 # T-TD-026 (SPEC v0.3) — WebSocket P&L stub funcional
 from cam.api.websocket import router as ws_router  # noqa: E402
 
 app.include_router(ws_router)
+
+# ---------------------------------------------------------------------------
+# BL-UI-0 (SPEC v0.5-COCKPIT-UI) — Borda HTTP: expõe features v0.4 à UI.
+# Read + comandos governados/seguros. NENHUM endpoint submete ordem (Art. 35º).
+# ---------------------------------------------------------------------------
+
+# U001 — Strategy Registry (dead route → viva)
+from cam.features.strategies.routes import router as strategies_router  # noqa: E402
+
+app.include_router(strategies_router)
+
+# U002 — Holdings / Carteira Hard (dead route → viva)
+from cam.features.ledger.holdings_router import router as holdings_router  # noqa: E402
+
+app.include_router(holdings_router)
+
+# U003 — Robot Orchestrator (read-only)
+from cam.features.robot_orchestrator.routes import (  # noqa: E402
+    router as robot_orchestrator_router,
+)
+
+app.include_router(robot_orchestrator_router)
+
+# U004 — Scaling / Escalonamento constitucional (Art. 11-B)
+from cam.features.scaling.routes import router as scaling_router  # noqa: E402
+
+app.include_router(scaling_router)
+
+# U005 — Research / AI Workbench (governado; OpenAI bloqueado)
+from cam.features.research.routes import router as research_router  # noqa: E402
+
+app.include_router(research_router)
+
+# U006 — Fundamentals / Dividendos / Policy alerts
+from cam.features.fundamentals.routes import router as fundamentals_router  # noqa: E402
+
+app.include_router(fundamentals_router)
+
+# U007 — Order Gateway decisions (SEC CRÍTICO, read-only)
+from cam.api.order_gateway_routes import router as order_gateway_router  # noqa: E402
+
+app.include_router(order_gateway_router)
+
+# Trade Analyzer — report + ticks → IA (Claude/OpenAI) analisa erros/correções
+from cam.features.trade_analyzer.routes import router as trade_analyzer_router  # noqa: E402, E501
+
+app.include_router(trade_analyzer_router)
+
+# Operation Analyzer (CASCA) — ticks+candles+estratégia → sinais (R:R 1:3), sem bloqueio
+from cam.features.operation_analyzer.routes import router as operation_analyzer_router  # noqa: E402, E501
+
+app.include_router(operation_analyzer_router)
+
+# App settings — preferências de runtime (provedor de dados MT5/Profit)
+from cam.features.app_settings.routes import router as app_settings_router  # noqa: E402
+
+app.include_router(app_settings_router)

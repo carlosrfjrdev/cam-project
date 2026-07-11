@@ -139,7 +139,7 @@ Write-Host "  CaM Cockpit -- Setup Windows Concluido  " -ForegroundColor Green
 Write-Host "============================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Proximos passos:" -ForegroundColor White
-Write-Host "  1. Backend:  cd backend && uv run uvicorn cam.api.main:app --reload"
+Write-Host "  1. Backend:  cd backend && uv run python run_server.py   (Windows: SelectorEventLoop p/ DB async + bridge)"
 Write-Host "  2. Frontend: cd frontend && npm run dev"
 Write-Host "  3. Abrir:    http://localhost:5173"
 Write-Host ""

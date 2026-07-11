@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     O .env NUNCA é commitado (pré-commit hook bloqueia + .gitignore).
     """
 
-    database_url: str = "postgresql+psycopg://cam:cam@localhost:5433/cam_db"
+    database_url: str = "postgresql+psycopg://cam:cam@localhost:5434/cam_db"
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
     anthropic_api_key: str = ""
@@ -39,12 +39,54 @@ class Settings(BaseSettings):
     mt5_wine_prefix: Path = Path.home() / ".wine"
     mt5_terminal_path: str = ""
 
+    # Inspetor de Ativo (ADR-014) — fundamentos via brapi.dev
+    # Token opcional (free tier funciona sem token p/ vários tickers).
+    # NUNCA commitado — vive no .env.
+    brapi_token: str = ""
+    brapi_base_url: str = "https://brapi.dev/api"
+    # Conecta a bridge ZeroMQ no startup do app (lifespan). Em CI/dev sem MT5,
+    # deixar False evita sockets ociosos; em produção Windows, True.
+    mt5_bridge_autoconnect: bool = False
+
     # T-TD-012 — CDI diario (risk-free rate) para Sharpe Ratio; default 0
     cdi_daily_rate: float = 0.0
 
     # T-TD-017 — Anthropic model/version configuraveis
     anthropic_model: str = "claude-haiku-4-5-20251001"
     anthropic_api_version: str = "2023-06-01"
+
+    # Trade Analyzer — OpenAI (provider selecionavel na UI). Sem default fixo:
+    # o usuario escolhe Claude ou OpenAI a cada analise. Key vive no .env.
+    openai_api_key: str = ""
+    openai_model: str = "gpt-5.5"
+    openai_base_url: str = "https://api.openai.com/v1"
+    # GPT-5.x são reasoning models: o budget inclui tokens de raciocínio, então
+    # precisa de folga grande (senão a resposta visível sai vazia).
+    openai_max_completion_tokens: int = 16000
+
+    # Limite de tokens de saída da IA (Trade Analyzer). Default alto para não
+    # cortar a narrativa/tabelas. Configurável no .env.
+    ai_max_tokens: int = 4096
+
+    # DeepSeek (OpenAI-compatible). Key/base no .env.
+    deepseek_api_key: str = ""
+    deepseek_base_url: str = "https://api.deepseek.com/v1"
+
+    # Ollama local — modelo default (catálogo configurável via .env CSV)
+    ollama_model: str = "llama3.1:8b"
+    ollama_models: list[str] = ["llama3.1:8b", "qwen2.5:14b", "deepseek-r1:14b"]
+
+    # ---------------------------------------------------------------------
+    # Profit bridge (ProfitDLL) — ticks READ-ONLY do Profit/Nelogica.
+    # Lane de market-data, independente do mutex de execucao R21.03.
+    # Segredos vivem no .env (nunca commitados).
+    # ---------------------------------------------------------------------
+    profit_dll_enabled: bool = False
+    profit_dll_path: str = ""          # caminho do ProfitDLL.dll (Win64)
+    profit_dll_key: str = ""           # chave de ativacao (Nelogica)
+    profit_username: str = ""          # usuario da conta (email/documento)
+    profit_password: str = ""          # senha da conta
+    profit_default_exchange: str = "F"  # B3 derivativos (WIN/WDO) = F
 
     # T-TD-026 — WebSocket P&L modo real-data
     websocket_pnl_real_data: bool = False
@@ -74,10 +116,25 @@ class Settings(BaseSettings):
         "extra": "ignore",
     }
 
-    @field_validator("real_trading_accounts", mode="before")
+    @field_validator("cam_journal_dir", "mt5_wine_prefix", mode="before")
     @classmethod
-    def _split_accounts(cls, v):  # type: ignore[no-untyped-def]
-        """Aceita string CSV em .env (ex.: 'acc1,acc2,acc3') ou lista nativa."""
+    def _expand_user_path(cls, v):  # type: ignore[no-untyped-def]
+        """
+        Expande `~` em paths vindos do .env/env var.
+
+        pydantic-settings entrega o valor como string literal (ex.:
+        "~/.cam/journal") e `Path("~/...")` NÃO expande o til — isso criava um
+        diretório literal `~/` relativo ao CWD (bug do `backend/~/`). Forçar
+        expanduser aqui resolve a causa raiz independentemente da fonte.
+        """
+        if v in (None, ""):
+            return v
+        return Path(v).expanduser()
+
+    @field_validator("real_trading_accounts", "ollama_models", mode="before")
+    @classmethod
+    def _split_csv(cls, v):  # type: ignore[no-untyped-def]
+        """Aceita string CSV em .env (ex.: 'a,b,c') ou lista nativa."""
         if isinstance(v, str):
             stripped = v.strip()
             if not stripped:

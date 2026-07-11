@@ -5,13 +5,17 @@ lint_mql5.py — TASK-010 (BL-A SPEC v0.4).
 Lint determinístico que falha CI se chamadas de envio de ordem aparecerem
 em qualquer arquivo .mq5/.mqh fora da allowlist.
 
-Funções proibidas fora de `cam_risk_mirror.mq5`:
+Funções proibidas fora da allowlist:
     OrderSend, OrderClose, PositionOpen, PositionClose, OrderModify
 
 Em BL-A, `cam_risk_mirror.mq5` ainda não existe — então o lint funciona como
 **zero-tolerance** (nenhum .mq5/.mqh pode usar essas funções).
 
-Em BL-E (T025) o allowlist será habilitado para `cam_risk_mirror.mq5`.
+Em BL-E (T025) o allowlist foi habilitado para `cam_risk_mirror.mq5`.
+
+StrategyLab Onda 1 (ADR-SL-04) adiciona `cam_d1_orb30_exec.mq5` à allowlist —
+o EA EXECUTOR da estratégia D1 (opera de verdade, DEMO-only). O EA gravador de
+paridade `cam_d1_orb30.mq5` continua FORA da allowlist (não envia ordem).
 
 CLI:
     python scripts/lint_mql5.py [--mql5-dir PATH] [--json]
@@ -38,8 +42,26 @@ _FORBIDDEN_FUNCS = (
     "OrderModify",
 )
 
-# Arquivo permitido a usar OrderSend etc. (criado em BL-E T025).
-_ALLOWED_FILES = {"cam_risk_mirror.mq5"}
+# Arquivos permitidos a usar OrderSend etc.:
+#   - cam_risk_mirror.mq5    (BL-E T025) — executor com Risk Engine espelho.
+#   - cam_d1_orb30_exec.mq5  (ADR-SL-04) — executor D1 puro (DEMO-only, sem risco).
+#   - cam_d1_orb30_sinais.mq5(ADR-SL-04) — executor D1 + regime ER embutido (DEMO).
+#   - cam_d2_vwap_exec.mq5   (ADR-SL-04) — executor D2 VWAP fade (DEMO-only).
+#   - cam_hibrido_orb30_vwap.mq5 (ADR-SL-04) — executor hibrido D1+D2 (recuperacao).
+#   - cam_hibrido_orb30_vwap_fbr.mq5 — hibrido 3 pernas D1+D3(FBR)+D2 (DEMO-only).
+#   - cam_hibrido_orb30_vwap_fbr_fulltrailing.mq5 — idem + stop hibrido tick-a-tick.
+#   - cam_disciplina_2c.mq5  — gestor de saida disciplinada p/ entradas manuais
+#                              (bracket 2 pernas + guard-rails, DEMO-only).
+_ALLOWED_FILES = {
+    "cam_risk_mirror.mq5",
+    "cam_d1_orb30_exec.mq5",
+    "cam_d1_orb30_sinais.mq5",
+    "cam_d2_vwap_exec.mq5",
+    "cam_hibrido_orb30_vwap.mq5",
+    "cam_hibrido_orb30_vwap_fbr.mq5",
+    "cam_hibrido_orb30_vwap_fbr_fulltrailing.mq5",
+    "cam_disciplina_2c.mq5",
+}
 
 
 def _strip_comments_and_strings(line: str) -> str:
@@ -100,7 +122,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--mql5-dir",
         type=Path,
-        default=Path(__file__).resolve().parents[1] / "mql5",
+        # Robôs movidos para /apps/trader-robots/mql5 (2026-06-05).
+        default=Path(__file__).resolve().parents[2] / "trader-robots" / "mql5",
         help="Diretório raiz dos arquivos MQL5 (.mq5/.mqh)",
     )
     parser.add_argument(
@@ -109,6 +132,13 @@ def main(argv: list[str] | None = None) -> int:
         help="Saída JSON consumível por CI.",
     )
     args = parser.parse_args(argv)
+
+    # Windows e o SO oficial do projeto; o console padrao (cp1252) nao encoda os
+    # emojis abaixo. Forca utf-8 no stdout p/ o script nao quebrar ao reportar.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
+    except (AttributeError, ValueError):
+        pass
 
     files = find_mql5_files(args.mql5_dir)
     all_violations: list[dict] = []

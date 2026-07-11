@@ -49,9 +49,10 @@ A Fase 0 do CaM exige cockpit funcional end-to-end com infra local estável. Hos
 
 ## Referências Obrigatórias
 
-- Persona completa: `teczi-devflow/personas/vint.md`
+- Persona completa: `personas/2-tecnologia/vint.md`
 - DevFlow NCC-1701: `teczi-devflow/NCC-1701/process.md`
 - Estado OPS: `teczi-devflow/NCC-1701/states/OPS.md`
 - Fase DEPLOY: `teczi-devflow/NCC-1701/phases/08-DEPLOY.md`
 - Templates: `teczi-devflow/NCC-1701/templates/INFRA-ARCH.md`, `OPS-EVENT.md`
-- Constituição do CaM: `CONSTITUICAO.md`
+
+> **Nota (2026-06-03):** a Constituição do CaM foi descomissionada com a virada para produto. Este agente é **livre** — não há mais hierarquia constitucional, Risk Engine soberano nem artigos vinculantes. O Risk Engine sobrevive apenas como feature de produto (Assets RiskManager). Processo de engenharia (NCC-1701) continua.

@@ -1,11 +1,24 @@
 # STACK-CAM-OFICIAL
 
+> 🪟 **ATUALIZAÇÃO 2026-05-30.** Dois níveis de decisão, com maturidade diferente:
+> - ✅ **SO = WINDOWS 11 (FIRME).** O MT5 sob **Wine no Linux falhou** → operação em
+>   Windows nativo. Isto encerra a parte "Linux/Wine" da Opção B.
+> - 🔄 **BROKER = EM AVALIAÇÃO (não decidido).** **MetaTrader 5 em teste** agora
+>   (Founder já criou alguns pontos/setups). **Profit/Nelogica NÃO caiu — está em
+>   STANDBY**, mantido como opção. **A escolha de broker só fecha após o 1º teste do MT5.**
+>
+> Estamos em **soft-stage de concepção** (pré-v1): docs moldáveis, **sem ADR HARD**.
+> Runbook operacional: [`runbooks/RUNBOOK-WINDOWS.md`](./runbooks/RUNBOOK-WINDOWS.md).
+> **O que NÃO muda em nenhum cenário:** Constituição, NCC-1701, backend Python/FastAPI,
+> frontend React/MUI, Postgres+Timescale, Risk Engine, política da IA. As seções
+> abaixo que descrevem **Wine/Linux** ficam **supersedidas** (preservadas como
+> histórico). As que descrevem **Profit** valem enquanto ele estiver em standby.
+
 > **Projeto:** CaM — The Carlos Alternative Money
-> **Documento:** Stack Oficial — **Linux + MetaTrader 5 + MQL5**
-> **Versão:** 1.0
-> **Data:** 2026-05-24 (origem) · 2026-05-25 (canonicalizada)
-> **Status:** **CANÔNICA** — decisão registrada em [`DECISION-MEMO-LINUX-OR-WINDOWS.md`](./DECISION-MEMO-LINUX-OR-WINDOWS.md) §6 (Opção B aprovada pelo Founder)
-> **Variante rejeitada:** [`archive/STACK-CAM-OFICIAL-WINDOWS-PROFIT-rejeitada-2026-05-25.md`](../archive/STACK-CAM-OFICIAL-WINDOWS-PROFIT-rejeitada-2026-05-25.md)
+> **Documento:** Stack Oficial — **Windows 11** · broker em avaliação (**MT5 em teste / Profit em standby**)
+> **Versão:** 1.1
+> **Data:** 2026-05-24 (origem) · 2026-05-25 (canonicalizada) · 2026-05-30 (SO→Windows; broker em reavaliação)
+> **Status:** **CANÔNICA (soft-stage)** — adendo em [`DECISION-MEMO-LINUX-OR-WINDOWS.md`](./DECISION-MEMO-LINUX-OR-WINDOWS.md) §10
 > **Vinculação constitucional:** [`../CONSTITUICAO.md`](../CONSTITUICAO.md)
 > **Síntese por:** Voltaire (devil's advocate) + Grace (arquitetura) + Vint (viabilidade infra)
 
@@ -13,9 +26,15 @@
 
 ## 0. Status canônico
 
-Carlos escolheu **Linux + MetaTrader 5** como stack oficial em **2026-05-25**, conforme registrado no DECISION-MEMO. O documento da variante Windows+Profit foi movido para `archive/` como rejeitado.
+Carlos escolheu **Linux + MetaTrader 5** em 2026-05-25. Em **2026-05-30**, após o
+MT5 sob Wine no Linux **não funcionar**, fixou o **SO em Windows 11 nativo** (firme).
+O **broker ficou em reavaliação**: **MT5 em teste** agora; **Profit em STANDBY**
+(não descartado). **A decisão de broker fecha após o 1º teste do MT5.** Tudo em
+**soft-stage** (pré-v1, moldável, sem ADR HARD).
 
-**SO produção:** Linux (Ubuntu 24.04+ LTS). **Broker:** MetaTrader 5. **Linguagem de execução automatizada:** MQL5 + Expert Advisors (EAs).
+**SO produção/desenvolvimento:** **Windows 11** (firme). **Broker:** **em avaliação**
+— MetaTrader 5 em teste (nativo, sem Wine; MQL5 EAs + bridge ZeroMQ em `127.0.0.1`)
+**/** Profit em standby (NTSL + CSV/ProfitDLL, se reativado). **Decisão após 1º teste.**
 
 **O que NÃO muda em relação ao documento Windows+Profit:**
 
@@ -29,18 +48,18 @@ Carlos escolheu **Linux + MetaTrader 5** como stack oficial em **2026-05-25**, c
 - O Risk Engine Pure Python em `_shared/risk/` é o mesmo
 - A política da IA (Arts. 34–36) é a mesma
 
-**O que MUDA:**
+**O que MUDA** (camada MT5 — o caminho **sob teste**; Profit em standby não aparece na tabela):
 
-| Camada | Windows+Profit | **Linux+MT5 (este doc)** |
+| Camada | Linux+MT5/Wine (revogado 2026-05-30) | **Windows+MT5 nativo (em teste)** |
 |---|---|---|
-| SO produção | Windows 11 | **Linux (Ubuntu 24.04+ LTS)** |
-| Broker/plataforma | Profit Pro/Ultra (Nelogica) | **MetaTrader 5 (MetaQuotes)** |
-| Linguagem estratégia no broker | NTSL | **MQL5** |
-| Artefatos de execução versionados | `ntsl/` (NTSL scripts + risk_mirror) | **`mql5/` (EAs + indicators + scripts + risk_mirror)** |
-| API nativa Python para o broker | `MetaTrader5` package oficial (Windows) ou ProfitDLL (Fase 5+) | **MT5 Python package NÃO roda nativo em Linux** — exige bridge (ver §6.1) |
-| Onde o MT5 roda | Windows nativo | **Wine, OU container Wine, OU VPS Windows remoto** |
-| Docker | Docker Desktop + WSL2 (pago em empresas grandes) | **Docker Engine + docker-compose nativo (open source)** |
-| Custo de licença | Windows 11 | **R$ 0 (Ubuntu LTS)** |
+| SO produção/dev | Linux (Ubuntu 24.04+ LTS) | **Windows 11** |
+| Broker/plataforma | MetaTrader 5 (MetaQuotes) | **MetaTrader 5 (MetaQuotes)** — sem mudança |
+| Linguagem estratégia no broker | MQL5 | **MQL5** — sem mudança |
+| Artefatos de execução versionados | `mql5/` (EAs + risk_mirror) | **`mql5/`** — sem mudança |
+| Onde o MT5 roda | Wine / container Wine / VPS Windows | **Windows nativo** (Wine eliminado — falhou) |
+| API Python p/ broker | bridge ZeroMQ (package nativo não roda em Linux) | **bridge ZeroMQ** (e `MetaTrader5` package nativo vira opção futura) |
+| Docker | Docker Engine nativo (sem Desktop) | **Docker Desktop + WSL2** (ou Postgres nativo) |
+| Custo de licença | R$ 0 (Ubuntu) | Windows 11 (já licenciado pelo Founder) |
 
 ---
 
@@ -184,6 +203,12 @@ Diferenças em relação ao documento Windows+Profit destacadas em **negrito**.
 ## 6. Detalhamento por Camada Crítica
 
 ### 6.1 Camada de Execução — MetaTrader 5 + MQL5 em Linux
+
+> ⚠️ **SUPERSEDIDO em 2026-05-30.** Esta seção (Wine local / container Wine / VPS
+> Windows / bridges em Linux) descreve a tentativa Linux que **falhou**. Vale como
+> histórico do raciocínio. **O setup vigente é Windows 11 nativo** — ver
+> [`runbooks/RUNBOOK-WINDOWS.md`](./runbooks/RUNBOOK-WINDOWS.md). A bridge ZeroMQ e os
+> EAs (`cam_bridge.mq5`, `cam_risk_mirror.mq5`) permanecem; só sai a camada Wine.
 
 **Decisão fundadora desta variante:** MT5 é o executor. CaM não envia ordem por caminho alternativo no MVP (Fase 0–3). EAs MQL5 dentro do MT5 fazem a execução; o Python publica parâmetros e recebe eventos.
 

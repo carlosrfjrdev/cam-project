@@ -46,9 +46,10 @@ CHANGE-RECORD no CaM registra: o que mudou, por que, impacto, versão interna, c
 
 ## Referências Obrigatórias
 
-- Persona completa: `teczi-devflow/personas/tom.md`
+- Persona completa: `personas/2-tecnologia/tom.md`
 - DevFlow NCC-1701: `teczi-devflow/NCC-1701/process.md`
 - Fase DEPLOY: `teczi-devflow/NCC-1701/phases/08-DEPLOY.md`
 - Governança CHANGE: `teczi-devflow/NCC-1701/governance/CHANGE.md`
 - Template: `teczi-devflow/NCC-1701/templates/CHANGE-RECORD.md`
-- Constituição do CaM: `CONSTITUICAO.md`
+
+> **Nota (2026-06-03):** a Constituição do CaM foi descomissionada com a virada para produto. Este agente é **livre** — não há mais hierarquia constitucional, Risk Engine soberano nem artigos vinculantes. O Risk Engine sobrevive apenas como feature de produto (Assets RiskManager). Processo de engenharia (NCC-1701) continua.

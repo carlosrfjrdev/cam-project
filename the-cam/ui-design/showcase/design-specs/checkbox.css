@@ -1,0 +1,7 @@
+.cbx{display:flex;align-items:center;gap:10px;font-size:var(--text-dense);color:var(--subtle);cursor:pointer}
+.cbx input{position:absolute;opacity:0}
+.cbx .box{width:18px;height:18px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface-2);display:inline-flex;align-items:center;justify-content:center;transition:all var(--dur-fast)}
+.cbx input:checked+.box{background:var(--primary);border-color:var(--primary)}
+.cbx input:checked+.box::after{content:"✓";color:#fff;font-size:13px}
+.cbx input:focus+.box{box-shadow:0 0 0 2px var(--primary-soft)}
+.cbx input:disabled+.box{opacity:.4}

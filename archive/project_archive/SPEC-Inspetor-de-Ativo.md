@@ -1,0 +1,288 @@
+---
+template: SPEC
+phase: SPEC
+status: Draft
+produto: CaM — The Carlos Alternative Money
+slice: Inspetor de Ativo (MVP)
+version: 1.1
+date: 2026-05-31
+lead: Albert
+aprovador: Founder
+status: Approved
+---
+
+# SPEC — INSPETOR · Inspetor de Ativo (MVP)
+
+> **Data:** 2026-05-31
+> **Status:** ✅ **Approved** — Carlos (Founder), 2026-05-31
+> **Produto:** CaM — The Carlos Alternative Money
+> **Lead:** Albert · **Aprovador:** Carlos (Founder)
+> **Cobertura mandatória (diretriz do Founder):** a entrega abrange as **3 camadas** —
+> **EAs (MQL5)** + **Backend (FastAPI)** + **Frontend (React)**. Nenhum bloco é considerado
+> "pronto" sem a camada que lhe cabe. Ver matriz §7.1.
+
+---
+
+## 1. Resumo
+
+Especifica uma tela **read-only** onde o operador pesquisa um ativo e o CaM exibe, ao vivo, o
+**gráfico** (candles históricos + tick e book do MT5 via EA `cam_bridge`/ZeroMQ) e, para papéis à
+vista (ações/FIIs), os **7 indicadores fundamentalistas do R-20** e **dois cenários de dividendo**
+(via brapi.dev), além de um **overlay de Regime de Markov read-only** ("assistente de pesquisa")
+para ações. Nenhuma superfície de execução. Em paralelo, simplifica o cockpit ocultando 13 das
+17 telas do sidebar sem deletar código.
+
+## 2. Referências de entrada
+
+- **SCOPE:** [`../scopes/SCOPE-Inspetor-Consolidado.md`](../scopes/SCOPE-Inspetor-Consolidado.md) — consolida e revoga `SCOPE-evolution2`, `SCOPE-Inspetor-de-Ativo` e `SCOPE-Inspetor-de-Ativo (1)`.
+- **DAS vigente:** [`../DAS.md`](../DAS.md) — **desatualizado** quanto a broker/SO (ver R-13 e ADR-014).
+- **ADRs aplicáveis:** ADR-013 (vertical slice), ADR-006 (IA sem autoridade), ADR-004 (TimescaleDB), ADR-003 (React/Vite/MUI), ADR-002 (FastAPI). **ADR-014 (novo, requerido)** — MT5 como market data read-only.
+- **Constituição:** Arts. 6º, 13º, 18º, 25º, 34º–36º; CA15.1/CA15.3 (allowlist do bridge).
+- **Estado real do código:** `mql5/experts/cam_bridge.mq5` v0.3; `features/market_data/` (service.py stub); `features/fundamentals/multi_source_collector.py` (Protocol + 7 R-20 + `cam_fundamentals_snapshot`).
+
+## 3. Regras de negócio
+
+### Market data (cano de preço)
+
+- **R-01.** O único canal de dados de mercado é o EA `cam_bridge` via ZeroMQ. O pacote Python `MetaTrader5` **não** é usado no caminho operacional.
+- **R-02.** O EA é **read-only por construção**: nenhum `OrderSend`/`OrderClose`/`PositionOpen`/`PositionClose` existe no arquivo (CA15.1). Qualquer comando REP fora da allowlist é rejeitado e logado (CA15.3).
+- **R-03.** Allowlist REP completa: `PING, GET_STATE, GET_POSITIONS, GET_SYMBOL_INFO, GET_VERSION, PAUSE_EA, RESUME_EA, GET_CANDLES, GET_SYMBOLS, SUBSCRIBE, UNSUBSCRIBE`. Comandos de escrita (`SUBMIT_ORDER` etc.) **nunca** entram aqui (vivem só em `cam_risk_mirror.mq5`, fora deste slice).
+- **R-04.** Candles históricos vêm via REP `GET_CANDLES(symbol, timeframe, count)` (`CopyRates`). `count` limitado no MVP (ex.: ≤ 5.000 barras ou ≤ 1 ano em M5) para não travar o heartbeat do EA single-thread.
+- **R-05.** Tick ao vivo vem via PUB `mt5.tick` (já publicado pelo EA). Book ao vivo vem via PUB `mt5.book` (novo: `MarketBookAdd`/`OnBookEvent`), **condicional** — se a corretora não fornece DOM para o ativo, o canal não publica e a tela exibe "Book não disponível".
+- **R-06.** `GET_SYMBOLS` retorna os símbolos disponíveis no terminal. `SUBSCRIBE(symbol)` faz `SymbolSelect(symbol, true)` e passa o EA a observar o símbolo pesquisado; `UNSUBSCRIBE` reverte.
+- **R-07.** Todo tick recebido é persistido em `cam_market_ticks` com proveniência (fonte=`mt5.cam_bridge`, ts de recepção). Continuous aggregates geram `cam_candles_*`. Nenhum tick histórico massivo é renderizado na tela.
+- **R-08.** **Resolução de símbolo:** o backend mapeia ticker B3 ↔ símbolo MT5 (sufixos, futuros `WIN$`/`WINM25`/`WDO$`). Símbolo inexistente no MT5 → 404 com mensagem clara.
+- **R-09.** **Falha segura:** EA caído/ZMQ sem heartbeat → WS emite `status: OFFLINE`; a tela mostra "sem dado fresco", nunca um estado que sugira operação liberada.
+- **R-10.** **Conta REAL read-only:** o EA hoje aborta em conta REAL (`InpRequireDemoAccount=true`). Para o Inspetor na conta real de Carlos, `InpRequireDemoAccount=false` é setado conscientemente. Pré-condições (SEC-GOV/Kevin): (a) banner **REAL** permanente no header; (b) verificação automatizada de que a allowlist não contém comando de escrita; (c) audit log da sessão.
+
+### Fundamentos (cano de fundamento)
+
+- **R-11.** Fundamentos e dividendos vêm da **brapi.dev** (free tier) via nova `BrapiSource` implementando o Protocol `FundamentalsSource` já existente. Scraping (Fundamentus/StatusInvest) **não** entra no MVP — fica em TD-v0.4-01 (LATER).
+- **R-12.** Indicadores exibidos = **7 do R-20**: DY, P/L, P/VP, ROE, Dívida Líq/EBITDA, Payout, ROIC (campos já em `cam_fundamentals_snapshot`). EV/EBITDA é **bônus** opcional se a brapi retornar. Campo ausente → `N/A` com tooltip.
+- **R-13.** Bloco de fundamentos só aparece para **Ação** e **FII**. Para **futuro** (WIN/WDO) a seção é **omitida** (sem erro). FII: P/L, ROE, Dívida/EBITDA, ROIC normalmente `N/A` (não aplicável) — tooltip explica.
+- **R-14.** **Duas projeções de dividendo**, lado a lado, ambas rotuladas **"estimativa"**:
+  - **Modelo A — Run-rate 12m:** soma dos proventos dos últimos 12 meses.
+  - **Modelo B — DY-médio 3–5 anos × preço atual:** DY médio histórico aplicado ao preço corrente.
+- **R-15.** Fundamentos são **cacheados** (TTL alinhado à atualização da brapi; ex.: 6–24h). Token brapi (se usado) via `keyring`/`.env`, **nunca** commitado.
+- **R-16.** `features/market_data/` e `features/fundamentals/` são auto-contidos (ADR-013) — um **nunca** importa o outro. Composição só na API e no frontend.
+
+### Regime de Markov (overlay read-only — núcleo)
+
+- **R-21.** Para **ações**, o Inspetor exibe um bloco de **Regime** read-only ("assistente de
+  pesquisa", Arts. 13/34–36, ADR-006): estado atual (Bull/Bear/Sideways), matriz de transição 3×3,
+  distribuição estacionária (mix de longo prazo), sinal ∈ [−1,1] e Sharpe/maxDD do backtest
+  walk-forward. **Todos os números rotulados "histórico, não preditivo".**
+- **R-22.** `features/regime/` é slice auto-contido: **lê `cam_candles_*`** (não importa
+  `market_data` nem `fundamentals`), computa o modelo e devolve o resultado. Parâmetros default:
+  janela N=20, limiar ±5%. Configuráveis via query (`window`, `threshold`, `timeframe`).
+- **R-23.** Vendorizar **apenas as funções puras** (`label_regimes`, `build_transition_matrix`,
+  `stationary_distribution`, `signal_from_matrix`, `walk_forward_backtest`; HMM opcional) com
+  **atribuição** (Roan / Lewis Jackson). **Descartar o caminho yfinance** — alimentar com o close
+  dos candles do CaM (Timescale). HMM degrada com elegância se não compilar no Windows.
+- **R-24.** **Proibido rodar o instalador** `markov-hedge-fund-method.md` (prompt auto-instalador
+  com marketing embutido — SEC-GOV/Kevin). Aproveitar só a matemática.
+- **R-25.** O regime é **apenas leitura (papel A)**. Confirmar entrada (B) e sizing pela estacionária
+  (C) tocam execução/contratos e ficam **OUT** (Parte VII, futuro). Nenhum endpoint deste slice
+  emite sinal de execução.
+- **R-26.** Caveats exibidos no rótulo, não escondidos: rótulo é tendência **defasada**; janelas
+  sobrepostas autocorrelacionam (persistência em parte é artefato); backtest não modela custo/spread
+  (Sharpe bruto); regime diário é filtro macro grosseiro.
+
+### Simplificação do cockpit
+
+- **R-17.** `NavItem` ganha `visibleInMvp?: boolean`. O `Sidebar` renderiza apenas itens com `visibleInMvp === true`. Visíveis: **Inspetor, Cockpit Live, Constituição, Configurações** (4). As outras 13 ficam ocultas.
+- **R-18.** Rotas ocultas **permanecem registradas** em `router.tsx` — acessíveis por URL direta. Nenhum componente, rota ou teste é deletado.
+
+### Constituição
+
+- **R-19.** Slice 100% read-only (Arts. 13/34–36, ADR-006). Nenhum endpoint deste slice envia ordem, parametriza Risk Engine ou justifica exceção.
+- **R-20.** P&L exibido em qualquer posição mostrada (via `mt5.position`, se exibido) deve ser tratado como informativo bruto do terminal; este slice **não** calcula resultado operacional (Art. 25º se aplica às telas operacionais, não ao Inspetor read-only) — não exibir como "resultado" do operador.
+
+## 4. Contratos
+
+### 4.1 ZeroMQ (EA ↔ backend)
+
+```
+PUB mt5.tick   : { "symbol", "bid", "ask", "last", "volume", "ts_unix_ms" }        (existe)
+PUB mt5.book   : { "symbol", "ts", "bids":[{"price","vol"}], "asks":[{"price","vol"}] }  (novo)
+PUB mt5.heartbeat : { "ts" }                                                        (existe)
+
+REP GET_CANDLES : req {"cmd":"GET_CANDLES","symbol","timeframe","count"}
+                → rep {"status":"ok","data":{"symbol","timeframe","candles":[{"ts","o","h","l","c","v"}]}}
+REP GET_SYMBOLS : req {"cmd":"GET_SYMBOLS"}
+                → rep {"status":"ok","data":["PETR4","VALE3","WIN$", ...]}
+REP SUBSCRIBE   : req {"cmd":"SUBSCRIBE","symbol"}    → rep {"status":"ok","data":"PETR4"}
+REP UNSUBSCRIBE : req {"cmd":"UNSUBSCRIBE","symbol"}  → rep {"status":"ok","data":"PETR4"}
+fora da allowlist → rep {"error":"UNAUTHORIZED_COMMAND","cmd":"..."}                 (existe)
+```
+
+`timeframe` ∈ `{M1,M5,M15,M30,H1,H4,D1,W1,MN1}` (mapeado p/ `TIMEFRAME_*` no EA).
+
+### 4.2 API REST/WS (backend ↔ frontend) — prefixo `/api/v1`
+
+| Método | Rota | Resposta |
+|---|---|---|
+| GET | `/market/symbols` | `["PETR4","VALE3","MXRF11","WIN$", ...]` |
+| GET | `/market/symbol/{ticker}` | `{ ticker, mt5_symbol, name, type: "stock"\|"fii"\|"future", currency, point, tick_size }` |
+| GET | `/market/candles?symbol=&timeframe=&count=` | `{ symbol, timeframe, candles:[{ time, open, high, low, close, volume }] }` |
+| WS | `/ws/market/{symbol}` | stream `{ type:"tick"\|"book"\|"status", ... }` |
+| GET | `/fundamentals/{ticker}` | ver 4.3 |
+| GET | `/regime/{symbol}?timeframe=&window=&threshold=` | ver 4.5 |
+
+### 4.3 `GET /fundamentals/{ticker}`
+
+```json
+{
+  "ticker": "PETR4",
+  "type": "stock",
+  "source": "brapi",
+  "ts_snapshot": "2026-05-31T12:00:00Z",
+  "indicators": {
+    "dy": 0.085, "pl": 4.20, "pvp": 1.15, "roe": 0.32,
+    "div_liq_ebitda": 0.95, "payout": 0.45, "roic": 0.28,
+    "ev_ebitda": 3.10
+  },
+  "dividends_history": [
+    { "date": "2026-03-15", "type": "DIVIDEND", "value": 1.20 }
+  ],
+  "dividend_projection": {
+    "run_rate_12m":   { "annual": 4.80, "yield": 0.084, "label": "estimativa" },
+    "dy_avg_3_5y":    { "annual": 4.10, "yield": 0.072, "label": "estimativa" }
+  }
+}
+```
+
+Para `type:"future"` → `404` ou `{ "type":"future", "indicators": null }` (frontend omite o bloco).
+
+### 4.5 `GET /regime/{symbol}`
+
+```json
+{
+  "symbol": "PETR4",
+  "timeframe": "D1",
+  "params": { "window": 20, "threshold": 0.05 },
+  "current_state": "Bull",
+  "transition_matrix": [[0.7,0.2,0.1],[0.3,0.5,0.2],[0.25,0.25,0.5]],
+  "states": ["Bull","Sideways","Bear"],
+  "stationary": { "Bull": 0.45, "Sideways": 0.30, "Bear": 0.25 },
+  "signal": 0.20,
+  "walk_forward": { "sharpe": 0.85, "max_drawdown": -0.18 },
+  "disclaimer": "histórico, não preditivo",
+  "attribution": "Roan (@RohOnChain) / Lewis Jackson — funções puras vendorizadas"
+}
+```
+
+Só para `type:"stock"`. Para FII/futuro → bloco omitido no frontend (sem erro).
+
+### 4.4 Eventos / persistência
+
+- `cam_market_ticks` (hypertable): insert por tick com `source="mt5.cam_bridge"`, `ts_recv`.
+- `cam_market_book_snapshots`: insert por evento de book (quando publicado).
+- `cam_fundamentals_snapshot`: upsert idempotente por hash (já implementado no coletor).
+
+## 5. Casos de uso / cenários
+
+| # | Caso | Esperado |
+|---|---|---|
+| 1 | Buscar `PETR4` (ação) | Candles D1 < 2s; tick ao vivo; 7 indicadores; histórico + 2 estimativas de dividendo |
+| 2 | Buscar `MXRF11` (FII) | Candles + tick; DY/P/VP/Payout preenchidos; P/L/ROE/ROIC = `N/A` (tooltip); dividendos mensais |
+| 3 | Buscar `WIN$` (futuro) | Só candles + tick + book; **sem** bloco de fundamentos, sem erro |
+| 4 | Trocar timeframe D1→M5 | Gráfico recarrega via `GET_CANDLES` com novo timeframe |
+| 5 | Ativo com DOM disponível | Painel de book ao vivo renderiza níveis bid/ask |
+| 6 | Ativo sem DOM | "Book não disponível para este símbolo" (discreto) |
+| 7 | EA morto | Header → `WS OFFLINE`; gráfico congela com aviso "sem dado fresco" |
+| 8 | Símbolo inexistente | 404 + "Símbolo não encontrado no MT5" |
+| 9 | Abrir o cockpit | Sidebar mostra 4 itens; URL `/journal` ainda abre a tela (não deletada) |
+| 10 | Conta MT5 real | Banner **REAL** no header durante toda a sessão |
+| 11 | Ação com histórico de candles | Bloco de Regime: estado, matriz 3×3, estacionária, sinal, Sharpe/maxDD — rotulado "histórico, não preditivo" |
+| 12 | FII ou futuro | Bloco de Regime **omitido** (sem erro) |
+
+## 6. Casos limite / exceções
+
+- **`GET_CANDLES` grande:** backend limita `count`; estoura → 422 "intervalo excede o limite do MVP".
+- **brapi rate limit / timeout:** retorna último snapshot cacheado + flag `stale: true`; se nunca houve cache, indicadores = `N/A` com aviso, **sem** derrubar a tela.
+- **brapi sem o ticker:** `indicators: null`; tela mostra "fundamentos indisponíveis para este ativo".
+- **EA em conta REAL com `InpRequireDemoAccount=true`:** EA não inicia → backend sem PUB → WS OFFLINE. Operador deve ajustar o input conscientemente (R-10).
+- **Book parcial (só bid ou só ask):** renderiza o lado disponível.
+- **Símbolo subscrito ≠ símbolo do gráfico do EA:** `SUBSCRIBE` resolve via `SymbolSelect`; tick ao vivo só flui para símbolos selecionados; candles via REP funcionam sempre.
+- **`lightweight-charts` incompatível com React 19:** fallback `recharts` (verificar no BL-4).
+
+## 7. Classificação P/M/G
+
+| Campo | Valor |
+|---|---|
+| Classe | **G** (decomposta em BL-1..BL-8) |
+| Rationale | Toca múltiplas funcionalidades novas em camadas distintas — EA (MQL5), backend (3 slices: market_data, fundamentals, regime), frontend (tela nova), governança (ADR-014) — e introduz o primeiro caminho de market data ao vivo. Cada bloco isolado é P/M, mas o conjunto é G e exige decomposição com gate Founder. |
+
+Blocos (do SCOPE §14): BL-1 (P), BL-2 (M), BL-3 (M), BL-4 (M), BL-5 (P), BL-6 (M), BL-7 (M), BL-8 (M — overlay Regime read-only).
+
+### 7.1 Cobertura por camada — EA · Backend · Frontend
+
+> Diretriz do Founder: a SPEC entrega **as três camadas**. Esta matriz fixa qual artefato cada
+> bloco produz em cada camada — "Done" de um bloco exige todas as células marcadas dele.
+
+| Bloco | EA (MQL5) | Backend (FastAPI) | Frontend (React) |
+|---|---|---|---|
+| **BL-1** | — | — | `nav.tsx` (`visibleInMvp`) + `Sidebar.tsx` + rota `/inspetor` vazia |
+| **BL-2** | **`cam_bridge.mq5`**: `GET_CANDLES`, `mt5.book`, `GET_SYMBOLS`, `SUBSCRIBE`, allowlist, permitir REAL read-only | (contratos ZMQ consumidos em BL-3) | — |
+| **BL-3** | — | **`market_data/`**: subscriber ZMQ + REP client + persistência `cam_market_ticks` + WS + endpoints + resolução de símbolo | (consumido em BL-4) |
+| **BL-4** | — | (endpoints de BL-3) | **`features/inspetor/`**: busca + `lightweight-charts` + timeframe + WS status + banner REAL |
+| **BL-5** | (PUB `mt5.book` de BL-2) | snapshot/relay de book | painel de book condicional |
+| **BL-6** | — | **`fundamentals/`**: `BrapiSource` + endpoint + 2 projeções + cache | (consumido em BL-7) |
+| **BL-7** | — | (endpoint de BL-6) | painel 7 indicadores R-20 + dividendos + 2 estimativas |
+| **BL-8** | — | **`features/regime/`**: funções puras Markov + `GET /regime/{symbol}` | bloco de Regime read-only (estado, matriz, estacionária, sinal, Sharpe/maxDD + disclaimer) |
+
+**Leitura:** as 3 camadas se distribuem assim — **EA:** BL-2 (e o PUB de book usado em BL-5).
+**Backend:** BL-3, BL-5, BL-6, BL-8 (3 slices auto-contidos: `market_data`, `fundamentals`,
+`regime`). **Frontend:** BL-1, BL-4, BL-5, BL-7, BL-8. Governança (ADR-014) é pré-CODE, transversal.
+
+## 8. Marcadores de segurança
+
+| Marcador | Aplicável | Justificativa |
+|---|---|---|
+| `sec` (intrabloco no CODE) | **sim — BL-2** | Estende a allowlist do bridge e libera operação em conta REAL. Gatilho SEC-GOV CaM: toca o perímetro EA/ZeroMQ e a trava read-only da IA (Art. 35º). Kevin valida: allowlist sem comando de escrita, `grep OrderSend` vazio, banner REAL. |
+| `qa-sec` (QA-SEC no QA) | **sim — BL-3, BL-6, BL-8** | BL-3: parsing seguro de payload ZMQ, segregação read-only, audit. BL-6: cliente HTTP externo (brapi) — timeout, sem vazamento de token, sanitização de resposta. BL-8: **proibição de rodar o instalador Markov** (R-24), confirmação de que o slice é read-only (papel A) e não emite sinal de execução (R-25). |
+
+> Gatilho SEC-GOV automático (CaM): a demanda toca **autoridade da IA / perímetro do EA**. Kevin
+> entra cross-cutting em BL-2 (sec) e BL-3/BL-6 (qa-sec). Ver `governance/SEC-GOV.md`.
+
+## 9. Saídas esperadas
+
+- EA `cam_bridge` estendido (GET_CANDLES, mt5.book, GET_SYMBOLS, SUBSCRIBE) — read-only mantido.
+- `features/market_data/` funcional (subscriber + REP client + persistência + WS + endpoints).
+- `features/fundamentals/` com `BrapiSource` + endpoint + 2 projeções + cache.
+- `features/regime/` no backend (funções puras Markov vendorizadas + endpoint `GET /regime/{symbol}`).
+- `features/inspetor/` no frontend (busca + gráfico + book + fundamentos + dividendos + bloco de Regime).
+- `nav.tsx`/`Sidebar.tsx` com `visibleInMvp`; 4 telas visíveis.
+- `ADR-014` ratificado + linha de market data do DAS corrigida.
+- Testes: contrato ZMQ, resolução de símbolo, `BrapiSource` (sem rede em CI, via fixture/mock), filtro do sidebar.
+
+## 10. Critérios de aceite
+
+Os 10 critérios do SCOPE §12 são a régua de QA (Linus). Go = todos verdes, com destaque para:
+
+- **(8)** `grep -r "OrderSend"` no slice = vazio (bloqueante — Kevin).
+- **(6/7/9)** Falha segura, persistência de tick e sidebar reduzido verificáveis objetivamente.
+- **(10)** Banner REAL presente.
+- Contratos da §4 batem com o implementado (validação de schema).
+
+## 11. Delta no DVP (se aplicável)
+
+Sem mudança de direção estratégica. Reforça "construir amplo, liberar estreito" e o gate de dados
+(Pilar 4). Ajuste **documental**: DAS precisa refletir a recalibração de 2026-05-30 (Windows firme;
+MT5 como market data) — capturado em ADR-014, fora desta SPEC de produto.
+
+## 12. Histórico
+
+| Versão | Data | Mudança | Aprovado por |
+|---|---|---|---|
+| 1.0 | 2026-05-31 | Draft inicial — consolidação de 3 escopos | — (aguarda Founder) |
+| 1.1 | 2026-05-31 | Markov → núcleo (BL-8 IN); matriz de cobertura EA/Backend/Frontend (§7.1); **SPEC aprovada** | **Carlos (Founder)** |
+
+---
+
+> **Gate SPEC/Founder:** ✅ **APROVADA.** Carlos aprovou esta SPEC em 2026-05-31, cobrindo as 3
+> camadas (EA + Backend + Frontend). Pendência de governança: **`ADR-014`** (MT5 read-only +
+> correção do DAS) deve ser ratificado antes do PLAN fechar para CODE.
+>
+> [x] Carlos Rodrigues Ferreira Junior — Data: 31/05/2026

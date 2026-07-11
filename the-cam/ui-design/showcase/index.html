@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DS CAM — Showcase</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/tokens.css" />
+  <link rel="stylesheet" href="assets/showcase.css" />
+</head>
+<body>
+  <div class="app">
+    <main class="main">
+      <div class="topbar">
+        <button class="hamburger" aria-label="Menu">&#9776;</button>
+        <div class="crumb"><b>DS CAM</b> · Showcase</div>
+      </div>
+      <div class="content">
+        <h1>Design System CAM <span class="tag">Esmeralda</span></h1>
+        <p>
+          Showcase navegável do Design System do <b>CaM — The Carlos Alternative Money</b>.
+          Padronização visual do cockpit de gestão financeira: <b>Full Web</b>, <b>Dark Mode First</b>,
+          Esmeralda como identidade, defesa de capital como princípio de UX.
+          HTML vanilla + CSS. Logo provisório em texto puro: <b>CaM</b>.
+        </p>
+        <p style="font-size:var(--text-small);color:var(--muted-foreground)">
+          Cada componente tem 3 artefatos: <code>componente.html</code> (visual),
+          <code>design-specs/componente.css</code> (estilos) e
+          <code>design-specs/componente.md</code> (spec legível por IA).
+        </p>
+
+        <h2>Fundamentos</h2>
+        <div class="grid">
+          <a class="card-link" href="colors.html"><h4>Colors</h4><p>Paleta Esmeralda, neutros, funcionais, Founder Orange.</p></a>
+          <a class="card-link" href="branding.html"><h4>Branding</h4><p>Logo CaM (texto), tom de voz, marca.</p></a>
+          <a class="card-link" href="tokens.html"><h4>Tokens</h4><p>Variáveis atômicas — SSoT.</p></a>
+          <a class="card-link" href="shadows.html"><h4>Shadows & Elevation</h4><p>Tonal layering (dark) + sombra de modal.</p></a>
+          <a class="card-link" href="grids.html"><h4>Grids & Spacing</h4><p>Grid 4px, breakpoints, colunas.</p></a>
+        </div>
+
+        <h2>Forms</h2>
+        <div class="grid">
+          <a class="card-link" href="text-fields.html"><h4>TextField</h4><p>text / email / password / multiline.</p></a>
+          <a class="card-link" href="chips.html"><h4>Chip</h4><p>filled / outlined / status.</p></a>
+          <a class="card-link" href="checkbox.html"><h4>Checkbox</h4><p>on / off / indeterminate.</p></a>
+          <a class="card-link" href="select.html"><h4>Select</h4><p>dropdown / select list.</p></a>
+          <a class="card-link" href="radio.html"><h4>Radio</h4><p>grupo de opções.</p></a>
+          <a class="card-link" href="toggle-button-group.html"><h4>ToggleButtonGroup</h4><p>seleção segmentada.</p></a>
+          <a class="card-link" href="switch.html"><h4>Switch</h4><p>toggle on/off.</p></a>
+          <a class="card-link" href="buttons.html"><h4>Button</h4><p>variants / icon / colors / IconButton / ToggleButton.</p></a>
+        </div>
+
+        <h2>Data</h2>
+        <div class="grid">
+          <a class="card-link" href="table.html"><h4>Table</h4><p>data table com defesa de capital (líquido).</p></a>
+          <a class="card-link" href="pagination.html"><h4>Pagination</h4><p>paginador.</p></a>
+        </div>
+
+        <h2>Panels</h2>
+        <div class="grid">
+          <a class="card-link" href="card.html"><h4>Card</h4><p>contêiner elevado.</p></a>
+          <a class="card-link" href="accordion.html"><h4>Accordion</h4><p>seções expansíveis.</p></a>
+          <a class="card-link" href="divider.html"><h4>Divider</h4><p>separador.</p></a>
+          <a class="card-link" href="stepper.html"><h4>Stepper</h4><p>fluxo em etapas.</p></a>
+          <a class="card-link" href="tabs.html"><h4>Tabs</h4><p>abas.</p></a>
+          <a class="card-link" href="paper.html"><h4>Paper</h4><p>superfície base.</p></a>
+          <a class="card-link" href="dialog.html"><h4>Dialog</h4><p>modal.</p></a>
+          <a class="card-link" href="drawer.html"><h4>Drawer</h4><p>sidebar / painel lateral.</p></a>
+          <a class="card-link" href="tooltip.html"><h4>Tooltip</h4><p>dica contextual.</p></a>
+        </div>
+
+        <h2>Messages</h2>
+        <div class="grid">
+          <a class="card-link" href="snackbar.html"><h4>Snackbar</h4><p>toast temporário.</p></a>
+          <a class="card-link" href="alert.html"><h4>Alert</h4><p>info / success / warning / error.</p></a>
+          <a class="card-link" href="badge.html"><h4>Badge</h4><p>contador / status.</p></a>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="assets/nav.js"></script>
+</body>
+</html>

@@ -70,7 +70,19 @@ async def run_async_migrations() -> None:
 
 def run_migrations_online() -> None:
     """Ponto de entrada para migrations online."""
-    asyncio.run(run_async_migrations())
+    import sys
+
+    if sys.platform == "win32":
+        # Windows usa ProactorEventLoop por padrão (incompatível com psycopg async).
+        # SelectorEventLoop é necessário para psycopg3 funcionar no Windows.
+        import selectors
+
+        asyncio.run(
+            run_async_migrations(),
+            loop_factory=lambda: asyncio.SelectorEventLoop(selectors.SelectSelector()),
+        )
+    else:
+        asyncio.run(run_async_migrations())
 
 
 if context.is_offline_mode():

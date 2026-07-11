@@ -1,0 +1,5 @@
+.tbg{display:inline-flex;border:1px solid var(--border);border-radius:var(--radius-btn);overflow:hidden}
+.tbg button{background:var(--surface-2);color:var(--subtle);border:none;border-right:1px solid var(--border);padding:8px 16px;font-family:var(--font-body);font-size:var(--text-dense);cursor:pointer}
+.tbg button:last-child{border-right:none}
+.tbg button.active{background:var(--primary-soft);color:var(--primary-light)}
+.tbg button:hover{background:var(--surface-3)}

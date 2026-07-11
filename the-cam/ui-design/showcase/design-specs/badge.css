@@ -1,0 +1,5 @@
+.badge-host{position:relative;display:inline-flex;align-items:center;gap:8px;font-size:var(--text-dense);color:var(--subtle);margin-right:var(--space-6)}
+.badge{background:var(--destructive);color:#fff;font-size:var(--text-caption);min-width:18px;height:18px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px}
+.badge.primary{background:var(--primary)}
+.dot-badge{width:10px;height:10px;border-radius:50%}
+.dot-badge.ok{background:var(--success)} .dot-badge.err{background:var(--destructive)}

@@ -6,6 +6,7 @@ import LockIcon from "@mui/icons-material/Lock";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { RiskStatus } from "../../api/types";
+import { useRobots } from "../robot-orchestrator/useRobots";
 
 interface RiskDecisionEntry {
   id: string;
@@ -28,6 +29,11 @@ export function RiskConsolePage() {
     queryKey: ["risk-decisions"],
     queryFn: () => api.get<RiskDecisionEntry[]>("/risk/decisions"),
   });
+
+  // U019 — aderência individual × agregada (R8.06) via Robot Orchestrator.
+  const { data: robotsData } = useRobots();
+  const strategies = (robotsData?.robots ?? []).flatMap((r) => r.strategies);
+  const aggregateSuspended = strategies.some((s) => s.suspended);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -94,6 +100,55 @@ export function RiskConsolePage() {
           </Paper>
         </Grid>
       </Grid>
+
+      <Paper sx={{ p: 3, mb: 3 }} data-testid="adherence-panel">
+        <Stack direction="row" alignItems="center" spacing={2} mb={1}>
+          <Typography variant="h6">Aderência — individual × agregada (R8.06)</Typography>
+          <Chip
+            label={`Limite vigente: WIN 2 · WDO 2`}
+            size="small"
+            color="primary"
+            data-testid="current-limits"
+          />
+          <Chip
+            label={aggregateSuspended ? "AGREGADA: ATENÇÃO" : "AGREGADA: OK"}
+            size="small"
+            color={aggregateSuspended ? "warning" : "success"}
+            data-testid="aggregate-adherence"
+          />
+        </Stack>
+        <TableContainer>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Estratégia</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Aderência individual</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {strategies.length === 0 && (
+                <TableRow><TableCell colSpan={3}>
+                  <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+                    Nenhuma estratégia ativa.
+                  </Typography>
+                </TableCell></TableRow>
+              )}
+              {strategies.map((s) => (
+                <TableRow key={s.strategy_id} data-testid="adherence-row">
+                  <TableCell>{s.name}</TableCell>
+                  <TableCell>{s.status}</TableCell>
+                  <TableCell>
+                    {s.suspended
+                      ? <Chip label="SUSPENSA (< 95%)" size="small" color="warning" data-testid="suspended-adherence" />
+                      : <Chip label="OK (≥ 95%)" size="small" color="success" variant="outlined" />}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
 
       <Typography variant="h6" gutterBottom>Decisões do Risk Engine</Typography>
       <TableContainer component={Paper}>

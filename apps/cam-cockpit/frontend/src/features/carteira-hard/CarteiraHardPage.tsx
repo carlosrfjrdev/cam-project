@@ -6,6 +6,9 @@ import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { BucketSnapshot } from "../../api/types";
+import {
+  useHoldings, usePolicyAlerts, useDividendsCalendar,
+} from "./useCarteiraHard";
 
 function formatBRL(v: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
@@ -30,6 +33,13 @@ export function CarteiraHardPage() {
     queryFn: () => api.get<HarvestHistory[]>("/harvest/history"),
   });
 
+  // U022 — lente Barsi: holdings R-20, policy alerts, dividendos.
+  const { data: holdings } = useHoldings();
+  const { data: policy } = usePolicyAlerts();
+  const { data: dividends } = useDividendsCalendar();
+  const holdingsRows = holdings ?? [];
+  const alerts = policy?.alerts ?? [];
+
   return (
     <Box sx={{ p: 3 }}>
       <Stack direction="row" alignItems="center" spacing={2} mb={3}>
@@ -37,10 +47,28 @@ export function CarteiraHardPage() {
         <Typography variant="h4" fontWeight={700}>Carteira Hard</Typography>
       </Stack>
 
+      <Alert severity="warning" sx={{ mb: 2 }} data-testid="art23-note">
+        <b>Art. 23º:</b> Carteira Hard é patrimônio preservado — <b>nunca</b> serve
+        de margem para operação alavancada. Capital fora do ciclo de risco.
+      </Alert>
+
       <Alert severity="info" sx={{ mb: 3 }}>
         Carteira Hard recebe 60% de cada harvest executado. Capital preservado — fora do ciclo operacional.
         Ativos externos (renda variável, FIIs) são registrados manualmente.
       </Alert>
+
+      {alerts.length > 0 && (
+        <Alert severity="warning" sx={{ mb: 3 }} data-testid="policy-alerts">
+          <b>Policy Engine (sugestão, nunca bloqueio — R-13):</b>
+          <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>
+            {alerts.map((a, i) => (
+              <li key={i}>
+                <b>{a.ticker}</b> — {a.message} <i>({a.suggestion})</i>
+              </li>
+            ))}
+          </ul>
+        </Alert>
+      )}
 
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" gutterBottom>Snapshot Patrimonial</Typography>
@@ -95,14 +123,66 @@ export function CarteiraHardPage() {
         </Table>
       </TableContainer>
 
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h6" gutterBottom>Ativos Externos (Registro Manual)</Typography>
-        <Chip label="PLACEHOLDER" size="small" color="default" sx={{ mb: 1 }} />
-        <Typography variant="body2" color="text.secondary">
-          Ativos externos (renda variável, FIIs, etc.) são registrados manualmente aqui.
-          Fora do escopo do cockpit no Bloco atual — implementar em Fase 1+ conforme necessidade.
-        </Typography>
-      </Paper>
+      <Typography variant="h6" gutterBottom>Holdings (R-20 — DY em destaque)</Typography>
+      <TableContainer component={Paper} sx={{ mb: 3 }}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell>Ticker</TableCell>
+              <TableCell>Classe</TableCell>
+              <TableCell align="right">Quantidade</TableCell>
+              <TableCell align="right">Preço médio</TableCell>
+              <TableCell>Origem</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {holdingsRows.length === 0 && (
+              <TableRow><TableCell colSpan={5} align="center">
+                <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+                  Nenhum ativo registrado.
+                </Typography>
+              </TableCell></TableRow>
+            )}
+            {holdingsRows.map((h) => (
+              <TableRow key={h.id} hover data-testid="holding-row">
+                <TableCell>{h.ticker}</TableCell>
+                <TableCell>{h.asset_class}</TableCell>
+                <TableCell align="right">{h.quantity}</TableCell>
+                <TableCell align="right">{h.avg_price}</TableCell>
+                <TableCell><Chip label={h.source} size="small" variant="outlined" /></TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
+        <Paper sx={{ p: 3, flex: 1 }} data-testid="dividends-calendar">
+          <Typography variant="h6" gutterBottom>Calendário de Dividendos</Typography>
+          {(dividends?.events ?? []).length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              {dividends?.note ?? "Sem proventos no horizonte."}
+            </Typography>
+          ) : (
+            <ul>
+              {dividends!.events.map((e, i) => (
+                <li key={i}>{e.ticker} — {e.ex_date} — {e.value}</li>
+              ))}
+            </ul>
+          )}
+        </Paper>
+
+        <Paper sx={{ p: 3, flex: 1 }} data-testid="rebalance-suggestion">
+          <Typography variant="h6" gutterBottom>Rebalanceamento sugerido</Typography>
+          <Alert severity="info" sx={{ mb: 1 }}>
+            Sugestão para revisão manual. O cockpit <b>nunca executa</b>
+            rebalanceamento automático.
+          </Alert>
+          <Typography variant="body2" color="text.secondary">
+            Use a sugestão como checklist. Nenhum botão de execução automática.
+          </Typography>
+        </Paper>
+      </Stack>
     </Box>
   );
 }

@@ -1,0 +1,7 @@
+.field{display:flex;flex-direction:column;gap:6px}
+.field>span{font-size:var(--text-small);color:var(--subtle)}
+.field input,.field textarea{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-input);color:var(--foreground);font-family:var(--font-body);font-size:var(--text-dense);padding:10px 12px;outline:none;transition:border-color var(--dur-fast)}
+.field input:focus,.field textarea:focus{border-color:var(--ring);box-shadow:0 0 0 2px var(--primary-soft)}
+.field input:disabled{opacity:.5;cursor:not-allowed}
+.field.err input{border-color:var(--destructive)}
+.field.err em{color:var(--destructive);font-style:normal;font-size:var(--text-caption)}

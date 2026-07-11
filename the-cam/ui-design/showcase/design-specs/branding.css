@@ -1,0 +1,7 @@
+.wordmark { font-family:var(--font-head); font-weight:600; font-size:3rem; letter-spacing:-.02em; }
+.wordmark.sm { font-size:1.5rem; }
+.wordmark .c,.wordmark .m { color:var(--foreground); }
+.wordmark .a { color:var(--primary-light); }
+.mock-header { display:flex; align-items:center; gap:var(--space-4); width:100%; padding:var(--space-3) var(--space-4); background:var(--surface-1); border:1px solid var(--border); border-radius:var(--radius-card); }
+.mock-header .mode { margin-left:auto; font-size:var(--text-caption); padding:2px 10px; border-radius:var(--radius-btn); background:var(--primary-soft); color:var(--primary-light); }
+.mock-header .kill { font-size:var(--text-caption); padding:2px 10px; border-radius:var(--radius-btn); background:var(--destructive); color:#fff; font-weight:600; }

@@ -69,8 +69,9 @@ Quando o Founder pedir DRIFT, Howard compara `/project/{codinome}/` (intenção:
 
 ## Referências Obrigatórias
 
-- Persona completa: `teczi-devflow/personas/howard.md`
+- Persona completa: `personas/3-governanca-seguranca-qa/howard.md`
 - DevFlow NCC-1701: `teczi-devflow/NCC-1701/process.md`
 - Fase SDOC: `teczi-devflow/NCC-1701/phases/09-SDOC.md`
 - Template: `teczi-devflow/NCC-1701/templates/DRIFT-REPORT.md`
-- Constituição do CaM: `CONSTITUICAO.md`
+
+> **Nota (2026-06-03):** a Constituição do CaM foi descomissionada com a virada para produto. Este agente é **livre** — não há mais hierarquia constitucional, Risk Engine soberano nem artigos vinculantes. O Risk Engine sobrevive apenas como feature de produto (Assets RiskManager). Processo de engenharia (NCC-1701) continua.

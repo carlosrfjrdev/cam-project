@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { ThemeProvider, CssBaseline } from "@mui/material";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { theme } from "./theme";
+import { UiProvider } from "../_shared/state/uiStore";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -14,7 +15,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        {children}
+        <UiProvider>{children}</UiProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

@@ -1,0 +1,20 @@
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>DS CAM — Shadows</title><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="assets/tokens.css"/><link rel="stylesheet" href="assets/showcase.css"/><link rel="stylesheet" href="design-specs/shadows.css"/>
+</head><body><div class="app"><main class="main">
+<div class="topbar"><button class="hamburger" aria-label="Menu">&#9776;</button><div class="crumb"><b>Fundamentos</b> · Shadows &amp; Elevation</div></div>
+<div class="content">
+<h1>Shadows &amp; Elevation</h1>
+<a class="spec-link" href="design-specs/shadows.md">&#128196; Spec (IA)</a>
+<p>Dark Mode <b>não usa drop shadow tradicional</b> — usa <b>tonal layering</b> (variação de superfície) + bordas sutis. Sombra real só em modal/popover.</p>
+<div class="demo-label">Tonal layering (profundidade construída)</div>
+<div class="demo">
+  <div class="el" style="background:var(--background)">background</div>
+  <div class="el" style="background:var(--surface-1)">surface-1</div>
+  <div class="el" style="background:var(--surface-2)">surface-2</div>
+  <div class="el" style="background:var(--elevated)">elevated</div>
+</div>
+<div class="demo-label">Sombra real (modal)</div>
+<div class="demo">
+  <div class="el modal">modal · 0 20px 40px rgba(0,0,0,.4)</div>
+</div>
+</div></main></div><script src="assets/nav.js"></script></body></html>

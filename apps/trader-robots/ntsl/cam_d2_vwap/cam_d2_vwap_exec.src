@@ -1,0 +1,184 @@
+//------------------------------------------------------------------//
+//  cam_d2_vwap_exec.src  —  Profit (NTSL / Nelogica)                //
+//  Estrategia D2 "VWAP fade" — EXECUTOR (replica do EA MQL5)         //
+//                                                                    //
+//  Replica em NTSL do cam_d2_vwap_exec.mq5 (MetaTrader) e do         //
+//  d2_vwap.py (CAM) — VALIDACAO TRIPLA (ver POLITICA-ROBOS.md).      //
+//                                                                    //
+//  ===================  A ESTRATEGIA (VWAP fade)  ================   //
+//  Reversao a media: opera CONTRA a esticada do preco em relacao ao  //
+//  VWAP da sessao (regime LATERAL — oposto da ORB-30).               //
+//  1) VWAP e desvio (sigma) CUMULATIVOS na sessao (typical=(H+L+C)/3 //
+//     ponderado por volume), resetando a cada pregao.                //
+//  2) Estica ACIMA de VWAP + K_entrada*sigma -> VENDE (fade);        //
+//     estica ABAIXO de VWAP - K_entrada*sigma -> COMPRA. 1 por       //
+//     excursao (re-arma ao voltar pra dentro da banda).              //
+//                                                                    //
+//  ====================  GESTAO DE SAIDA (NTSL)  =================   //
+//  Espelha o ORB30: saida por STOP PENDENTE no preco (preenche NO    //
+//  PRECO do stop, igual ao MT5), alvo por LIMIT, flat a mercado no   //
+//  fim do pregao. Stop/alvo CONGELADOS na entrada; trailing re-emite //
+//  o stop a cada barra. Modos de saida:                              //
+//    - StopInicialPts = 0  -> stop na banda sigma (VWAP +- KStop*sg) //
+//    - StopInicialPts > 0  -> stop estatico em pontos                //
+//    - AlvoFixoPts    = 0  -> alvo no proprio VWAP (congelado)       //
+//    - AlvoFixoPts    > 0  -> alvo fixo em pontos                    //
+//    - StopMovelPts   > 0  -> stop movel (trailing) em pontos        //
+//                                                                    //
+//  ===================  MAPA NTSL <-> MetaTrader  ===============   //
+//   KEntradaSigma .......... InpFade_KSigma                          //
+//   KStopSigma ............. InpStop_KSigma                          //
+//   WarmupBarras ........... InpWarmup_Barras                        //
+//   StopInicialPts ......... InpStopInicial_Pts                      //
+//   AlvoFixoPts ............ InpAlvoFixo_Pts                         //
+//   StopMovelPts ........... InpStopMovel_Pts                        //
+//   Contratos .............. InpContratos                            //
+//  Use os MESMOS valores do MT5/CAM. Conta DEMO ate status TESTE.    //
+//                                                                    //
+//  >> Config CAMPEA otimizada pelo Founder no MT5 em AMOSTRA GRANDE   //
+//     (01/12/25-05/06/26): KEntrada 2 / KStop 30 / Warmup 180 /       //
+//     StopIni 300 / Alvo 300 / StopMovel 400 -> +R$920 (3614-2694),   //
+//     acerto 54%. CAM converge (+-9%). Diversificador da D1 (corr ~0).//
+//     (a config curta de 3 meses, acerto 75%, era overfit.)           //
+//------------------------------------------------------------------//
+
+input
+  Contratos(1);            // quantidade de contratos por ordem
+  AberturaHHMM(900);       // inicio do pregao / da sessao (HHMM)
+  EntradaAteHHMM(1700);    // nao abre nova posicao apos (HHMM)
+  FechamentoHHMM(1755);    // flat compulsorio a partir de (HHMM)
+  KEntradaSigma(2);        // faz fade quando estica K x sigma do VWAP
+  KStopSigma(30);          // stop na banda VWAP +- K x sigma (inocuo se StopInicialPts>0)
+  WarmupBarras(180);       // barras minimas na sessao antes de operar
+  StopInicialPts(300);     // stop estatico em pontos; 0 = usa banda sigma
+  AlvoFixoPts(300);        // alvo fixo em pontos; 0 = alvo no VWAP
+  StopMovelPts(400);       // stop movel (trailing) em pontos; 0 = off
+
+var
+  curDate    : Float;
+  sumPV      : Float;
+  sumV       : Float;
+  sumPV2     : Float;
+  nBar       : Integer;
+  tpv        : Float;
+  volBar     : Float;
+  vwap       : Float;
+  vr         : Float;
+  sigma      : Float;
+  ue         : Float;
+  le         : Float;
+  stopPrice  : Float;
+  alvoPrice  : Float;
+  maxFavor   : Float;
+  armedLong  : Boolean;
+  armedShort : Boolean;
+
+begin
+  // ============== RESET DIARIO (novo pregao) ==============
+  if (Date <> curDate) then
+  begin
+    curDate    := Date;
+    sumPV      := 0;
+    sumV       := 0;
+    sumPV2     := 0;
+    nBar       := 0;
+    armedLong  := True;
+    armedShort := True;
+  end;
+
+  // ============== VWAP / SIGMA CUMULATIVOS (toda barra) ==============
+  tpv    := (High + Low + Close) / 3;
+  volBar := Volume;
+  if (volBar <= 0) then volBar := 1;
+  sumPV  := sumPV + tpv * volBar;
+  sumV   := sumV + volBar;
+  sumPV2 := sumPV2 + tpv * tpv * volBar;
+  nBar   := nBar + 1;
+
+  // ============== GESTAO DE POSICAO (TODA barra) ==============
+  // Stop/alvo congelados na entrada. Trailing re-emite o stop. Saida por stop
+  // pendente preenche NO PRECO do stop (igual MT5). Flat a mercado no fim.
+  if (IsBought) then
+  begin
+    if (StopMovelPts > 0) then
+    begin
+      if (High > maxFavor) then maxFavor := High;
+      if (maxFavor - StopMovelPts > stopPrice) then
+        stopPrice := maxFavor - StopMovelPts;
+    end;
+
+    if (Time >= FechamentoHHMM) then
+      SellToCoverAtMarket                             // flat no fim do pregao
+    else
+    begin
+      SellToCoverStop(stopPrice);                     // stop no preco (long)
+      SellToCoverLimit(alvoPrice);                    // alvo (VWAP ou fixo)
+    end;
+  end
+  else if (IsSold) then
+  begin
+    if (StopMovelPts > 0) then
+    begin
+      if (Low < maxFavor) then maxFavor := Low;
+      if (maxFavor + StopMovelPts < stopPrice) then
+        stopPrice := maxFavor + StopMovelPts;
+    end;
+
+    if (Time >= FechamentoHHMM) then
+      BuyToCoverAtMarket                              // flat no fim do pregao
+    else
+    begin
+      BuyToCoverStop(stopPrice);                      // stop no preco (short)
+      BuyToCoverLimit(alvoPrice);
+    end;
+  end
+  // ============== FLAT -> banda de entrada + fade ==============
+  else if (Time >= AberturaHHMM) and (Time < EntradaAteHHMM) and (Time < FechamentoHHMM) then
+  begin
+    if (nBar >= WarmupBarras) and (sumV > 0) then
+    begin
+      vwap := sumPV / sumV;
+      vr   := sumPV2 / sumV - vwap * vwap;
+      if (vr < 0) then vr := 0;
+      sigma := Sqrt(vr);
+
+      if (sigma > 0) then
+      begin
+        ue := vwap + KEntradaSigma * sigma;
+        le := vwap - KEntradaSigma * sigma;
+
+        // re-arma quando o preco volta pra dentro da banda (1 trade/excursao)
+        if (Close >= le) and (Close <= ue) then
+        begin
+          armedLong  := True;
+          armedShort := True;
+        end
+        else
+        begin
+          // VENDE na esticada pra cima (fade)
+          if (armedShort) and (Close > ue) then
+          begin
+            armedShort := False;
+            SellShortAtMarket(Contratos);
+            maxFavor := Close;
+            if (StopInicialPts > 0) then stopPrice := Close + StopInicialPts
+            else stopPrice := vwap + KStopSigma * sigma;
+            if (AlvoFixoPts > 0) then alvoPrice := Close - AlvoFixoPts
+            else alvoPrice := vwap;
+          end
+          // COMPRA na esticada pra baixo (fade)
+          else if (armedLong) and (Close < le) then
+          begin
+            armedLong := False;
+            BuyAtMarket(Contratos);
+            maxFavor := Close;
+            if (StopInicialPts > 0) then stopPrice := Close - StopInicialPts
+            else stopPrice := vwap - KStopSigma * sigma;
+            if (AlvoFixoPts > 0) then alvoPrice := Close + AlvoFixoPts
+            else alvoPrice := vwap;
+          end;
+        end;
+      end;
+    end;
+  end;
+end;

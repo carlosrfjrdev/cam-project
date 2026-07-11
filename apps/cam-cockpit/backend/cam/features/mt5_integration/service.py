@@ -8,13 +8,16 @@ SPEC v0.2.1:
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
+from cam._shared.infra import async_session_factory
 from cam._shared.risk.context import OrderCandidate, RiskContext
 from cam._shared.risk.decision import RiskDecision
 from cam._shared.risk.engine import validate as risk_validate
 from cam.features.mt5_integration.bridge import MT5BridgeClient
+from cam.features.mt5_integration.live_market import MarketHub
 from cam.features.mt5_integration.schemas import MT5BridgeStatus
+from cam.features.mt5_integration.tick_persister import TickPersister
 
 
 class MT5IntegrationService:
@@ -33,10 +36,144 @@ class MT5IntegrationService:
         self.pub_port = pub_port
         self.req_port = req_port
         self._bridge = MT5BridgeClient(host=host, pub_port=pub_port, req_port=req_port)
+        self._hub = MarketHub()
+        self._persister = TickPersister(async_session_factory)
+        self._connected = False
 
     @property
     def bridge(self) -> MT5BridgeClient:
         return self._bridge
+
+    @property
+    def hub(self) -> MarketHub:
+        return self._hub
+
+    # ---------------- lifecycle (lifespan do app) ----------------
+
+    async def connect(self) -> None:
+        """
+        Conecta a bridge e registra os handlers de tick/book no hub.
+
+        Best-effort: se o terminal MT5 / EA não estiverem ativos, os sockets
+        sobem mas nenhum dado chega → is_alive()=False → falha segura (OFFLINE).
+        """
+        if self._connected:
+            return
+        await self._bridge.connect()
+        await self._bridge.subscribe("mt5.tick", self._hub.on_tick)
+        await self._bridge.subscribe("mt5.book", self._hub.on_book)
+        # Critério 7: persiste ticks ao vivo em cam_market_ticks (corpus).
+        await self._bridge.subscribe("mt5.tick", self._persister.on_tick)
+        self._persister.start()
+        self._connected = True
+
+    async def disconnect(self) -> None:
+        if not self._connected:
+            return
+        await self._persister.stop()
+        await self._bridge.disconnect()
+        self._connected = False
+
+    # ---------------- Inspetor: market data read-only ----------------
+
+    async def get_candles(
+        self, symbol: str, timeframe: str, count: int,
+        timeout_ms: int | None = None, start_pos: int = 0,
+    ) -> dict:
+        """
+        REP GET_CANDLES → OHLCV. ADR-014 R-04 (read-only).
+
+        `timeout_ms` opcional: ingestão de research pede milhares de candles M1
+        (payload grande + CopyRates sincroniza histórico na 1ª chamada) e precisa
+        de timeout maior que o default de 1.5s.
+        `start_pos`: deslocamento a partir da barra mais recente (paginação de
+        histórico longo — o EA cap por requisição é InpMaxCandles).
+        """
+        return await self._bridge.request(
+            "GET_CANDLES",
+            symbol=symbol,
+            timeframe=timeframe,
+            count=count,
+            start_pos=start_pos,
+            timeout_ms=timeout_ms,
+        )
+
+    async def get_symbols(self) -> dict:
+        """REP GET_SYMBOLS → lista de símbolos disponíveis."""
+        return await self._bridge.request("GET_SYMBOLS")
+
+    async def subscribe_symbol(self, symbol: str) -> dict:
+        """REP SUBSCRIBE → EA passa a observar o símbolo (tick + book ao vivo)."""
+        return await self._bridge.request("SUBSCRIBE", symbol=symbol)
+
+    async def get_ticks(
+        self, symbol: str, from_msc: int = 0, count: int = 10000
+    ) -> dict:
+        """
+        REP GET_TICKS → ticks em BULK (paginado por from_msc). Diferente do
+        PROBE_TICKS (diagnostico), retorna os ticks reais p/ ingestao do dataset.
+        `from_msc`: tempo inicial em ms (0 = inicio do historico). O caller pagina
+        avancando from_msc = ultimo_tick_msc + 1. Timeout grande (CopyTicks pode
+        sincronizar o historico de ticks na 1a chamada).
+        """
+        return await self._bridge.request(
+            "GET_TICKS",
+            symbol=symbol,
+            from_msc=from_msc,
+            count=count,
+            timeout_ms=20000,
+        )
+
+    async def get_ticks_range(
+        self,
+        symbol: str,
+        from_msc: int,
+        to_msc: int,
+        max_total: int = 500_000,
+    ) -> list[dict]:
+        """
+        Busca TODOS os ticks de [from_msc, to_msc] paginando GET_TICKS.
+
+        Usado pelos analyzers para puxar os ticks do dia automaticamente do MT5.
+        Retorna [] se a bridge estiver offline (falha segura — o caller decide).
+        Cada tick: {t, bid, ask, last, v, f}. `max_total` protege contra payloads
+        absurdos.
+        """
+        if not self._bridge.is_alive():
+            # tenta mesmo assim uma vez (is_alive depende de heartbeat); se a 1ª
+            # página vier vazia/erro, o loop encerra naturalmente.
+            pass
+        out: list[dict] = []
+        cursor = from_msc
+        while True:
+            resp = await self.get_ticks(symbol, from_msc=cursor, count=20000)
+            if resp.get("error"):
+                break
+            data = resp.get("data", {})
+            ticks = data.get("ticks", [])
+            got = data.get("count", len(ticks))
+            last_msc = data.get("last_msc", cursor)
+            if not ticks:
+                break
+            out.extend(t for t in ticks if t.get("t", 0) <= to_msc)
+            if last_msc >= to_msc or last_msc <= cursor or len(out) >= max_total:
+                break
+            if got < 20000:
+                break
+            cursor = last_msc + 1
+        return out[:max_total]
+
+    async def probe_ticks(self, symbol: str, count: int = 500) -> dict:
+        """
+        REP PROBE_TICKS → diagnóstico: o feed entrega flag de agressor?
+        Research v0.5 — decide empiricamente se OFI/tick (Cubo Rápido) é viável.
+
+        Timeout maior: CopyTicks pode disparar sincronização do histórico de
+        ticks do símbolo na 1ª chamada (demora alguns segundos).
+        """
+        return await self._bridge.request(
+            "PROBE_TICKS", symbol=symbol, count=count, timeout_ms=8000
+        )
 
     def get_status(self) -> MT5BridgeStatus:
         alive = self._bridge.is_alive()
@@ -44,7 +181,7 @@ class MT5IntegrationService:
         age = self._bridge.last_heartbeat_age_ms
         last_hb_at = None
         if self._bridge._last_heartbeat_ts is not None:
-            last_hb_at = datetime.fromtimestamp(self._bridge._last_heartbeat_ts, tz=timezone.utc)
+            last_hb_at = datetime.fromtimestamp(self._bridge._last_heartbeat_ts, tz=UTC)
 
         return MT5BridgeStatus(
             state=state,
@@ -57,7 +194,9 @@ class MT5IntegrationService:
             mt5_path=None,
         )
 
-    def validate_intention(self, candidate: OrderCandidate, context: RiskContext) -> RiskDecision:
+    def validate_intention(
+        self, candidate: OrderCandidate, context: RiskContext
+    ) -> RiskDecision:
         """
         Art. 15o — toda intencao passa pelo Risk Engine antes de qualquer coisa.
 

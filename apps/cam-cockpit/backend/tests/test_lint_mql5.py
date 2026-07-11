@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -17,8 +18,10 @@ LINT_SCRIPT = REPO_ROOT / "scripts" / "lint_mql5.py"
 
 
 def _run(mql5_dir: Path) -> tuple[int, dict]:
+    # sys.executable (não "python3") — cross-platform: no Windows o alias
+    # python3 não existe e o subprocess retornaria stdout vazio.
     result = subprocess.run(
-        ["python3", str(LINT_SCRIPT), "--mql5-dir", str(mql5_dir), "--json"],
+        [sys.executable, str(LINT_SCRIPT), "--mql5-dir", str(mql5_dir), "--json"],
         capture_output=True,
         text=True,
     )
@@ -58,6 +61,72 @@ class TestLintMQL5:
         code, data = _run(tmp_path)
         assert code == 0
         assert data["violations"] == []
+
+    def test_allows_orders_in_cam_d1_orb30_exec(self, tmp_path: Path):
+        # ADR-SL-04 — executor D1 puro tambem pode enviar ordem (DEMO-only).
+        ok = tmp_path / "cam_d1_orb30_exec.mq5"
+        ok.write_text(
+            "void f() {\n"
+            "  g_trade.PositionClose(_Symbol);\n"  # permitido aqui
+            "}\n"
+        )
+        code, data = _run(tmp_path)
+        assert code == 0
+        assert data["violations"] == []
+
+    def test_recorder_cam_d1_orb30_stays_forbidden(self, tmp_path: Path):
+        # o GRAVADOR de paridade NAO pode enviar ordem (fora da allowlist).
+        bad = tmp_path / "cam_d1_orb30.mq5"
+        bad.write_text("void f() { OrderSend(req, res); }\n")
+        code, data = _run(tmp_path)
+        assert code == 1
+        assert any(v["function"] == "OrderSend" for v in data["violations"])
+
+    def test_allows_orders_in_cam_d1_orb30_sinais(self, tmp_path: Path):
+        # ADR-SL-04 — executor D1 + regime embutido (DEMO-only) pode enviar ordem.
+        ok = tmp_path / "cam_d1_orb30_sinais.mq5"
+        ok.write_text("void f() { g_trade.PositionClose(_Symbol); }\n")
+        code, data = _run(tmp_path)
+        assert code == 0
+        assert data["violations"] == []
+
+    def test_allows_orders_in_cam_d2_vwap_exec(self, tmp_path: Path):
+        # ADR-SL-04 — executor D2 tambem pode enviar ordem (DEMO-only).
+        ok = tmp_path / "cam_d2_vwap_exec.mq5"
+        ok.write_text("void f() { g_trade.PositionClose(_Symbol); }\n")
+        code, data = _run(tmp_path)
+        assert code == 0
+        assert data["violations"] == []
+
+    def test_allows_orders_in_cam_hibrido(self, tmp_path: Path):
+        # ADR-SL-04 — executor hibrido D1+D2 pode enviar ordem (DEMO-only).
+        ok = tmp_path / "cam_hibrido_orb30_vwap.mq5"
+        ok.write_text("void f() { g_trade.PositionClose(_Symbol); }\n")
+        code, data = _run(tmp_path)
+        assert code == 0
+        assert data["violations"] == []
+
+    def test_allows_orders_in_cam_hibrido_fbr(self, tmp_path: Path):
+        # hibrido 3 pernas D1+D3(FBR)+D2 pode enviar ordem (DEMO-only).
+        ok = tmp_path / "cam_hibrido_orb30_vwap_fbr.mq5"
+        ok.write_text("void f() { g_trade.PositionClose(_Symbol); }\n")
+        code, data = _run(tmp_path)
+        assert code == 0
+        assert data["violations"] == []
+
+    def test_allows_orders_in_cam_hibrido_fbr_fulltrailing(self, tmp_path: Path):
+        # hibrido 3 pernas + stop hibrido tick-a-tick pode enviar ordem (DEMO-only).
+        ok = tmp_path / "cam_hibrido_orb30_vwap_fbr_fulltrailing.mq5"
+        ok.write_text("void f() { g_trade.PositionModify(_Symbol, sl, tp); }\n")
+        code, data = _run(tmp_path)
+        assert code == 0
+        assert data["violations"] == []
+
+    def test_recorder_cam_d2_vwap_stays_forbidden(self, tmp_path: Path):
+        bad = tmp_path / "cam_d2_vwap.mq5"
+        bad.write_text("void f() { OrderSend(req, res); }\n")
+        code, data = _run(tmp_path)
+        assert code == 1
 
     def test_detects_OrderClose_PositionOpen_PositionClose_OrderModify(
         self, tmp_path: Path

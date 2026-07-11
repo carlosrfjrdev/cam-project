@@ -15,7 +15,8 @@ Padroes ZeroMQ:
 """
 import asyncio
 import time
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 import zmq
 import zmq.asyncio
@@ -58,8 +59,21 @@ class MT5BridgeClient:
         self._latency_samples: list[float] = []
         self._subscribers: dict[str, list[Callable[[bytes], Awaitable[None]]]] = {}
         self._sub_task: asyncio.Task | None = None
+        # Socket REQ do ZMQ é estritamente send→recv: serializa o acesso para
+        # evitar que candles (HTTP) e SUBSCRIBE (WS) usem o socket ao mesmo tempo.
+        self._req_lock = asyncio.Lock()
 
     # ---------------------- Lifecycle ----------------------
+
+    def _new_req_socket(self) -> Any:
+        """Cria/recria o socket REQ. Usado no connect e após timeout (reset)."""
+        assert self._context is not None
+        sock = self._context.socket(zmq.REQ)
+        sock.setsockopt(zmq.RCVTIMEO, REQ_TIMEOUT_MS)
+        sock.setsockopt(zmq.SNDTIMEO, REQ_TIMEOUT_MS)
+        sock.setsockopt(zmq.LINGER, 0)
+        sock.connect(f"tcp://{self.host}:{self.req_port}")
+        return sock
 
     async def connect(self) -> None:
         """Inicializa sockets PUB/SUB e REQ/REP."""
@@ -68,12 +82,20 @@ class MT5BridgeClient:
         self._sub_socket.connect(f"tcp://{self.host}:{self.pub_port}")
         self._sub_socket.setsockopt(zmq.SUBSCRIBE, b"")
 
-        self._req_socket = self._context.socket(zmq.REQ)
-        self._req_socket.setsockopt(zmq.RCVTIMEO, REQ_TIMEOUT_MS)
-        self._req_socket.setsockopt(zmq.SNDTIMEO, REQ_TIMEOUT_MS)
-        self._req_socket.connect(f"tcp://{self.host}:{self.req_port}")
+        self._req_socket = self._new_req_socket()
 
         self._sub_task = asyncio.create_task(self._sub_loop())
+
+    def _reset_req_socket(self) -> None:
+        """
+        Recria o socket REQ. O REQ do ZMQ é uma máquina send→recv estrita:
+        um recv que falha (timeout) deixa o socket travado para os próximos
+        comandos. Recriar restaura o estado (senão candles/símbolos quebram
+        junto após um PROBE_TICKS lento).
+        """
+        if self._req_socket is not None:
+            self._req_socket.close(linger=0)
+        self._req_socket = self._new_req_socket()
 
     async def disconnect(self) -> None:
         if self._sub_task:
@@ -116,18 +138,55 @@ class MT5BridgeClient:
 
     # ---------------------- REQ/REP ----------------------
 
-    async def request(self, cmd: str, **params: Any) -> dict:
+    # Allowlist read-only (CA15.3). Comandos do Inspetor (ADR-014) são todos
+    # de leitura: candles, símbolos, assinatura de stream. NENHUM envia ordem.
+    _READ_ONLY_COMMANDS = frozenset(
+        {
+            "PING",
+            "GET_STATE",
+            "GET_POSITIONS",
+            "GET_SYMBOL_INFO",
+            "GET_VERSION",
+            "GET_CANDLES",
+            "GET_SYMBOLS",
+            "SUBSCRIBE",
+            "UNSUBSCRIBE",
+            "PROBE_TICKS",
+            "GET_TICKS",
+        }
+    )
+
+    async def request(
+        self, cmd: str, *, timeout_ms: int | None = None, **params: Any
+    ) -> dict:
         """Envia comando read-only e aguarda resposta do EA."""
-        if cmd not in {"GET_STATE", "GET_POSITIONS", "GET_SYMBOL_INFO", "PING"}:
+        if cmd not in self._READ_ONLY_COMMANDS:
             return {"error": "UNAUTHORIZED_COMMAND", "cmd": cmd}
         if self._req_socket is None:
             raise RuntimeError("Bridge nao conectada — chame connect() primeiro")
 
         payload = {"cmd": cmd, **params}
         t0 = time.time()
-        # send_json/recv_json: em zmq.asyncio, send_json e sync mas recv_json e awaitable
-        await self._req_socket.send_json(payload)
-        response = await self._req_socket.recv_json()
+        # send_json/recv_json: em zmq.asyncio, send_json e sync, recv_json e awaitable.
+        # Lock garante 1 ciclo REQ/REP por vez (candles + SUBSCRIBE não colidem).
+        async with self._req_lock:
+            if timeout_ms is not None:
+                self._req_socket.setsockopt(zmq.RCVTIMEO, timeout_ms)
+            try:
+                await self._req_socket.send_json(payload)
+                response = await self._req_socket.recv_json()
+            except zmq.Again:
+                # timeout — o socket REQ ficou travado no estado recv; reseta
+                # para não derrubar os próximos comandos (candles/símbolos).
+                self._reset_req_socket()
+                return {"error": "EA_TIMEOUT", "cmd": cmd}
+            except ValueError as exc:
+                # resposta do EA não é JSON válido — não derruba a rota (502, não 500)
+                self._reset_req_socket()
+                return {"error": "BAD_EA_RESPONSE", "cmd": cmd, "detail": str(exc)}
+            finally:
+                if timeout_ms is not None and self._req_socket is not None:
+                    self._req_socket.setsockopt(zmq.RCVTIMEO, REQ_TIMEOUT_MS)
         latency = (time.time() - t0) * 1000
         self._latency_samples.append(latency)
         if len(self._latency_samples) > 50:
@@ -136,7 +195,9 @@ class MT5BridgeClient:
 
     # ---------------------- PUB/SUB ----------------------
 
-    async def subscribe(self, topic: str, handler: Callable[[bytes], Awaitable[None]]) -> None:
+    async def subscribe(
+        self, topic: str, handler: Callable[[bytes], Awaitable[None]]
+    ) -> None:
         self._subscribers.setdefault(topic, []).append(handler)
 
     async def _sub_loop(self) -> None:
@@ -147,8 +208,21 @@ class MT5BridgeClient:
                 msg = await self._sub_socket.recv_multipart()
                 if not msg:
                     continue
-                topic = msg[0].decode("utf-8", errors="replace")
-                payload = msg[1] if len(msg) > 1 else b""
+                # O EA (cam_zmq.mqh::CamZMQPub) publica UM frame único no formato
+                # "topic payload" (separado por espaço). Também aceitamos multipart
+                # [topic, payload] por robustez.
+                if len(msg) == 1:
+                    raw = msg[0]
+                    sep = raw.find(b" ")
+                    if sep >= 0:
+                        topic = raw[:sep].decode("utf-8", errors="replace")
+                        payload = raw[sep + 1:]
+                    else:
+                        topic = raw.decode("utf-8", errors="replace")
+                        payload = b""
+                else:
+                    topic = msg[0].decode("utf-8", errors="replace")
+                    payload = msg[1]
                 if topic == "mt5.heartbeat":
                     self._record_heartbeat()
                 for handler in self._subscribers.get(topic, []):

@@ -1,6 +1,6 @@
 import {
   Box, Typography, Paper, Stack, TextField, Button, Alert, Divider,
-  Grid, Chip,
+  Grid, Chip, MenuItem,
 } from "@mui/material";
 import LockIcon from "@mui/icons-material/Lock";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
@@ -44,6 +44,20 @@ export function SettingsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["mt5-bridge-status"] }),
   });
 
+  const { data: dataProvider } = useQuery({
+    queryKey: ["market-data-provider"],
+    queryFn: () =>
+      api.get<{ provider: string; active: boolean; options: { id: string; label: string; status: string }[] }>(
+        "/app-settings/market-data-provider",
+      ),
+  });
+
+  const setProvider = useMutation({
+    mutationFn: (provider: string) =>
+      api.put("/app-settings/market-data-provider", { provider }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["market-data-provider"] }),
+  });
+
   const stateColor = (s?: string) =>
     s === "ONLINE" ? "success" : s === "RECONNECTING" ? "warning" : "error";
 
@@ -63,6 +77,41 @@ export function SettingsPage() {
       </Alert>
 
       <Grid container spacing={3}>
+        <Grid item xs={12}>
+          <Paper sx={{ p: 3 }}>
+            <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+              <Typography variant="h6">Provedor de dados de mercado</Typography>
+              <Chip
+                label={dataProvider?.active ? "ativo" : "em casca"}
+                color={dataProvider?.active ? "success" : "warning"}
+                size="small"
+              />
+            </Stack>
+            <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
+              <TextField
+                select
+                size="small"
+                label="Fonte de ticks/candles"
+                value={dataProvider?.provider ?? "mt5"}
+                onChange={(e) => setProvider.mutate(e.target.value)}
+                sx={{ minWidth: 260 }}
+                disabled={setProvider.isPending}
+              >
+                {(dataProvider?.options ?? [{ id: "mt5", label: "MetaTrader 5", status: "active" }]).map((o) => (
+                  <MenuItem key={o.id} value={o.id}>
+                    {o.label}{o.status === "casca" ? " (casca — em breve)" : ""}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <Typography variant="caption" color="text.secondary" sx={{ maxWidth: 460 }}>
+                MT5 é o provedor ativo. Profit (ProfitDLL) está em casca — a coleta entra
+                quando o profit_bridge for conectado (chave de ativação). Os analyzers usam
+                a fonte selecionada aqui.
+              </Typography>
+            </Stack>
+          </Paper>
+        </Grid>
+
         <Grid item xs={12} md={6}>
           <Paper sx={{ p: 3 }}>
             <Stack direction="row" alignItems="center" spacing={1} mb={2}>

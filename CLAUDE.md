@@ -8,38 +8,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## O que este repositório é
 
-**CaM — The Carlos Alternative Money.** Cockpit pessoal, local, não comercial de Carlos Rodrigues Ferreira Junior para operação disciplinada de mercado, preservação de capital e construção patrimonial via Harvest Rule. Projeto **separado e independente** da Teczilabs (sem perímetro de capital, infraestrutura ou receita compartilhada — Art. 8º).
+**CaM — Cockpit de gestão de ativos.** Plataforma de software para gestão, análise e
+operação de ativos. **Virada estratégica (2026-06-03):** o projeto deixou de ser o
+cockpit *pessoal e não-comercial* de um único trader e passou a ser um **produto** —
+solução de software para terceiros operarem (codinome de produto futuro: **TCaM — Teczi
+Cockpit Assets Manager**; o nome "CaM" e as pastas `cam-cockpit` permanecem até o
+Founder pedir o rebrand de UI). Histórico do projeto pessoal preservado na branch
+`the_old_cam`.
 
-**Fase atual:** **Fase 0 — Construção** (`CONSTITUICAO.md` Anexo II). Sem trade real, sem paper trading. Construção do cockpit: backend, frontend, Risk Engine, journal, backtest engine, integrações.
+**Fase atual:** **Fase 0 — Construção da estrutura do produto.** Reaproveita o que já
+foi construído (features, MT5 bridge, Inspetor, Quant Lab, backtest, etc.) e organiza
+sob o novo paradigma de produto.
 
-Não há comandos de build/lint/test ainda — esta seção será adicionada quando o primeiro app for criado em `/apps`.
-
----
-
-## Hierarquia constitucional — LEIA antes de qualquer ação
-
-```
-Constituição > Risk Engine > Estratégia validada > IA > Operador em decisão manual
-```
-
-A [`CONSTITUICAO.md`](./CONSTITUICAO.md) é **soberana** (Art. 43º). Toda recomendação, código, decisão ou orquestração que você produzir tem que sobreviver a essa hierarquia.
-
-**Artigos não-negociáveis:**
-
-| Artigo | O que vincula |
-|---|---|
-| **Art. 11º** | Limite absoluto: **2 contratos WIN / 2 contratos WDO**. Intocável |
-| **Art. 15º** | Risk Engine bloqueia? CaM não opera. Sem exceções |
-| **Art. 18º** | Kill switch obrigatório, acionável sem justificar oportunidade perdida |
-| **Art. 19º** | Posição aberta sem cobertura sistêmica é risco inaceitável |
-| **Art. 25º** | UIs operacionais exibem resultado **LÍQUIDO de imposto provisionado**, nunca bruto |
-| **Art. 26º** | DARF atrasada bloqueia novas operações |
-| **Art. 31º** | Operação sem registro no journal é falha operacional |
-| **Art. 35º** | IA NÃO PODE: enviar ordem, desabilitar/parametrizar Risk Engine, justificar exceção constitucional |
-| **Art. 36º** | A hierarquia acima — inviolável |
-| **Art. 6º** | Em conflito entre regras, prevalece a que **preserva mais capital** |
-
-Quando estiver em dúvida sobre o que recomendar/codar: aplique o Art. 6º.
+> ⚠️ **A Constituição foi DESCOMISSIONADA (2026-06-03).** O documento
+> `CONSTITUICAO.md` era a disciplina **pessoal de trader** do Carlos (preservação de
+> capital, limites de contrato, kill switch obrigatório, DARF bloqueante, "IA não opera").
+> Como o Carlos não opera mais — vira fornecedor de solução —, essas regras morreram
+> como **lei do projeto**. Ver `project/tcam/CONSTITUTION-DECOMMISSION.md`.
+>
+> **NÃO** aplique mais nenhuma "trava constitucional", hierarquia soberana, "Art. Xº",
+> nem o princípio "preserve mais capital" como regra vinculante. O documento, se ainda
+> existir, está **arquivado** e é apenas memória histórica.
+>
+> **O que sobrevive (como engenharia, não como lei):** o **Risk Engine** (`_shared/risk`)
+> permanece no código — passa a ser **feature de produto** ("Assets RiskManager"),
+> configurável pelo usuário, não um dogma moral. O isolamento research↔live
+> (import-linter) fica como boa prática de arquitetura. O **DevFlow NCC-1701** e as
+> personas continuam — são processo de **engenharia de software**, nunca foram a
+> Constituição do trader.
 
 ---
 
@@ -47,9 +43,10 @@ Quando estiver em dúvida sobre o que recomendar/codar: aplique o Art. 6º.
 
 ```
 CaM-project/
-├── CONSTITUICAO.md             ← Lei suprema (v1.0 consolidada — substitui os .txt antigos)
 ├── CLAUDE.md                   ← Este arquivo (contexto para Claude Code)
 ├── README.md                   ← README institucional do CaM
+├── project/tcam/               ← Virada estratégica → produto (PIVOT, DECOMMISSION, MAP)
+│   (CONSTITUICAO.md descomissionada — arquivada, sem força de lei)
 │
 ├── apps/                       ← APLICATIVOS do cockpit (estado real — código)
 │   └── README.md
@@ -68,12 +65,22 @@ CaM-project/
 │   │   ├── governance/         ← SEC-GOV, CHANGE
 │   │   ├── templates/          ← SCOPE, DVP, DAS, ADR, INFRA-ARCH, SPEC, PLAN, BUG, OPS-EVENT, CHANGE-RECORD, DRIFT-REPORT, PROOF-PACK
 │   │   └── skills/             ← Drafts conceituais (referência canônica das skills operacionais)
-│   ├── personas/               ← Definições completas das 14+ personas
+│   ├── personas/               ← Apenas INDEX.md → aponta para /personas (ADR-001 repo-wide)
 │   └── CLAUDE.md               ← Notas escopadas ao subdiretório
 │
+├── personas/                   ← CAST CaM-only em 5 times (ADR-001 — fora do teczi-devflow, Art. 8º)
+│   ├── carlos.md               ← Founder (soberano, cross-time)
+│   ├── 1-lideranca-estrategia/ ← leo, marty, albert, nico, peter, voltaire, sun
+│   ├── 2-tecnologia/           ← oscar, nikola, tom, vint, ada, grace, alan, steve
+│   ├── 3-governanca-seguranca-qa/ ← kevin, linus, bill, denis, howard
+│   ├── 4-experiencia-cockpit/  ← don, andy
+│   ├── 5-financeiro-mercado-ativos/ ← mammon, ray, jim, wyck, nassim, barsi, luca, daniel, fred
+│   ├── _archive/               ← florence (aposentada) + catálogos legados
+│   └── README.md               ← Mapa dos 5 times (fonte autoritativa)
+│
 └── .claude/                    ← Configuração Claude Code
-    ├── agents/                 ← 14 personas NCC-1701 + cast estendido (25 total)
-    ├── skills/                 ← Skills operacionais (DevFlow portadas + strategy-session + teczi-discovery-software)
+    ├── agents/                 ← 31 agents (24 ativos + 7 financeiros novos; florence removida)
+    ├── skills/                 ← teczi-* (compartilháveis) + cam-* (CaM-only) + strategy-session
     ├── settings.json           ← bypassPermissions ON (cuidado equivalente)
     └── settings.local.json
 ```
@@ -86,6 +93,23 @@ CaM-project/
 | [`/project`](./project/) | **Intenção viva** — SCOPE, SPEC, PLAN, ADRs, PROOF-PACKs | "O que está sendo decidido e construído" |
 
 Quando ambos divergirem: **estado real vence intenção** (NCC-1701 §2, regra 7). DRIFT só é analisado por solicitação explícita do Founder (Q12).
+
+### 📄 Política de documentação (diretriz do Founder — 2026-05-30)
+
+**`.md` de documentação NÃO ficam dentro de `/apps`.** A codebase (`/apps`) só
+contém os `.md` **obrigatórios**: `README.md` (qualquer nível) e arquivos de
+instrução de agente (`CLAUDE.md`, `AGENTS.md`). **Toda outra documentação**
+(runbooks, tech-debt, ledgers, TODOs operacionais, notas) vive em **`/project`**:
+
+| Tipo de doc | Local |
+|---|---|
+| Runbooks | `project/runbooks/` |
+| Tech-debt / feature-flags / TODO operacional | `project/cam-cockpit/` |
+| SCOPE / SPEC / PLAN / ADR / QA / PROOF-PACK | `project/cam-cockpit/{scopes,specs,plans,adrs,qa}/` |
+
+> Ao criar documentação, **nunca** a coloque em `/apps`. Se precisar referenciá-la
+> do código, use um link relativo para `/project`. README de feature pode resumir
+> e apontar para o doc em `/project`.
 
 ---
 
@@ -179,8 +203,11 @@ Padrão Claude Code disponíveis: `superpowers:*`, `frontend-design`, `verify`, 
 | `denis` | PDOC co-lead + SDOC lead | Lime |
 | `howard` | SDOC DRIFT (sob solicitação) | Sandy Brown |
 
-**Cast estendido (11)** — chamado por Leo quando necessário:
-`sun`, `voltaire`, `mammon`, `grace`, `alan`, `andy`, `ada`, `peter`, `florence`, `fred`, `don`.
+**Cast estendido + mundo financeiro (Time 5)** — chamado por Leo quando necessário:
+`sun`, `voltaire`, `grace`, `alan`, `andy`, `ada`, `peter`, `fred`, `don` +
+**Time 5 financeiro:** `mammon` (ofensivo, read-only Art. 35º), `ray` (macro), `jim` (quant/edge), `wyck` (fluxo), `nassim` (risco de ruína), `barsi` (Carteira Hard/dividendos), `luca` (fiscal/ledger), `daniel` (RCA do operador).
+
+> `florence` **aposentada** (D4) — ver `personas/_archive/`. Cast organizado em **5 times** (ADR-001): mapa completo em [`personas/README.md`](./personas/README.md).
 
 **Padrão de invocação:** delegue para `leo` quando a demanda for ampla ou ambígua; para `{persona}` específica quando o lead da fase/estado/governança for óbvio. Leo NUNCA simula outra persona — sempre invoca via `Agent` tool e consolida o resultado identificando a fonte.
 
@@ -195,32 +222,49 @@ A stack do CaM **revoga** os Combos A/B/C do catálogo Teczilabs (Java/Spring, F
 **Resumo da stack oficial:**
 
 ```text
-Profit/Nelogica         →  Plataforma de execução (NTSL + Automação de Estratégias)
-Python 3.12 + FastAPI   →  Cockpit local: Risk Engine, Ledger, Journal, IA, integração
-React 19 + Vite + MUI   →  Frontend SPA local (sem Next.js)
+SO: Windows 11        →  FIRME (Wine/Linux falhou). Único SO, dev + produção.
+Broker: EM AVALIAÇÃO  →  MetaTrader 5 em teste (MQL5 EAs + bridge ZeroMQ 127.0.0.1)
+                          / Profit em STANDBY (NTSL + CSV/ProfitDLL). Decide após 1º teste.
+Python 3.12 + FastAPI →  Cockpit local: Risk Engine, Ledger, Journal, IA, integração
+React 19 + Vite + MUI →  Frontend SPA local (sem Next.js)
 PostgreSQL 16 + TimescaleDB → Banco transacional + tick/candle storage (desde Fase 0)
-DuckDB                  →  Motor analítico auxiliar (research em CSV/Parquet)
-Telegram Bot            →  Canal externo de alerta
-Ollama local + Anthropic → IA auditora/analista, NUNCA executora (Arts. 34–36)
+DuckDB                →  Motor analítico auxiliar (research em CSV/Parquet)
+Telegram Bot          →  Canal externo de alerta
+Ollama local + Anthropic → IA auditora/analista (papel definido por produto, não por lei)
 ```
 
-**SO produção:** Windows 11 (Profit é Windows-only).
-**SO desenvolvimento:** Linux (eficiência) → Windows (integração Profit/NTSL).
+**SO produção E desenvolvimento:** **Windows 11** (firme, 2026-05-30 — Wine/Linux
+falhou). **Broker em avaliação:** **MT5 em teste** agora; **Profit em STANDBY**
+(não descartado) — a escolha fecha **após o 1º teste do MT5**. Tudo em **soft-stage**
+(pré-v1): docs e ADRs **moldáveis, não-HARD**.
 
-Convenção de pastas: aplicativos em `/apps/cam-*`. Estrutura monorepo `apps/cam-cockpit/{backend,frontend,ntsl}` no MVP. Detalhes completos, ADRs propostos, faseamento de integração Profit, riscos, custos: ver [`STACK-CAM-OFICIAL.md`](./project/STACK-CAM-OFICIAL.md).
+> ⚙️ **Continuar a partir de um `git clone` no Windows:** siga o runbook
+> [`project/tcam/runbooks/RUNBOOK-WINDOWS.md`](./project/tcam/runbooks/RUNBOOK-WINDOWS.md)
+> (setup, MT5 + EAs, bridge ZeroMQ, guardrails DEMO-only). O `cam-cockpit`
+> (backend/frontend/banco) é multiplataforma; só a camada de broker é Windows.
+> EAs MT5 em `apps/cam-cockpit/mql5/` (`cam_bridge.mq5`, `cam_risk_mirror.mq5`);
+> artefatos Profit em `apps/cam-cockpit/ntsl/` (standby).
+
+Convenção de pastas: aplicativos em `/apps/cam-*` (monorepo `apps/cam-cockpit/{backend,frontend,mql5,ntsl}`). Detalhes, faseamento, riscos: ver [`STACK-CAM-OFICIAL.md`](./project/STACK-CAM-OFICIAL.md).
+
+> ⚠️ **Notas (soft-stage):** SO Windows é firme; **broker em aberto** (MT5 teste /
+> Profit standby — nada descartado). ADR-001/008 → **Under-evaluation**, ADR-009 →
+> **Active** (recalibradas 2026-05-30). Estado real (`/apps`) vence intenção (NCC-1701 §2 regra 7).
 
 ---
 
-## Gatilhos automáticos para SEC-GOV no CaM
+## Segurança (SEC-GOV) no produto
 
-Além dos 9 gatilhos canônicos do NCC-1701, no CaM **sempre** acionar SEC-GOV (Kevin) quando a demanda tocar:
+Os **9 gatilhos canônicos do NCC-1701** para SEC-GOV (Kevin) continuam válidos como
+boa engenharia. Os antigos gatilhos *constitucionais* (Risk Engine como autoridade,
+kill switch obrigatório, journal/DARF, "autoridade da IA" Arts. 34–36) **deixaram de
+ser lei**. Eles podem reaparecer como **requisitos de produto** quando fizer sentido
+comercial — ex.: segurança de dados de cliente, isolamento multi-tenant, segregação
+research↔live — mas como decisão de engenharia/produto, não como dogma.
 
-- **Risk Engine** (Art. 15º)
-- **Kill switch** (Art. 18º)
-- **Journal**, ledger fiscal ou provisão (Arts. 25º, 26º, 31º)
-- **Autoridade da IA** (Arts. 34º–36º)
-
-Esses são **bugs/mudanças constitucionais** — não tratá-los como "comuns".
+> Vender ferramenta para terceiros operarem abre exposição **legal/regulatória** nova
+> (responsabilidade, CVM, termos de uso). Isso é tratado na camada de produto (Fase 2),
+> ver `project/tcam/PIVOT-TCaM-STRATEGY.md` — não é uma trava de código agora.
 
 ---
 
@@ -236,15 +280,16 @@ Quando o cockpit CaM começar a materializar código em `/apps/{codinome}/`, cad
 
 ## Settings note
 
-`.claude/settings.json` define `defaultMode: bypassPermissions` e `skipDangerousModePermissionPrompt: true`. Ferramentas rodam sem prompt — exercer o mesmo cuidado que você teria sob permissões normais, especialmente para ações destrutivas, em estado compartilhado ou que violem a Constituição.
+`.claude/settings.json` define `defaultMode: bypassPermissions` e `skipDangerousModePermissionPrompt: true`. Ferramentas rodam sem prompt — exercer o mesmo cuidado que você teria sob permissões normais, especialmente para ações destrutivas ou em estado compartilhado.
 
 ---
 
 ## Checklist de orientação (para qualquer Claude novo entrando aqui)
 
-1. Leia [`CONSTITUICAO.md`](./CONSTITUICAO.md) — pelo menos Parte I, IV, IX, X
-2. Leia [`teczi-devflow/NCC-1701/process.md`](./teczi-devflow/NCC-1701/process.md)
-3. Confira a fase atual do CaM (Fase 0 — Construção) no Anexo II da Constituição
-4. Para qualquer demanda: acione a skill da fase correspondente via `Skill` tool
-5. Responda em português
-6. Quando em dúvida: **preserve mais capital** (Art. 6º) e **invoque Leo** para orquestrar
+0. **Abra [`project/ORIENTACAO.md`](./project/ORIENTACAO.md)** — mapa de navegação único do repo (onde mora o quê + estado vivo/stub/morto de cada feature). É o ponto de partida para se localizar.
+1. Leia esta seção "O que este repositório é" — entenda a **virada para produto** e que a **Constituição está descomissionada** (sem força de lei).
+2. Leia [`project/tcam/`](./project/tcam/) — a estratégia da virada (PIVOT, DECOMMISSION, MAP de módulos).
+3. Leia [`teczi-devflow/NCC-1701/process.md`](./teczi-devflow/NCC-1701/process.md) — o processo de engenharia (continua válido).
+4. Para qualquer demanda: acione a skill da fase correspondente via `Skill` tool.
+5. Responda em português.
+6. Quando em dúvida: **invoque Leo** para orquestrar. Não há mais "preserve mais capital" como regra — o objetivo agora é **construir o produto**.

@@ -1,0 +1,7 @@
+.rdo{display:flex;align-items:center;gap:10px;font-size:var(--text-dense);color:var(--subtle);cursor:pointer}
+.rdo input{position:absolute;opacity:0}
+.rdo .dot{width:18px;height:18px;border-radius:50%;border:1px solid var(--border-strong);background:var(--surface-2);display:inline-flex;align-items:center;justify-content:center}
+.rdo input:checked+.dot::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--primary)}
+.rdo input:checked+.dot{border-color:var(--primary)}
+.rdo input:focus+.dot{box-shadow:0 0 0 2px var(--primary-soft)}
+.rdo input:disabled+.dot{opacity:.4}
